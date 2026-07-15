@@ -10,14 +10,19 @@
           ✎ Edit
         </button>
         <template v-else>
-          <button @click="saveBooking" class="btn-primary text-sm">
-            Save
+          <button @click="saveBooking" :disabled="saving" class="btn-primary text-sm">
+            {{ saving ? 'Saving...' : 'Save' }}
           </button>
           <button @click="cancelEdit" class="btn-secondary text-sm">
             Cancel
           </button>
         </template>
       </div>
+    </div>
+
+    <!-- Save Error -->
+    <div v-if="saveError" class="mb-6 p-3 bg-red-50 border border-red-200 rounded">
+      <p class="text-sm text-red-700">{{ saveError }}</p>
     </div>
 
     <!-- Loading State -->
@@ -81,6 +86,13 @@
                     <span v-else class="text-gray-400">Not provided</span>
                   </p>
                 </div>
+                <div class="col-span-2">
+                  <p class="text-sm text-gray-500">Address</p>
+                  <p class="font-medium whitespace-pre-line">
+                    <span v-if="clientAddress">{{ clientAddress }}</span>
+                    <span v-else class="text-gray-400">Not provided</span>
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -131,6 +143,75 @@
                   <textarea v-else v-model="editForm.notes" class="input-field mt-1" rows="3"></textarea>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session & Health Details Card -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold">🩺 Session &amp; Health Details</h2>
+          </div>
+          <div class="card-body">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="text-sm text-gray-500">Pressure preference</label>
+                <p v-if="!isEditing" class="font-medium">
+                  <span v-if="booking.pressurePreference">{{ formatPressure(booking.pressurePreference) }}</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+                <select v-else v-model="editForm.pressurePreference" class="input-field mt-1">
+                  <option value="">—</option>
+                  <option value="gentle">Gentle</option>
+                  <option value="medium">Medium</option>
+                  <option value="firm">Firm</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-500">First massage?</label>
+                <p v-if="!isEditing" class="font-medium">
+                  <span v-if="booking.firstTime === true">Yes</span>
+                  <span v-else-if="booking.firstTime === false">No</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+                <select v-else v-model="editForm.firstTime" class="input-field mt-1">
+                  <option value="">—</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-500">Location postcode</label>
+                <p v-if="!isEditing" class="font-medium">
+                  <span v-if="booking.postcode">{{ booking.postcode }}</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+                <input v-else v-model="editForm.postcode" type="text" class="input-field mt-1" />
+              </div>
+              <div>
+                <label class="text-sm text-gray-500">Allergies</label>
+                <p v-if="!isEditing" class="font-medium">
+                  <span v-if="booking.allergies">{{ booking.allergies }}</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+                <input v-else v-model="editForm.allergies" type="text" class="input-field mt-1" />
+              </div>
+            </div>
+            <div class="mt-4">
+              <label class="text-sm text-gray-500">Health conditions / injuries</label>
+              <p v-if="!isEditing" class="font-medium whitespace-pre-wrap">
+                <span v-if="booking.healthConditions">{{ booking.healthConditions }}</span>
+                <span v-else class="text-gray-400">Not provided</span>
+              </p>
+              <textarea v-else v-model="editForm.healthConditions" class="input-field mt-1" rows="3"></textarea>
+            </div>
+            <div class="mt-4">
+              <label class="text-sm text-gray-500">Focus / problem areas</label>
+              <p v-if="!isEditing" class="font-medium whitespace-pre-wrap">
+                <span v-if="booking.problemAreas">{{ booking.problemAreas }}</span>
+                <span v-else class="text-gray-400">Not provided</span>
+              </p>
+              <textarea v-else v-model="editForm.problemAreas" class="input-field mt-1" rows="2"></textarea>
             </div>
           </div>
         </div>
@@ -219,7 +300,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
 import type { Booking } from '@/types'
@@ -229,7 +310,19 @@ const route = useRoute()
 const bookingsStore = useBookingsStore()
 
 const booking = ref<Booking | null>(null)
+
+// Full postal address for the client, assembled from address / city / postcode
+const clientAddress = computed(() => {
+  const c = booking.value?.client
+  if (!c) return ''
+  return [c.address, c.city, c.postcode]
+    .map(part => (part || '').trim())
+    .filter(Boolean)
+    .join('\n')
+})
 const isEditing = ref(false)
+const saveError = ref('')
+const saving = ref(false)
 const editForm = reactive({
   startDate: '',
   startTime: '',
@@ -237,23 +330,42 @@ const editForm = reactive({
   service: '',
   status: 'CONFIRMED',
   notes: '',
+  postcode: '',
+  healthConditions: '',
+  problemAreas: '',
+  pressurePreference: '' as '' | 'gentle' | 'medium' | 'firm',
+  firstTime: '' as '' | 'yes' | 'no',
+  allergies: '',
 })
+
+function initEditForm() {
+  const b = booking.value
+  if (!b) return
+  editForm.startDate = b.startTime.split('T')[0]
+  editForm.startTime = format(new Date(b.startTime), 'HH:mm')
+  editForm.duration = calculateDuration(b.startTime, b.endTime)
+  editForm.service = b.service || ''
+  editForm.status = b.status
+  editForm.notes = b.notes || ''
+  editForm.postcode = b.postcode || ''
+  editForm.healthConditions = b.healthConditions || ''
+  editForm.problemAreas = b.problemAreas || ''
+  editForm.pressurePreference = (b.pressurePreference as any) || ''
+  editForm.firstTime = b.firstTime === true ? 'yes' : b.firstTime === false ? 'no' : ''
+  editForm.allergies = b.allergies || ''
+}
 
 onMounted(async () => {
   await bookingsStore.fetchBookings()
   const bookingId = route.params.id as string
   booking.value = bookingsStore.bookings.find(b => b.id === bookingId) || null
-
-  if (booking.value) {
-    const start = new Date(booking.value.startTime)
-    editForm.startDate = booking.value.startTime.split('T')[0]
-    editForm.startTime = format(start, 'HH:mm')
-    editForm.duration = calculateDuration(booking.value.startTime, booking.value.endTime)
-    editForm.service = booking.value.service || ''
-    editForm.status = booking.value.status
-    editForm.notes = booking.value.notes || ''
-  }
+  initEditForm()
 })
+
+function formatPressure(value?: string | null): string {
+  if (!value) return ''
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
 
 function formatDate(date?: string): string {
   if (!date) return ''
@@ -317,13 +429,43 @@ function getPreFormStatusClass(status?: string): string {
   }
 }
 
-function saveBooking() {
-  // TODO: Implement save logic
-  isEditing.value = false
+async function saveBooking() {
+  if (!booking.value) return
+  const start = new Date(`${editForm.startDate}T${editForm.startTime}:00`)
+  if (isNaN(start.getTime())) {
+    saveError.value = 'Invalid date or time'
+    return
+  }
+  const end = new Date(start.getTime() + Number(editForm.duration) * 60000)
+
+  saving.value = true
+  saveError.value = ''
+  try {
+    const updated = await bookingsStore.updateBooking(booking.value.id, {
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+      status: editForm.status as Booking['status'],
+      service: editForm.service.trim() || null,
+      notes: editForm.notes.trim() || null,
+      postcode: editForm.postcode.trim() || null,
+      healthConditions: editForm.healthConditions.trim() || null,
+      problemAreas: editForm.problemAreas.trim() || null,
+      pressurePreference: editForm.pressurePreference || null,
+      firstTime: editForm.firstTime === 'yes' ? true : editForm.firstTime === 'no' ? false : null,
+      allergies: editForm.allergies.trim() || null,
+    })
+    booking.value = updated
+    isEditing.value = false
+  } catch (err: any) {
+    saveError.value = err?.message || 'Failed to save booking'
+  } finally {
+    saving.value = false
+  }
 }
 
 function cancelEdit() {
+  initEditForm()
+  saveError.value = ''
   isEditing.value = false
-  // Reset form values
 }
 </script>

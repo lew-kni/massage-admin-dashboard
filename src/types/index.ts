@@ -25,6 +25,13 @@ export interface Booking {
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED'
   service?: string | null
   notes?: string | null
+  postcode?: string | null
+  healthConditions?: string | null
+  problemAreas?: string | null
+  pressurePreference?: 'gentle' | 'medium' | 'firm' | null
+  firstTime?: boolean | null
+  allergies?: string | null
+  promotionId?: string | null
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null
   preFormCompletedAt?: string | null
@@ -107,6 +114,48 @@ export interface Assessment {
   content: string
   createdAt: string
   updatedAt: string
+}
+
+// Service Types
+export type ServiceCategory = 'relaxation' | 'sports'
+
+export interface ServiceDuration {
+  id?: string
+  minutes: number
+  price: number | null
+  note?: string | null
+  isActive?: boolean
+  sortOrder?: number
+}
+
+export interface NoteBlock {
+  title: string
+  content: string[]
+}
+
+export interface Service {
+  id: string
+  slug: string
+  name: string
+  category: ServiceCategory
+  summary: string
+  description: string[]
+  goodFor: string[]
+  contraindicationNote?: string | NoteBlock | null
+  postBookingNote?: NoteBlock | null
+  bookable: boolean
+  isActive: boolean
+  sortOrder: number
+  durations: ServiceDuration[]
+}
+
+// Promotion Types
+export interface Promotion {
+  id: string
+  active: boolean
+  message: string
+  discountPercentage: number
+  applicableTo: 'all' | string[]
 }
 
 // API Response Types

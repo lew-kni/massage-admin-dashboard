@@ -55,6 +55,7 @@ const navigation = [
   { name: 'Dashboard', to: '/', icon: '📊' },
   { name: 'Clients', to: '/clients', icon: '👥' },
   { name: 'Bookings', to: '/bookings', icon: '📅' },
+  { name: 'Services', to: '/services', icon: '💆' },
   { name: 'Availability', to: '/availability', icon: '🕐' },
   { name: 'Emails', to: '/emails', icon: '✉️' },
 ]

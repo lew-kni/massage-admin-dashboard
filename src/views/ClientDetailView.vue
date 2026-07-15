@@ -148,7 +148,7 @@
         <div class="card">
           <div class="card-header flex justify-between items-center">
             <h2 class="text-lg font-semibold">📅 Bookings</h2>
-            <button class="text-sage-600 hover:text-sage-700 text-sm font-medium">
+            <button @click="showNewBooking = true" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
               + New Booking
             </button>
           </div>
@@ -156,19 +156,32 @@
             <div v-if="bookings.length === 0" class="text-gray-500 text-center py-8">
               No bookings yet
             </div>
-            <div v-else class="space-y-4">
-              <div v-for="booking in bookings" :key="booking.id" class="border-b pb-4 last:border-0">
+            <div v-else class="space-y-1">
+              <RouterLink
+                v-for="booking in bookings"
+                :key="booking.id"
+                :to="`/bookings/${booking.id}`"
+                class="block border-b last:border-0 -mx-2 px-2 py-3 rounded hover:bg-gray-50 transition group"
+              >
                 <div class="flex justify-between items-start">
                   <div>
-                    <p class="font-medium">{{ formatDateTime(booking.startTime) }}</p>
-                    <p class="text-sm text-gray-500">Duration: {{ calculateDuration(booking.startTime, booking.endTime) }} minutes</p>
+                    <p class="font-medium group-hover:text-sage-600">
+                      #{{ booking.bookingNumber }} · {{ formatDateTime(booking.startTime) }}
+                    </p>
+                    <p class="text-sm text-gray-500">
+                      Duration: {{ calculateDuration(booking.startTime, booking.endTime) }} minutes
+                      <span v-if="booking.service"> · {{ booking.service }}</span>
+                    </p>
                   </div>
-                  <span :class="['badge', getStatusClass(booking.status)]">
-                    {{ booking.status }}
-                  </span>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span :class="['badge', getStatusClass(booking.status)]">
+                      {{ booking.status }}
+                    </span>
+                    <span class="text-gray-300 group-hover:text-sage-500">→</span>
+                  </div>
                 </div>
-                <p v-if="booking.notes" class="text-sm text-gray-600 mt-2">{{ booking.notes }}</p>
-              </div>
+                <p v-if="booking.notes" class="text-sm text-gray-600 mt-2 line-clamp-2">{{ booking.notes }}</p>
+              </RouterLink>
             </div>
           </div>
         </div>
@@ -213,7 +226,7 @@
             <button class="btn-primary w-full text-sm">
               ✉️ Send Email
             </button>
-            <button class="btn-secondary w-full text-sm">
+            <button @click="showNewBooking = true" class="btn-secondary w-full text-sm">
               📅 New Booking
             </button>
             <button class="btn-secondary w-full text-sm">
@@ -273,6 +286,14 @@
       @saved="handleClientSaved"
     />
 
+    <!-- New Booking Modal -->
+    <NewBookingModal
+      v-if="showNewBooking && clientsStore.currentClient"
+      :client="clientsStore.currentClient"
+      @close="showNewBooking = false"
+      @saved="handleBookingSaved"
+    />
+
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
@@ -301,11 +322,13 @@ import { apiService } from '@/services/api'
 import { formatDistanceToNow, format } from 'date-fns'
 import type { Booking, Communication } from '@/types'
 import ClientForm from '@/components/ClientForm.vue'
+import NewBookingModal from '@/components/NewBookingModal.vue'
 
 const route = useRoute()
 const router = useRouter()
 const clientsStore = useClientsStore()
 const editMode = ref(false)
+const showNewBooking = ref(false)
 const showDeleteConfirm = ref(false)
 const deletingClient = ref(false)
 const bookings = ref<Booking[]>([])
@@ -362,6 +385,11 @@ function getCommStatusClass(status: string) {
 function handleClientSaved() {
   editMode.value = false
   clientsStore.fetchClient(route.params.id as string)
+}
+
+async function handleBookingSaved() {
+  showNewBooking.value = false
+  await loadClientData()
 }
 
 async function loadClientData() {

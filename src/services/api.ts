@@ -7,6 +7,9 @@ import type {
   BlockedTime,
   EmailTemplate,
   Communication,
+  Service,
+  ServiceDuration,
+  Promotion,
 } from '@/types'
 
 class ApiService {
@@ -198,6 +201,56 @@ class ApiService {
 
   async deleteCommunication(id: string): Promise<void> {
     await this.client.delete(`/api/communications/${id}`)
+  }
+
+  // Services
+  async getServices(): Promise<Service[]> {
+    // ?all=true returns inactive services/durations too (admin only)
+    const { data } = await this.client.get('/api/services', { params: { all: true } })
+    return data
+  }
+
+  async createService(service: Partial<Service> & { durations?: ServiceDuration[] }): Promise<Service> {
+    const { data } = await this.client.post('/api/services', service)
+    return data
+  }
+
+  async updateService(id: string, service: Partial<Service>): Promise<Service> {
+    const { data } = await this.client.patch(`/api/services/${id}`, service)
+    return data
+  }
+
+  async deleteService(id: string): Promise<void> {
+    await this.client.delete(`/api/services/${id}`)
+  }
+
+  async upsertServiceDuration(serviceId: string, duration: ServiceDuration): Promise<Service> {
+    const { data } = await this.client.put(`/api/services/${serviceId}/durations`, duration)
+    return data
+  }
+
+  async deleteServiceDuration(serviceId: string, durationId: string): Promise<void> {
+    await this.client.delete(`/api/services/${serviceId}/durations/${durationId}`)
+  }
+
+  // Promotions
+  async getPromotions(): Promise<Promotion[]> {
+    const { data } = await this.client.get('/api/promotions', { params: { all: true } })
+    return data
+  }
+
+  async createPromotion(promotion: Partial<Promotion>): Promise<Promotion> {
+    const { data } = await this.client.post('/api/promotions', promotion)
+    return data
+  }
+
+  async updatePromotion(id: string, promotion: Partial<Promotion>): Promise<Promotion> {
+    const { data } = await this.client.patch(`/api/promotions/${id}`, promotion)
+    return data
+  }
+
+  async deletePromotion(id: string): Promise<void> {
+    await this.client.delete(`/api/promotions/${id}`)
   }
 }
 
