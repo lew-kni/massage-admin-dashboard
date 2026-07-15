@@ -18,10 +18,10 @@
 
       <!-- Unavailable blocks row -->
       <div v-if="dayUnavailableBlocks.length > 0" class="flex bg-gray-100 border-b min-w-max">
-        <div class="w-32 p-3 bg-gray-50 font-semibold text-xs text-center text-gray-600 border-r">🔒 Blocked</div>
+        <div class="w-32 p-3 bg-gray-50 font-semibold text-xs text-center text-gray-600 border-r"><i class="fas fa-lock mr-1"></i>Blocked</div>
         <div v-for="hour in timeSlots" :key="'block-' + hour" class="w-16 p-1 bg-white relative border-r">
           <div v-if="hasBlockAt(hour)" class="absolute inset-0 bg-red-100 border-l-4 border-red-500 flex items-center justify-center">
-            <span class="text-xs text-red-700 font-medium">■</span>
+            <span class="text-xs text-red-700 font-medium"><i class="fas fa-square"></i></span>
           </div>
         </div>
       </div>
@@ -33,8 +33,7 @@
             {{ booking.client.firstName.substring(0, 1) }}. {{ booking.client.lastName }}
           </div>
           <div v-for="hour in timeSlots" :key="'booking-' + booking.id + '-' + hour" class="w-16 p-1 relative border-r" :class="bookingSpansHour(booking, hour) ? getBookingBgColor(booking.status) : 'bg-white'">
-            <div v-if="bookingSpansHour(booking, hour)" class="text-xs font-medium text-center py-2">
-              {{ getStatusIcon(booking.status) }}
+            <div v-if="bookingSpansHour(booking, hour)" class="text-xs font-medium text-center py-2" v-html="getStatusIcon(booking.status)">
             </div>
           </div>
         </div>
@@ -130,9 +129,9 @@ function getBookingBgColor(status: string): string {
 }
 
 function getStatusIcon(status: string): string {
-  if (status === 'PENDING') return '⏳'
-  if (status === 'CONFIRMED') return '✓'
-  if (status === 'CANCELLED') return '✕'
-  return '•'
+  if (status === 'PENDING') return '<i class="fas fa-clock"></i>'
+  if (status === 'CONFIRMED') return '<i class="fas fa-check text-green-600"></i>'
+  if (status === 'CANCELLED') return '<i class="fas fa-times text-red-600"></i>'
+  return '<i class="fas fa-circle text-xs"></i>'
 }
 </script>

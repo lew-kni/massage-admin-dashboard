@@ -3,7 +3,7 @@
     <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
       <div class="card-header flex justify-between items-center sticky top-0 bg-white">
         <h2 class="text-lg font-semibold">New Booking</h2>
-        <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">✕</button>
+        <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-xmark"></i></button>
       </div>
 
       <form @submit.prevent="submitForm" class="card-body space-y-6">

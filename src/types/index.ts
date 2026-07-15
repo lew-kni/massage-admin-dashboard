@@ -14,6 +14,32 @@ export interface Client {
   updatedAt: string
 }
 
+// Lead Types
+export interface LeadReply {
+  id: string
+  leadId: string
+  subject: string
+  body: string
+  createdAt: string
+}
+
+export interface Lead {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  service: string | null
+  location: string | null
+  message: string
+  healthNotes: string | null
+  isRead: boolean
+  clientId: string | null
+  client?: Client | null
+  replies?: LeadReply[]
+  createdAt: string
+  updatedAt: string
+}
+
 // Booking Types
 export interface Booking {
   id: string

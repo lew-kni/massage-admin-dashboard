@@ -1,13 +1,14 @@
 <template>
-  <div class="p-8">
+  <div class="p-8 dark:text-gray-50">
     <!-- Header -->
     <div class="flex justify-between items-center mb-8">
-      <RouterLink to="/bookings" class="text-sage-600 hover:text-sage-700">
-        ← Back to Bookings
+      <RouterLink to="/bookings" class="text-sage-600 hover:text-sage-700 dark:text-sage-400 dark:hover:text-sage-300">
+        <i class="fas fa-arrow-left mr-1"></i>Back to Bookings
       </RouterLink>
       <div v-if="booking" class="flex items-center gap-3">
         <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary text-sm">
-          ✎ Edit
+          <i class="fas fa-edit"></i>
+          <span>Edit</span>
         </button>
         <template v-else>
           <button @click="saveBooking" :disabled="saving" class="btn-primary text-sm">
@@ -60,7 +61,7 @@
                   :to="`/clients/${booking.clientId}`"
                   class="text-sage-600 hover:text-sage-700 text-sm font-medium"
                 >
-                  View Profile →
+                  View Profile<i class="fas fa-arrow-right ml-1"></i>
                 </RouterLink>
               </div>
               <div class="grid grid-cols-2 gap-4">
@@ -150,7 +151,7 @@
         <!-- Session & Health Details Card -->
         <div class="card">
           <div class="card-header">
-            <h2 class="text-lg font-semibold">🩺 Session &amp; Health Details</h2>
+            <h2 class="text-lg font-semibold"><i class="fas fa-heartbeat mr-2"></i>Session &amp; Health Details</h2>
           </div>
           <div class="card-body">
             <div class="grid grid-cols-2 gap-4">
@@ -219,7 +220,7 @@
         <!-- Pre-Massage Form Card -->
         <div class="card">
           <div class="card-header flex justify-between items-center">
-            <h2 class="text-lg font-semibold">📋 Pre-Massage Form</h2>
+            <h2 class="text-lg font-semibold"><i class="fas fa-clipboard mr-2"></i>Pre-Massage Form</h2>
             <span :class="['badge', getPreFormStatusClass(booking.preFormStatus || 'NOT_SENT')]">
               {{ formatPreFormStatus(booking.preFormStatus || 'NOT_SENT') }}
             </span>
@@ -230,7 +231,8 @@
               <p class="text-sm text-gray-500">This section will display the client's pre-massage form responses once they have completed the form.</p>
             </div>
             <button v-if="(booking.preFormStatus || 'NOT_SENT') === 'NOT_SENT'" class="mt-4 btn-primary text-sm">
-              ✉️ Send Form to Client
+              <i class="fas fa-envelope"></i>
+              <span>Send Form to Client</span>
             </button>
           </div>
         </div>
@@ -245,10 +247,12 @@
           </div>
           <div class="card-body space-y-3">
             <button class="btn-primary w-full text-sm">
-              ✉️ Send Email
+              <i class="fas fa-envelope"></i>
+              <span>Send Email</span>
             </button>
             <button class="btn-danger w-full text-sm">
-              🗑️ Cancel Booking
+              <i class="fas fa-trash-alt"></i>
+              <span>Cancel Booking</span>
             </button>
           </div>
         </div>
@@ -285,12 +289,13 @@
         <!-- Documents -->
         <div class="card">
           <div class="card-header">
-            <h3 class="font-semibold">📄 Documents</h3>
+            <h3 class="font-semibold"><i class="fas fa-file-lines mr-2"></i>Documents</h3>
           </div>
           <div class="card-body space-y-3">
             <p class="text-sm text-gray-500 text-center py-4">No documents uploaded yet</p>
             <button class="btn-secondary w-full text-sm">
-              📎 Upload Document
+              <i class="fas fa-paperclip"></i>
+              <span>Upload Document</span>
             </button>
           </div>
         </div>

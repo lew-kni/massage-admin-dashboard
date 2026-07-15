@@ -4,7 +4,7 @@
       <div class="card-header flex justify-between items-center sticky top-0 bg-white">
         <h2 class="text-lg font-semibold">{{ isEditMode ? 'Edit Client' : 'New Client' }}</h2>
         <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">
-          ✕
+          <i class="fas fa-xmark"></i>
         </button>
       </div>
 

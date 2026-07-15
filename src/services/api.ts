@@ -10,6 +10,8 @@ import type {
   Service,
   ServiceDuration,
   Promotion,
+  Lead,
+  LeadReply,
 } from '@/types'
 
 class ApiService {
@@ -251,6 +253,27 @@ class ApiService {
 
   async deletePromotion(id: string): Promise<void> {
     await this.client.delete(`/api/promotions/${id}`)
+  }
+
+  // Leads
+  async getLeads(clientId?: string): Promise<Lead[]> {
+    const { data } = await this.client.get('/api/leads', { params: clientId ? { clientId } : undefined })
+    return data
+  }
+
+  async getLead(id: string): Promise<Lead> {
+    const { data } = await this.client.get(`/api/leads/${id}`)
+    return data
+  }
+
+  async updateLead(id: string, lead: Partial<Pick<Lead, 'isRead'>>): Promise<Lead> {
+    const { data } = await this.client.patch(`/api/leads/${id}`, lead)
+    return data
+  }
+
+  async replyToLead(id: string, reply: { subject: string; body: string }): Promise<LeadReply> {
+    const { data } = await this.client.post(`/api/leads/${id}/reply`, reply)
+    return data
   }
 }
 

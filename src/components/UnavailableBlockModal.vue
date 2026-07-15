@@ -4,7 +4,7 @@
       <div class="card-header flex justify-between items-center">
         <h2 class="text-lg font-semibold">{{ block ? 'Edit Unavailable Block' : 'Add Unavailable Block' }}</h2>
         <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">
-          ✕
+          <i class="fas fa-xmark"></i>
         </button>
       </div>
 
@@ -18,14 +18,14 @@
               @click="blockType = 'full-day'"
               :class="['flex-1 py-2 px-3 rounded border text-sm font-medium', blockType === 'full-day' ? 'border-sage-500 bg-sage-50 text-sage-700' : 'border-gray-300']"
             >
-              📅 Full Day(s)
+<i class="fas fa-calendar-days mr-1"></i>Full Day(s)
             </button>
             <button
               type="button"
               @click="blockType = 'partial'"
               :class="['flex-1 py-2 px-3 rounded border text-sm font-medium', blockType === 'partial' ? 'border-sage-500 bg-sage-50 text-sage-700' : 'border-gray-300']"
             >
-              ⏰ Partial Day
+              <i class="fas fa-clock mr-1"></i>Partial Day
             </button>
           </div>
         </div>
@@ -119,7 +119,8 @@
             class="btn-primary"
           >
             <span v-if="loading">Saving...</span>
-            <span v-else>{{ block ? '✓ Update' : '+ Add Block' }}</span>
+            <template v-else-if="block"><i class="fas fa-check"></i><span>Update</span></template>
+            <template v-else><i class="fas fa-plus"></i><span>Add Block</span></template>
           </button>
         </div>
       </form>

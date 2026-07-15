@@ -7,14 +7,45 @@
 
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <StatCard label="Total Clients" :value="clientsCount" icon="Users" />
-      <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" />
+      <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
+      <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" :to="`/bookings?status=CONFIRMED`" />
       <StatCard label="This Month" :value="`£${monthlyRevenue}`" icon="TrendingUp" />
-      <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" />
+      <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" :to="`/bookings?status=PENDING`" />
     </div>
 
     <!-- Recent Activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Today's Bookings -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold"><i class="fas fa-calendar-day mr-2"></i>Today's Bookings</h2>
+        </div>
+        <div class="card-body">
+          <div v-if="todaysBookings.length === 0" class="text-gray-500 text-center py-8">
+            No bookings scheduled for today
+          </div>
+          <div v-else class="space-y-3">
+            <RouterLink
+              v-for="booking in todaysBookings"
+              :key="booking.id"
+              :to="`/bookings/${booking.id}`"
+              class="block border-b pb-3 last:border-0 hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
+            >
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="font-semibold text-sage-600">{{ formatTime(booking.startTime) }}</p>
+                  <p class="font-medium">{{ booking.client?.firstName }} {{ booking.client?.lastName }}</p>
+                  <p v-if="booking.service" class="text-sm text-gray-500">{{ booking.service }}</p>
+                </div>
+                <span :class="['badge', getStatusBadgeClass(booking.status)]">
+                  {{ booking.status }}
+                </span>
+              </div>
+            </RouterLink>
+          </div>
+        </div>
+      </div>
+
       <!-- Recent Bookings -->
       <div class="card">
         <div class="card-header">
@@ -25,17 +56,23 @@
             No bookings yet
           </div>
           <div v-else class="space-y-4">
-            <div v-for="booking in recentBookings" :key="booking.id" class="border-b pb-4 last:border-0">
+            <RouterLink
+              v-for="booking in recentBookings"
+              :key="booking.id"
+              :to="`/bookings/${booking.id}`"
+              class="block border-b pb-4 last:border-0 hover:bg-gray-50 -mx-2 px-2 py-1 rounded transition-colors"
+            >
               <div class="flex justify-between items-start">
                 <div>
                   <p class="font-medium">{{ booking.client?.firstName }} {{ booking.client?.lastName }}</p>
-                  <p class="text-sm text-gray-500">{{ formatDate(booking.startTime) }}</p>
+                  <p class="text-sm text-gray-500">Appointment {{ formatDate(booking.startTime) }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">Booked {{ formatDate(booking.createdAt) }}</p>
                 </div>
                 <span :class="['badge', getStatusBadgeClass(booking.status)]">
                   {{ booking.status }}
                 </span>
               </div>
-            </div>
+            </RouterLink>
           </div>
         </div>
       </div>
@@ -69,7 +106,7 @@ import { RouterLink } from 'vue-router'
 import { useClientsStore } from '@/stores/clients'
 import { apiService } from '@/services/api'
 import type { Booking } from '@/types'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, format } from 'date-fns'
 import StatCard from '@/components/StatCard.vue'
 
 const clientsStore = useClientsStore()
@@ -87,11 +124,34 @@ const monthlyRevenue = computed(() => {
   return (upcomingBookingsCount.value * 50).toFixed(2)
 })
 
-const recentBookings = computed(() => bookings.value.slice(0, 5))
+const todaysBookings = computed(() => {
+  const now = new Date()
+  return bookings.value
+    .filter((b) => {
+      const start = new Date(b.startTime)
+      return (
+        b.status !== 'CANCELLED' &&
+        start.getFullYear() === now.getFullYear() &&
+        start.getMonth() === now.getMonth() &&
+        start.getDate() === now.getDate()
+      )
+    })
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+})
+
+const recentBookings = computed(() =>
+  [...bookings.value]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5)
+)
 const recentClients = computed(() => clientsStore.clients.slice(0, 5))
 
 function formatDate(date: string) {
   return formatDistanceToNow(new Date(date), { addSuffix: true })
+}
+
+function formatTime(date: string) {
+  return format(new Date(date), 'h:mm a')
 }
 
 function getStatusBadgeClass(status: string) {

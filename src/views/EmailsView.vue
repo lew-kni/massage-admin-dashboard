@@ -8,7 +8,7 @@
     <!-- Email Settings Alert -->
     <div class="card mb-8 p-4 bg-blue-50 border-blue-200">
       <p class="text-sm text-blue-700">
-        <strong>📧 Note:</strong> Email sending is currently disabled for local development.
+        <strong><i class="fas fa-envelope mr-1"></i>Note:</strong> Email sending is currently disabled for local development.
         Set <code class="bg-white px-2 py-1 rounded">EMAILS_ENABLED=true</code> in your environment to enable sending.
       </p>
     </div>
@@ -19,13 +19,13 @@
         @click="activeTab = 'templates'"
         :class="['px-4 py-3 font-medium border-b-2', activeTab === 'templates' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
       >
-        📋 Email Templates
+<i class="fas fa-envelope-open-text mr-2"></i>Email Templates
       </button>
       <button
         @click="activeTab = 'history'"
         :class="['px-4 py-3 font-medium border-b-2', activeTab === 'history' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
       >
-        📧 Send History
+        <i class="fas fa-clock-rotate-left mr-2"></i>Send History
       </button>
     </div>
 

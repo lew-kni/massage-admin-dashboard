@@ -1,11 +1,12 @@
 <template>
-  <div class="p-8">
+  <div class="p-8 dark:text-gray-50">
     <div class="flex justify-between items-center mb-8">
-      <RouterLink to="/clients" class="text-sage-600 hover:text-sage-700">
-        ← Back to Clients
+      <RouterLink to="/clients" class="text-sage-600 hover:text-sage-700 dark:text-sage-400 dark:hover:text-sage-300">
+<i class="fas fa-arrow-left mr-1"></i>Back to Clients
       </RouterLink>
       <button v-if="clientsStore.currentClient" @click="editMode = true" class="btn-secondary text-sm">
-        ✎ Edit
+        <i class="fas fa-edit"></i>
+        <span>Edit</span>
       </button>
     </div>
 
@@ -94,7 +95,7 @@
 
             <!-- Notes Timeline -->
             <div class="border-t pt-6">
-              <h3 class="font-semibold text-gray-900 mb-4">📝 Notes</h3>
+              <h3 class="font-semibold text-gray-900 mb-4"><i class="fas fa-note-sticky mr-2"></i>Notes</h3>
 
               <!-- Add New Note -->
               <div class="mb-6 pb-6 border-b">
@@ -110,14 +111,15 @@
                   :disabled="addingNote"
                   class="mt-2 btn-primary text-sm"
                 >
-                  {{ addingNote ? 'Adding...' : '✓ Add Note' }}
+                  <span v-if="addingNote">Adding...</span>
+                  <template v-else><i class="fas fa-check"></i><span>Add Note</span></template>
                 </button>
               </div>
 
               <!-- Notes List -->
               <div v-if="notesList.length > 0" class="space-y-4">
                 <div
-                  v-for="(note, index) in notesList"
+                  v-for="(note, index) in paginatedNotes"
                   :key="index"
                   class="border-l-4 border-sage-300 pl-4 py-2"
                 >
@@ -136,6 +138,7 @@
                   </div>
                   <p class="text-gray-700 text-sm whitespace-pre-wrap">{{ note.text }}</p>
                 </div>
+                <Pagination v-model="notesPage" :total-pages="notesTotalPages" />
               </div>
               <div v-else class="text-center py-8 text-gray-400">
                 No notes yet. Add your first note above.
@@ -144,12 +147,40 @@
           </div>
         </div>
 
+        <!-- Leads Section -->
+        <div v-if="clientLeads.length > 0" class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold"><i class="fas fa-inbox mr-2"></i>Leads</h2>
+          </div>
+          <div class="card-body space-y-1">
+            <RouterLink
+              v-for="lead in paginatedLeads"
+              :key="lead.id"
+              :to="`/leads/${lead.id}`"
+              class="block border-b last:border-0 -mx-2 px-2 py-3 rounded hover:bg-gray-50 transition group"
+            >
+              <div class="flex justify-between items-start">
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium group-hover:text-sage-600 truncate">{{ lead.message }}</p>
+                  <p class="text-sm text-gray-500">{{ formatDate(lead.createdAt) }}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span v-if="!lead.isRead" class="badge badge-warning">Unread</span>
+                  <i class="fas fa-arrow-right text-gray-300 group-hover:text-sage-500"></i>
+                </div>
+              </div>
+            </RouterLink>
+            <Pagination v-model="leadsPage" :total-pages="leadsTotalPages" />
+          </div>
+        </div>
+
         <!-- Bookings Section -->
         <div class="card">
           <div class="card-header flex justify-between items-center">
-            <h2 class="text-lg font-semibold">📅 Bookings</h2>
-            <button @click="showNewBooking = true" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
-              + New Booking
+            <h2 class="text-lg font-semibold"><i class="fas fa-calendar-days mr-2"></i>Bookings</h2>
+            <button @click="showNewBooking = true" class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
+              <i class="fas fa-plus"></i>
+              <span>New Booking</span>
             </button>
           </div>
           <div class="card-body">
@@ -158,7 +189,7 @@
             </div>
             <div v-else class="space-y-1">
               <RouterLink
-                v-for="booking in bookings"
+                v-for="booking in paginatedBookings"
                 :key="booking.id"
                 :to="`/bookings/${booking.id}`"
                 class="block border-b last:border-0 -mx-2 px-2 py-3 rounded hover:bg-gray-50 transition group"
@@ -177,11 +208,12 @@
                     <span :class="['badge', getStatusClass(booking.status)]">
                       {{ booking.status }}
                     </span>
-                    <span class="text-gray-300 group-hover:text-sage-500">→</span>
+                    <i class="fas fa-arrow-right text-gray-300 group-hover:text-sage-500"></i>
                   </div>
                 </div>
                 <p v-if="booking.notes" class="text-sm text-gray-600 mt-2 line-clamp-2">{{ booking.notes }}</p>
               </RouterLink>
+              <Pagination v-model="bookingsPage" :total-pages="bookingsTotalPages" />
             </div>
           </div>
         </div>
@@ -189,9 +221,10 @@
         <!-- Communications Section -->
         <div class="card">
           <div class="card-header flex justify-between items-center">
-            <h2 class="text-lg font-semibold">✉️ Communications</h2>
-            <button class="text-sage-600 hover:text-sage-700 text-sm font-medium">
-              + Send Email
+            <h2 class="text-lg font-semibold"><i class="fas fa-envelope mr-2"></i>Communications</h2>
+            <button class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
+              <i class="fas fa-plus"></i>
+              <span>Send Email</span>
             </button>
           </div>
           <div class="card-body">
@@ -199,7 +232,7 @@
               No communications yet
             </div>
             <div v-else class="space-y-4">
-              <div v-for="comm in communications" :key="comm.id" class="border-b pb-4 last:border-0">
+              <div v-for="comm in paginatedCommunications" :key="comm.id" class="border-b pb-4 last:border-0">
                 <div class="flex justify-between items-start">
                   <div class="flex-1">
                     <p class="font-medium text-sm">{{ comm.subject }}</p>
@@ -210,6 +243,7 @@
                   </span>
                 </div>
               </div>
+              <Pagination v-model="communicationsPage" :total-pages="communicationsTotalPages" />
             </div>
           </div>
         </div>
@@ -224,16 +258,20 @@
           </div>
           <div class="card-body space-y-3">
             <button class="btn-primary w-full text-sm">
-              ✉️ Send Email
+              <i class="fas fa-envelope"></i>
+              <span>Send Email</span>
             </button>
             <button @click="showNewBooking = true" class="btn-secondary w-full text-sm">
-              📅 New Booking
+              <i class="fas fa-calendar-days"></i>
+              <span>New Booking</span>
             </button>
             <button class="btn-secondary w-full text-sm">
-              📄 Add Document
+              <i class="fas fa-file-lines"></i>
+              <span>Add Document</span>
             </button>
             <button @click="confirmDelete" class="btn-danger w-full text-sm">
-              🗑️ Delete Client
+              <i class="fas fa-trash-alt"></i>
+              <span>Delete Client</span>
             </button>
           </div>
         </div>
@@ -318,25 +356,54 @@
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useClientsStore } from '@/stores/clients'
+import { useLeadsStore } from '@/stores/leads'
 import { apiService } from '@/services/api'
 import { formatDistanceToNow, format } from 'date-fns'
-import type { Booking, Communication } from '@/types'
+import type { Booking, Communication, Lead } from '@/types'
 import ClientForm from '@/components/ClientForm.vue'
 import NewBookingModal from '@/components/NewBookingModal.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const route = useRoute()
 const router = useRouter()
 const clientsStore = useClientsStore()
+const leadsStore = useLeadsStore()
 const editMode = ref(false)
 const showNewBooking = ref(false)
 const showDeleteConfirm = ref(false)
 const deletingClient = ref(false)
 const bookings = ref<Booking[]>([])
+const clientLeads = ref<Lead[]>([])
 const communications = ref<Communication[]>([])
 const newNote = ref('')
 const addingNote = ref(false)
 const notesList = ref<Array<{ text: string; createdAt: string; editedAt?: string }>>([])
 const selectedNoteEditTime = ref<string | null>(null)
+
+// Embedded component lists default to 3 per page
+const COMPONENT_PAGE_SIZE = 3
+const notesPage = ref(1)
+const leadsPage = ref(1)
+const bookingsPage = ref(1)
+const communicationsPage = ref(1)
+
+const notesTotalPages = computed(() => Math.max(1, Math.ceil(notesList.value.length / COMPONENT_PAGE_SIZE)))
+const leadsTotalPages = computed(() => Math.max(1, Math.ceil(clientLeads.value.length / COMPONENT_PAGE_SIZE)))
+const bookingsTotalPages = computed(() => Math.max(1, Math.ceil(bookings.value.length / COMPONENT_PAGE_SIZE)))
+const communicationsTotalPages = computed(() => Math.max(1, Math.ceil(communications.value.length / COMPONENT_PAGE_SIZE)))
+
+const paginatedNotes = computed(() =>
+  notesList.value.slice((notesPage.value - 1) * COMPONENT_PAGE_SIZE, notesPage.value * COMPONENT_PAGE_SIZE)
+)
+const paginatedLeads = computed(() =>
+  clientLeads.value.slice((leadsPage.value - 1) * COMPONENT_PAGE_SIZE, leadsPage.value * COMPONENT_PAGE_SIZE)
+)
+const paginatedBookings = computed(() =>
+  bookings.value.slice((bookingsPage.value - 1) * COMPONENT_PAGE_SIZE, bookingsPage.value * COMPONENT_PAGE_SIZE)
+)
+const paginatedCommunications = computed(() =>
+  communications.value.slice((communicationsPage.value - 1) * COMPONENT_PAGE_SIZE, communicationsPage.value * COMPONENT_PAGE_SIZE)
+)
 
 function formatDate(date: string) {
   return formatDistanceToNow(new Date(date), { addSuffix: true })
@@ -402,6 +469,9 @@ async function loadClientData() {
 
     // Load communications for this client
     communications.value = await apiService.getClientCommunications(clientId)
+
+    // Load leads linked to this client
+    clientLeads.value = await leadsStore.fetchLeadsForClient(clientId)
   } catch (error) {
     console.error('Failed to load client data:', error)
   }
@@ -449,6 +519,7 @@ async function addNote() {
 
     // Add to local list
     notesList.value.unshift(note)
+    notesPage.value = 1
 
     // Store as JSON array in the notes field
     const updatedNotes = JSON.stringify(notesList.value)

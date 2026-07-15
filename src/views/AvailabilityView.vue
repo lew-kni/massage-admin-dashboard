@@ -11,13 +11,13 @@
         @click="activeTab = 'general'"
         :class="['px-4 py-3 font-medium border-b-2', activeTab === 'general' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
       >
-        📅 General Availability
+<i class="fas fa-calendar-days mr-2"></i>General Availability
       </button>
       <button
         @click="activeTab = 'unavailable'"
         :class="['px-4 py-3 font-medium border-b-2', activeTab === 'unavailable' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
       >
-        🚫 Unavailable Blocks
+        <i class="fas fa-ban mr-2"></i>Unavailable Blocks
       </button>
     </div>
 
@@ -27,7 +27,8 @@
         <div class="card-header flex justify-between items-center">
           <h2 class="text-lg font-semibold">Weekly Schedule</h2>
           <button @click="saveGeneralAvailability" class="btn-primary text-sm">
-            💾 Save Changes
+<i class="fas fa-floppy-disk"></i>
+            <span>Save Changes</span>
           </button>
         </div>
         <div class="card-body">
@@ -69,43 +70,50 @@
           @click="unavailableFilter = 'future'"
           :class="['btn-secondary text-sm', unavailableFilter === 'future' && 'ring-2 ring-sage-500']"
         >
-          📍 Future ({{ futureBlocks.length }})
+<i class="fas fa-location-dot mr-1"></i>Future ({{ futureBlocks.length }})
         </button>
         <button
           @click="unavailableFilter = 'past'"
           :class="['btn-secondary text-sm', unavailableFilter === 'past' && 'ring-2 ring-sage-500']"
         >
-          ✓ Past ({{ pastBlocks.length }})
+          <i class="fas fa-check mr-1"></i>Past ({{ pastBlocks.length }})
         </button>
         <button
           @click="showAddBlockModal = true"
           class="btn-primary text-sm ml-auto"
         >
-          + Add Block
+          <i class="fas fa-plus"></i>
+          <span>Add Block</span>
         </button>
       </div>
 
       <!-- Future Blocks -->
-      <div v-if="unavailableFilter === 'future' && futureBlocks.length > 0" class="space-y-3">
-        <UnavailableBlockCard
-          v-for="block in futureBlocks"
-          :key="block.id"
-          :block="block"
-          @edit="editBlock"
-          @delete="deleteBlock"
-        />
+      <div v-if="unavailableFilter === 'future' && futureBlocks.length > 0">
+        <div class="space-y-3">
+          <UnavailableBlockCard
+            v-for="block in paginatedFutureBlocks"
+            :key="block.id"
+            :block="block"
+            @edit="editBlock"
+            @delete="deleteBlock"
+          />
+        </div>
+        <Pagination v-model="futurePage" :total-pages="futureTotalPages" />
       </div>
 
       <!-- Past Blocks -->
-      <div v-if="unavailableFilter === 'past' && pastBlocks.length > 0" class="space-y-3">
-        <UnavailableBlockCard
-          v-for="block in pastBlocks"
-          :key="block.id"
-          :block="block"
-          :editable="false"
-          @edit="editBlock"
-          @delete="deleteBlock"
-        />
+      <div v-if="unavailableFilter === 'past' && pastBlocks.length > 0">
+        <div class="space-y-3">
+          <UnavailableBlockCard
+            v-for="block in paginatedPastBlocks"
+            :key="block.id"
+            :block="block"
+            :editable="false"
+            @edit="editBlock"
+            @delete="deleteBlock"
+          />
+        </div>
+        <Pagination v-model="pastPage" :total-pages="pastTotalPages" />
       </div>
 
       <!-- Empty State -->
@@ -132,6 +140,7 @@ import { useAvailabilityStore } from '@/stores/availability'
 import type { UnavailableBlock } from '@/types'
 import UnavailableBlockCard from '@/components/UnavailableBlockCard.vue'
 import UnavailableBlockModal from '@/components/UnavailableBlockModal.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const availabilityStore = useAvailabilityStore()
 const activeTab = ref<'general' | 'unavailable'>('general')
@@ -164,6 +173,20 @@ const pastBlocks = computed(() => {
     .filter(block => new Date(block.endDate) <= now)
     .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())
 })
+
+const PAGE_SIZE = 10
+const futurePage = ref(1)
+const pastPage = ref(1)
+
+const futureTotalPages = computed(() => Math.max(1, Math.ceil(futureBlocks.value.length / PAGE_SIZE)))
+const pastTotalPages = computed(() => Math.max(1, Math.ceil(pastBlocks.value.length / PAGE_SIZE)))
+
+const paginatedFutureBlocks = computed(() =>
+  futureBlocks.value.slice((futurePage.value - 1) * PAGE_SIZE, futurePage.value * PAGE_SIZE)
+)
+const paginatedPastBlocks = computed(() =>
+  pastBlocks.value.slice((pastPage.value - 1) * PAGE_SIZE, pastPage.value * PAGE_SIZE)
+)
 
 async function saveGeneralAvailability() {
   // TODO: Save to backend

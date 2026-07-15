@@ -60,7 +60,8 @@
                   class="btn-primary text-xs py-1 px-2 whitespace-nowrap"
                   title="Confirm booking"
                 >
-                  ✓ Confirm
+<i class="fas fa-check"></i>
+                  <span>Confirm</span>
                 </button>
                 <button
                   v-if="booking.status === 'PENDING'"
@@ -68,7 +69,8 @@
                   class="btn-danger text-xs py-1 px-2 whitespace-nowrap"
                   title="Reject booking"
                 >
-                  ✕ Reject
+                  <i class="fas fa-times"></i>
+                  <span>Reject</span>
                 </button>
                 <button
                   v-else-if="booking.status === 'CONFIRMED'"
@@ -83,7 +85,8 @@
                   class="btn-secondary text-xs py-1 px-2 whitespace-nowrap"
                   title="Edit booking"
                 >
-                  ✎ Edit
+                  <i class="fas fa-edit"></i>
+                  <span>Edit</span>
                 </button>
               </div>
             </td>

@@ -1,12 +1,13 @@
 <template>
-  <div class="p-8">
+  <div class="p-8 dark:text-gray-50">
     <div class="flex justify-between items-center mb-8">
       <div>
-        <h1>Clients</h1>
-        <p class="text-gray-600 mt-2">Manage your massage therapy clients</p>
+        <h1 class="dark:text-gray-50">Clients</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">Manage your massage therapy clients</p>
       </div>
       <button @click="showForm = true" class="btn-primary">
-        + New Client
+        <i class="fas fa-plus"></i>
+        <span>New Client</span>
       </button>
     </div>
 
@@ -44,7 +45,7 @@
             </tr>
           </thead>
           <tbody class="divide-y">
-            <tr v-for="client in clientsStore.filteredClients" :key="client.id" class="hover:bg-gray-50">
+            <tr v-for="client in paginatedClients" :key="client.id" class="hover:bg-gray-50">
               <td class="px-6 py-4">
                 <button
                   @click="showClientDetail(client)"
@@ -74,6 +75,10 @@
           {{ clientsStore.clients.length === 0 ? 'No clients yet. Create one to get started!' : 'No clients match your search' }}
         </p>
       </div>
+
+      <div class="pb-4">
+        <Pagination v-model="currentPage" :total-pages="totalPages" />
+      </div>
     </div>
 
     <!-- Client Form Modal -->
@@ -87,17 +92,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useClientsStore } from '@/stores/clients'
 import { formatDistanceToNow } from 'date-fns'
 import type { Client } from '@/types'
 import ClientForm from '@/components/ClientForm.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const router = useRouter()
 const clientsStore = useClientsStore()
 const showForm = ref(false)
 const selectedClient = ref<Client | undefined>()
+
+const PAGE_SIZE = 10
+const currentPage = ref(1)
+const totalPages = computed(() => Math.max(1, Math.ceil(clientsStore.filteredClients.length / PAGE_SIZE)))
+const paginatedClients = computed(() =>
+  clientsStore.filteredClients.slice((currentPage.value - 1) * PAGE_SIZE, currentPage.value * PAGE_SIZE)
+)
+
+watch(() => clientsStore.filteredClients.length, () => {
+  currentPage.value = 1
+})
 
 function formatDate(date: string) {
   return formatDistanceToNow(new Date(date), { addSuffix: true })

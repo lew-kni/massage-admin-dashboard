@@ -1,30 +1,33 @@
 <template>
-  <div class="p-8">
+  <div class="p-8 dark:text-gray-50">
     <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900">Services &amp; Promotions</h1>
-      <p class="text-gray-600 mt-2">Manage what you offer, session lengths, pricing, and campaigns</p>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-50">Services &amp; Promotions</h1>
+      <p class="text-gray-600 dark:text-gray-400 mt-2">Manage what you offer, session lengths, pricing, and campaigns</p>
     </div>
 
     <!-- Tabs -->
-    <div class="flex gap-2 mb-8 border-b">
+    <div class="flex gap-2 mb-8 border-b dark:border-gray-700">
       <button
         @click="activeTab = 'services'"
-        :class="['px-4 py-3 font-medium border-b-2', activeTab === 'services' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
+        :class="['px-4 py-3 font-medium border-b-2', activeTab === 'services' ? 'border-sage-600 text-sage-600 dark:text-sage-400' : 'border-transparent text-gray-600 dark:text-gray-400']"
       >
-        💆 Services
+        <i class="fas fa-spa mr-2"></i>Services
       </button>
       <button
         @click="activeTab = 'promotions'"
-        :class="['px-4 py-3 font-medium border-b-2', activeTab === 'promotions' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
+        :class="['px-4 py-3 font-medium border-b-2', activeTab === 'promotions' ? 'border-sage-600 text-sage-600 dark:text-sage-400' : 'border-transparent text-gray-600 dark:text-gray-400']"
       >
-        🏷️ Promotions
+        <i class="fas fa-tag mr-2"></i>Promotions
       </button>
     </div>
 
     <!-- Services Tab -->
     <div v-if="activeTab === 'services'" class="space-y-4">
       <div class="flex justify-end">
-        <button @click="newService" class="btn-primary text-sm">+ New Service</button>
+        <button @click="newService" class="btn-primary text-sm">
+          <i class="fas fa-plus"></i>
+          <span>New Service</span>
+        </button>
       </div>
 
       <div v-if="store.loading && store.services.length === 0" class="text-center py-12 text-gray-500">
@@ -36,7 +39,7 @@
       </div>
 
       <div
-        v-for="service in store.services"
+        v-for="service in paginatedServices"
         :key="service.id"
         class="card"
         :class="{ 'opacity-60': !service.isActive }"
@@ -56,8 +59,13 @@
               <p class="text-sm text-gray-700 mt-2">{{ service.summary }}</p>
             </div>
             <div class="flex gap-2 shrink-0">
-              <button @click="editService(service)" class="btn-secondary text-sm">✎ Edit</button>
-              <button @click="confirmDeleteService(service)" class="btn-danger text-sm">🗑️</button>
+              <button @click="editService(service)" class="btn-secondary text-sm">
+                <i class="fas fa-edit"></i>
+                <span>Edit</span>
+              </button>
+              <button @click="confirmDeleteService(service)" class="btn-danger text-sm">
+                <i class="fas fa-trash-alt"></i>
+              </button>
             </div>
           </div>
 
@@ -76,19 +84,24 @@
           </div>
         </div>
       </div>
+
+      <Pagination v-model="servicesPage" :total-pages="servicesTotalPages" />
     </div>
 
     <!-- Promotions Tab -->
     <div v-if="activeTab === 'promotions'" class="space-y-4">
       <div class="flex justify-end">
-        <button @click="newPromotion" class="btn-primary text-sm">+ New Promotion</button>
+        <button @click="newPromotion" class="btn-primary text-sm">
+          <i class="fas fa-plus"></i>
+          <span>New Promotion</span>
+        </button>
       </div>
 
       <div v-if="store.promotions.length === 0" class="card p-12 text-center text-gray-500">
         No promotions yet.
       </div>
 
-      <div v-for="promo in store.promotions" :key="promo.id" class="card" :class="{ 'opacity-60': !promo.active }">
+      <div v-for="promo in paginatedPromotions" :key="promo.id" class="card" :class="{ 'opacity-60': !promo.active }">
         <div class="card-body flex justify-between items-start">
           <div>
             <div class="flex items-center gap-2">
@@ -105,11 +118,18 @@
             </p>
           </div>
           <div class="flex gap-2 shrink-0">
-            <button @click="editPromotion(promo)" class="btn-secondary text-sm">✎ Edit</button>
-            <button @click="confirmDeletePromotion(promo)" class="btn-danger text-sm">🗑️</button>
+            <button @click="editPromotion(promo)" class="btn-secondary text-sm">
+              <i class="fas fa-edit"></i>
+              <span>Edit</span>
+            </button>
+            <button @click="confirmDeletePromotion(promo)" class="btn-danger text-sm">
+              <i class="fas fa-trash-alt"></i>
+            </button>
           </div>
         </div>
       </div>
+
+      <Pagination v-model="promotionsPage" :total-pages="promotionsTotalPages" />
     </div>
 
     <!-- Modals -->
@@ -129,11 +149,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useServicesStore } from '@/stores/services'
 import type { Service, Promotion } from '@/types'
 import ServiceFormModal from '@/components/ServiceFormModal.vue'
 import PromotionFormModal from '@/components/PromotionFormModal.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const store = useServicesStore()
 const activeTab = ref<'services' | 'promotions'>('services')
@@ -142,6 +163,20 @@ const showServiceModal = ref(false)
 const editingService = ref<Service | null>(null)
 const showPromotionModal = ref(false)
 const editingPromotion = ref<Promotion | null>(null)
+
+const PAGE_SIZE = 10
+const servicesPage = ref(1)
+const promotionsPage = ref(1)
+
+const servicesTotalPages = computed(() => Math.max(1, Math.ceil(store.services.length / PAGE_SIZE)))
+const promotionsTotalPages = computed(() => Math.max(1, Math.ceil(store.promotions.length / PAGE_SIZE)))
+
+const paginatedServices = computed(() =>
+  store.services.slice((servicesPage.value - 1) * PAGE_SIZE, servicesPage.value * PAGE_SIZE)
+)
+const paginatedPromotions = computed(() =>
+  store.promotions.slice((promotionsPage.value - 1) * PAGE_SIZE, promotionsPage.value * PAGE_SIZE)
+)
 
 function newService() {
   editingService.value = null

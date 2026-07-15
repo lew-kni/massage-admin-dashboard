@@ -11,13 +11,13 @@
         @click="viewMode = 'list'"
         :class="['px-4 py-3 font-medium border-b-2', viewMode === 'list' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
       >
-        📋 List
+        <i class="fas fa-list mr-2"></i>List
       </button>
       <button
         @click="viewMode = 'calendar'"
         :class="['px-4 py-3 font-medium border-b-2', viewMode === 'calendar' ? 'border-sage-600 text-sage-600' : 'border-transparent text-gray-600']"
       >
-        📅 Calendar View
+        <i class="fas fa-calendar-days mr-2"></i>Calendar View
       </button>
     </div>
 
@@ -58,13 +58,15 @@
             @click="listDisplayMode = 'cards'"
             :class="['px-3 py-1 rounded text-sm font-medium transition', listDisplayMode === 'cards' ? 'bg-white text-sage-600 shadow' : 'text-gray-600 hover:text-gray-700']"
           >
-            📇 Cards
+            <i class="fas fa-th"></i>
+            <span>Cards</span>
           </button>
           <button
             @click="listDisplayMode = 'table'"
             :class="['px-3 py-1 rounded text-sm font-medium transition', listDisplayMode === 'table' ? 'bg-white text-sage-600 shadow' : 'text-gray-600 hover:text-gray-700']"
           >
-            📊 Table
+            <i class="fas fa-table"></i>
+            <span>Table</span>
           </button>
         </div>
       </div>
@@ -87,10 +89,10 @@
         <div v-if="listDisplayMode === 'cards'" class="space-y-6">
           <!-- Pending Bookings (grouped) -->
           <div v-if="pendingBookings.length > 0 && (!filterStatus || filterStatus === 'PENDING')">
-            <h2 class="text-lg font-semibold text-orange-600 mb-3">⏳ Pending Review ({{ pendingBookings.length }})</h2>
+            <h2 class="text-lg font-semibold text-orange-600 mb-3"><i class="fas fa-hourglass-half mr-2"></i>Pending Review ({{ pendingBookings.length }})</h2>
             <div class="space-y-3">
               <BookingCard
-                v-for="booking in pendingBookings"
+                v-for="booking in paginatedPendingBookings"
                 :key="booking.id"
                 :booking="booking"
                 :pending="true"
@@ -99,14 +101,15 @@
                 @edit="editBooking"
               />
             </div>
+            <Pagination v-model="pendingPage" :total-pages="pendingTotalPages" />
           </div>
 
           <!-- Confirmed Bookings (by date) -->
           <div v-if="confirmedBookings.length > 0 && (!filterStatus || filterStatus === 'CONFIRMED')">
-            <h2 class="text-lg font-semibold text-green-600 mb-3">✓ Confirmed ({{ confirmedBookings.length }})</h2>
+            <h2 class="text-lg font-semibold text-green-600 mb-3"><i class="fas fa-check mr-2"></i>Confirmed ({{ confirmedBookings.length }})</h2>
             <div class="space-y-3">
               <BookingCard
-                v-for="booking in confirmedBookings"
+                v-for="booking in paginatedConfirmedBookings"
                 :key="booking.id"
                 :booking="booking"
                 :pending="false"
@@ -114,14 +117,15 @@
                 @edit="editBooking"
               />
             </div>
+            <Pagination v-model="confirmedPage" :total-pages="confirmedTotalPages" />
           </div>
 
           <!-- Rejected Bookings -->
           <div v-if="rejectedBookings.length > 0 && (!filterStatus || filterStatus === 'CANCELLED')">
-            <h2 class="text-lg font-semibold text-red-600 mb-3">✕ Rejected ({{ rejectedBookings.length }})</h2>
+            <h2 class="text-lg font-semibold text-red-600 mb-3"><i class="fas fa-times mr-2"></i>Rejected ({{ rejectedBookings.length }})</h2>
             <div class="space-y-3">
               <BookingCard
-                v-for="booking in rejectedBookings"
+                v-for="booking in paginatedRejectedBookings"
                 :key="booking.id"
                 :booking="booking"
                 :pending="false"
@@ -129,6 +133,7 @@
                 @edit="editBooking"
               />
             </div>
+            <Pagination v-model="rejectedPage" :total-pages="rejectedTotalPages" />
           </div>
 
           <!-- No Bookings -->
@@ -150,26 +155,7 @@
             @edit="editBooking"
           />
 
-          <!-- Pagination Controls -->
-          <div v-if="totalPages > 1" class="flex items-center justify-center gap-2">
-            <button
-              @click="currentPage = Math.max(1, currentPage - 1)"
-              :disabled="currentPage === 1"
-              class="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              ← Previous
-            </button>
-            <div class="text-sm text-gray-600">
-              Page {{ currentPage }} of {{ totalPages }}
-            </div>
-            <button
-              @click="currentPage = Math.min(totalPages, currentPage + 1)"
-              :disabled="currentPage === totalPages"
-              class="px-3 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next →
-            </button>
-          </div>
+          <Pagination v-model="currentPage" :total-pages="totalPages" />
         </div>
       </div>
     </div>
@@ -203,13 +189,13 @@
         <!-- Navigation controls -->
         <div class="flex items-center gap-4">
           <button @click="goToPreviousDay" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">
-            ← Prev Day
+            <i class="fas fa-chevron-left mr-1"></i>Prev Day
           </button>
           <button @click="goToToday" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 font-medium">
             Today
           </button>
           <button @click="goToNextDay" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">
-            Next Day →
+            Next Day<i class="fas fa-chevron-right ml-1"></i>
           </button>
           <label class="text-sm font-medium text-gray-700 ml-4">Select Date:</label>
           <input
@@ -218,7 +204,7 @@
             type="date"
             class="px-3 py-2 border border-gray-300 rounded-md text-sm"
           />
-          <span v-if="isToday(selectedCalendarDate)" class="text-xs text-blue-600 font-medium">● Today</span>
+          <span v-if="isToday(selectedCalendarDate)" class="text-xs text-blue-600 font-medium"><i class="fas fa-circle mr-1" style="font-size: 0.5em; vertical-align: middle;"></i>Today</span>
         </div>
 
         <div class="card overflow-hidden">
@@ -242,7 +228,7 @@
               <div class="flex-1 relative bg-white">
                 <!-- Unavailable block for this hour -->
                 <div v-if="hasUnavailableAt(hour)" class="absolute inset-0 bg-red-50 border-l-4 border-red-500 flex items-center pl-2">
-                  <span class="text-xs text-red-700 font-medium">🔒</span>
+                  <span class="text-xs text-red-700 font-medium"><i class="fas fa-lock"></i></span>
                 </div>
               </div>
             </div>
@@ -284,13 +270,13 @@
         <!-- Navigation controls -->
         <div class="flex items-center gap-4">
           <button @click="goToPreviousWeek" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">
-            ← Prev Week
+            <i class="fas fa-chevron-left mr-1"></i>Prev Week
           </button>
           <button @click="goToToday" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 font-medium">
             Today
           </button>
           <button @click="goToNextWeek" class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">
-            Next Week →
+            Next Week<i class="fas fa-chevron-right ml-1"></i>
           </button>
         </div>
 
@@ -318,7 +304,7 @@
             <div v-for="hour in timeSlots" :key="'slot-' + dayIdx + '-' + hour" class="bg-white relative" style="min-height: 60px;">
               <!-- Unavailable blocks -->
               <div v-if="hasUnavailableAtDay(day, hour)" class="absolute inset-0 bg-red-50 border-l-4 border-red-500 flex items-center pl-1">
-                <span class="text-xs text-red-700 font-medium">🔒</span>
+                <span class="text-xs text-red-700 font-medium"><i class="fas fa-lock"></i></span>
               </div>
             </div>
 
@@ -360,13 +346,13 @@
               @click="goToPreviousMonth"
               class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
             >
-              ← Prev
+<i class="fas fa-chevron-left mr-1"></i>Prev
             </button>
             <button
               @click="goToNextMonth"
               class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50"
             >
-              Next →
+              Next<i class="fas fa-chevron-right ml-1"></i>
             </button>
           </div>
         </div>
@@ -400,7 +386,7 @@
 
               <!-- Unavailable indicators -->
               <div v-if="hasUnavailableDay(day)" class="text-xs p-1 rounded bg-red-50 text-red-700 font-medium truncate">
-                🔒 Blocked
+<i class="fas fa-lock mr-1"></i>Blocked
               </div>
             </div>
           </div>
@@ -427,7 +413,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAvailabilityStore } from '@/stores/availability'
 import type { Booking } from '@/types'
@@ -435,8 +421,10 @@ import BookingCard from '@/components/BookingCard.vue'
 import BookingTableView from '@/components/BookingTableView.vue'
 import BookingModal from '@/components/BookingModal.vue'
 import BookingSidePanel from '@/components/BookingSidePanel.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const router = useRouter()
+const route = useRoute()
 const bookingsStore = useBookingsStore()
 const availabilityStore = useAvailabilityStore()
 const viewMode = ref<'list' | 'calendar'>('list')
@@ -484,6 +472,25 @@ const rejectedBookings = computed(() => {
     .filter(b => b.status === 'CANCELLED')
     .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
 })
+
+const CARD_PAGE_SIZE = 5
+const pendingPage = ref(1)
+const confirmedPage = ref(1)
+const rejectedPage = ref(1)
+
+const pendingTotalPages = computed(() => Math.max(1, Math.ceil(pendingBookings.value.length / CARD_PAGE_SIZE)))
+const confirmedTotalPages = computed(() => Math.max(1, Math.ceil(confirmedBookings.value.length / CARD_PAGE_SIZE)))
+const rejectedTotalPages = computed(() => Math.max(1, Math.ceil(rejectedBookings.value.length / CARD_PAGE_SIZE)))
+
+const paginatedPendingBookings = computed(() =>
+  pendingBookings.value.slice((pendingPage.value - 1) * CARD_PAGE_SIZE, pendingPage.value * CARD_PAGE_SIZE)
+)
+const paginatedConfirmedBookings = computed(() =>
+  confirmedBookings.value.slice((confirmedPage.value - 1) * CARD_PAGE_SIZE, confirmedPage.value * CARD_PAGE_SIZE)
+)
+const paginatedRejectedBookings = computed(() =>
+  rejectedBookings.value.slice((rejectedPage.value - 1) * CARD_PAGE_SIZE, rejectedPage.value * CARD_PAGE_SIZE)
+)
 
 const unavailableBlocks = computed(() => {
   return availabilityStore.unavailableBlocks
@@ -551,10 +558,10 @@ function getBookingBg(status: string): string {
 }
 
 function getStatusIcon(status: string): string {
-  if (status === 'PENDING') return '⏳'
-  if (status === 'CONFIRMED') return '✓'
-  if (status === 'CANCELLED') return '✕'
-  return '•'
+  if (status === 'PENDING') return '<i class="fas fa-clock"></i>'
+  if (status === 'CONFIRMED') return '<i class="fas fa-check text-green-600"></i>'
+  if (status === 'CANCELLED') return '<i class="fas fa-times text-red-600"></i>'
+  return '<i class="fas fa-circle text-xs"></i>'
 }
 
 function getBookingsForHour(hour: number): Booking[] {
@@ -779,10 +786,18 @@ function handleBookingSaved() {
 
 watch(filterStatus, () => {
   currentPage.value = 1
+  pendingPage.value = 1
+  confirmedPage.value = 1
+  rejectedPage.value = 1
 })
 
 onMounted(() => {
   bookingsStore.fetchBookings()
   availabilityStore.fetchUnavailableBlocks()
+
+  const statusParam = route.query.status
+  if (statusParam === 'PENDING' || statusParam === 'CONFIRMED' || statusParam === 'CANCELLED') {
+    filterStatus.value = statusParam
+  }
 })
 </script>

@@ -35,7 +35,7 @@
 
       <!-- Service - Compact -->
       <div v-if="booking.service" class="mb-2 p-2 bg-gray-50 rounded text-xs">
-        <p class="text-gray-700 line-clamp-1">📋 {{ booking.service }}</p>
+        <p class="text-gray-700 line-clamp-1"><i class="fas fa-list mr-1"></i>{{ booking.service }}</p>
       </div>
 
       <!-- Actions -->
@@ -45,14 +45,16 @@
           @click="$emit('confirm', booking)"
           class="btn-primary text-xs flex-1 py-1"
         >
-          ✓ Confirm
+<i class="fas fa-check"></i>
+          <span>Confirm</span>
         </button>
         <button
           v-if="pending"
           @click="$emit('reject', booking)"
           class="btn-danger text-xs flex-1 py-1"
         >
-          ✕ Reject
+          <i class="fas fa-times"></i>
+          <span>Reject</span>
         </button>
         <button
           v-else
@@ -65,7 +67,8 @@
           @click="$emit('edit', booking)"
           class="btn-secondary text-xs py-1"
         >
-          ✎ Edit
+          <i class="fas fa-edit"></i>
+          <span>Edit</span>
         </button>
       </div>
     </div>

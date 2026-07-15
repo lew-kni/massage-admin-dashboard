@@ -23,13 +23,15 @@
           @click="$emit('edit', block)"
           class="btn-secondary text-sm flex-1"
         >
-          ✎ Edit
+<i class="fas fa-edit"></i>
+          <span>Edit</span>
         </button>
         <button
           @click="$emit('delete', block)"
           class="btn-danger text-sm flex-1"
         >
-          🗑️ Delete
+          <i class="fas fa-trash-alt"></i>
+          <span>Delete</span>
         </button>
       </div>
     </div>

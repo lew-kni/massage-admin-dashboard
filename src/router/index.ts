@@ -5,6 +5,8 @@ import DashboardView from '@/views/DashboardView.vue'
 import ClientsView from '@/views/ClientsView.vue'
 import ClientDetailView from '@/views/ClientDetailView.vue'
 import BookingsView from '@/views/BookingsView.vue'
+import LeadsView from '@/views/LeadsView.vue'
+import LeadDetailView from '@/views/LeadDetailView.vue'
 import BookingDetailView from '@/views/BookingDetailView.vue'
 import ServicesView from '@/views/ServicesView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
@@ -20,6 +22,18 @@ const routes = [
     path: '/',
     name: 'Dashboard',
     component: DashboardView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/leads',
+    name: 'Leads',
+    component: LeadsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/leads/:id',
+    name: 'LeadDetail',
+    component: LeadDetailView,
     meta: { requiresAuth: true },
   },
   {

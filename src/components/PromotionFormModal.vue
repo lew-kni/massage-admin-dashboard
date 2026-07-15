@@ -3,7 +3,7 @@
     <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
       <div class="card-header flex justify-between items-center">
         <h2 class="text-lg font-semibold">{{ promotion ? 'Edit Promotion' : 'New Promotion' }}</h2>
-        <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">✕</button>
+        <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-xmark"></i></button>
       </div>
 
       <form @submit.prevent="submitForm" class="card-body space-y-4">
@@ -51,7 +51,8 @@
           <button type="button" @click="$emit('close')" class="btn-secondary">Cancel</button>
           <button type="submit" :disabled="loading" class="btn-primary">
             <span v-if="loading">Saving...</span>
-            <span v-else>{{ promotion ? '✓ Save' : '+ Create' }}</span>
+            <template v-else-if="promotion"><i class="fas fa-check"></i><span>Save</span></template>
+            <template v-else><i class="fas fa-plus"></i><span>Create</span></template>
           </button>
         </div>
       </form>

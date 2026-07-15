@@ -3,7 +3,7 @@
     <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] flex flex-col">
       <div class="card-header flex justify-between items-center shrink-0">
         <h2 class="text-lg font-semibold">{{ service ? 'Edit Service' : 'New Service' }}</h2>
-        <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">✕</button>
+        <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-xmark"></i></button>
       </div>
 
       <form @submit.prevent="submitForm" class="card-body space-y-5 overflow-y-auto">
@@ -63,8 +63,9 @@
         <div class="border-t pt-4">
           <div class="flex justify-between items-center mb-2">
             <label class="block text-sm font-medium text-gray-700">Durations &amp; pricing</label>
-            <button type="button" @click="addDuration" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
-              + Add duration
+            <button type="button" @click="addDuration" class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
+              <i class="fas fa-plus"></i>
+              <span>Add duration</span>
             </button>
           </div>
           <div v-if="form.durations.length === 0" class="text-sm text-gray-400 py-2">No durations yet</div>
@@ -79,7 +80,7 @@
               </div>
             </div>
             <input v-model="d.note" type="text" placeholder="Note (optional)" class="input-field text-sm flex-1" />
-            <button type="button" @click="removeDuration(i)" class="text-red-500 hover:text-red-700 px-2 py-2 text-sm">✕</button>
+            <button type="button" @click="removeDuration(i)" class="text-red-500 hover:text-red-700 px-2 py-2 text-sm"><i class="fas fa-xmark"></i></button>
           </div>
           <p class="text-xs text-gray-400 mt-1">Leave price blank if it's still to be confirmed.</p>
         </div>
@@ -107,7 +108,8 @@
         <button type="button" @click="$emit('close')" class="btn-secondary">Cancel</button>
         <button type="button" @click="submitForm" :disabled="loading" class="btn-primary">
           <span v-if="loading">Saving...</span>
-          <span v-else>{{ service ? '✓ Save Changes' : '+ Create Service' }}</span>
+          <template v-else-if="service"><i class="fas fa-check"></i><span>Save Changes</span></template>
+          <template v-else><i class="fas fa-plus"></i><span>Create Service</span></template>
         </button>
       </div>
     </div>

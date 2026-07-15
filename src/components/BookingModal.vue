@@ -4,7 +4,7 @@
       <div class="card-header flex justify-between items-center sticky top-0 bg-white">
         <h2 class="text-lg font-semibold">Edit Booking</h2>
         <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700">
-          ✕
+          <i class="fas fa-xmark"></i>
         </button>
       </div>
 
@@ -119,7 +119,7 @@
             class="btn-primary"
           >
             <span v-if="loading">Saving...</span>
-            <span v-else>✓ Save Changes</span>
+            <template v-else><i class="fas fa-check"></i><span>Save Changes</span></template>
           </button>
         </div>
       </form>
