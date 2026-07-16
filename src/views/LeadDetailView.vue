@@ -32,41 +32,51 @@
       <div class="lg:col-span-2 space-y-6">
         <!-- Enquiry Card -->
         <div class="card">
-          <div class="card-header flex justify-between items-start">
-            <div>
-              <h2 class="text-2xl font-semibold">{{ lead.name }}</h2>
-              <p class="text-gray-500 text-sm mt-1">Submitted {{ formatDateTime(lead.createdAt) }} ({{ formatRelative(lead.createdAt) }})</p>
-            </div>
-            <span v-if="lead.service" class="badge badge-success">{{ formatService(lead.service) }}</span>
+          <div class="card-header">
+            <h2 class="text-2xl font-semibold">{{ lead.name }}</h2>
+            <p class="text-gray-500 text-sm mt-1">Submitted {{ formatDateTime(lead.createdAt) }} ({{ formatRelative(lead.createdAt) }})</p>
           </div>
           <div class="card-body space-y-4">
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <p class="text-sm text-gray-500">Email</p>
+                <p class="text-sm text-gray-500">Email <span v-if="!lead.phone" class="text-gray-400 font-normal">(required)</span></p>
                 <p class="font-medium">
                   <a v-if="lead.email" :href="`mailto:${lead.email}`" class="text-sage-600 hover:underline break-all">{{ lead.email }}</a>
                   <span v-else class="text-gray-400">Not provided</span>
                 </p>
               </div>
               <div>
-                <p class="text-sm text-gray-500">Phone</p>
+                <p class="text-sm text-gray-500">Phone <span v-if="!lead.email" class="text-gray-400 font-normal">(required)</span></p>
                 <p class="font-medium">
                   <a v-if="lead.phone" :href="`tel:${lead.phone}`" class="text-sage-600 hover:underline">{{ lead.phone }}</a>
                   <span v-else class="text-gray-400">Not provided</span>
                 </p>
               </div>
-              <div v-if="lead.location">
-                <p class="text-sm text-gray-500">Location</p>
-                <p class="font-medium"><i class="fas fa-location-dot mr-1 text-gray-400"></i>{{ lead.location }}</p>
+              <div>
+                <p class="text-sm text-gray-500">Service interest <span class="text-gray-400 font-normal">(required)</span></p>
+                <p class="font-medium">
+                  <span v-if="lead.service">{{ formatService(lead.service) }}</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Location <span class="text-gray-400 font-normal">(optional)</span></p>
+                <p class="font-medium">
+                  <span v-if="lead.location"><i class="fas fa-location-dot mr-1 text-gray-400"></i>{{ lead.location }}</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
               </div>
             </div>
             <div class="border-t pt-4 dark:border-gray-700">
-              <p class="text-sm text-gray-500">Message</p>
+              <p class="text-sm text-gray-500">Message <span class="text-gray-400 font-normal">(required)</span></p>
               <p class="font-medium whitespace-pre-wrap">{{ lead.message }}</p>
             </div>
-            <div v-if="lead.healthNotes" class="border-t pt-4 dark:border-gray-700">
-              <p class="text-sm text-gray-500">Health / contraindication notes</p>
-              <p class="font-medium whitespace-pre-wrap">{{ lead.healthNotes }}</p>
+            <div class="border-t pt-4 dark:border-gray-700">
+              <p class="text-sm text-gray-500">Health / contraindication notes <span class="text-gray-400 font-normal">(optional)</span></p>
+              <p class="font-medium whitespace-pre-wrap">
+                <span v-if="lead.healthNotes">{{ lead.healthNotes }}</span>
+                <span v-else class="text-gray-400">Not provided</span>
+              </p>
             </div>
           </div>
         </div>
@@ -129,7 +139,22 @@
                 <span>View Client Profile</span>
               </RouterLink>
             </div>
-            <p v-else class="text-sm text-gray-400">No matching client found for this lead's email/phone.</p>
+            <div v-else>
+              <p class="text-sm text-gray-400 mb-3">No matching client found for this lead's email/phone.</p>
+              <p v-if="!lead.email" class="text-xs text-gray-400 mb-3">A client record needs an email address to be created, and this lead didn't provide one.</p>
+              <div v-if="createClientError" class="p-2 mb-3 bg-red-50 border border-red-200 rounded">
+                <p class="text-xs text-red-700">{{ createClientError }}</p>
+              </div>
+              <button
+                v-if="lead.email"
+                @click="createClientFromLead"
+                :disabled="creatingClient"
+                class="btn-secondary w-full text-sm"
+              >
+                <i class="fas fa-user-plus"></i>
+                <span>{{ creatingClient ? 'Creating...' : 'Create New Client' }}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -141,6 +166,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useLeadsStore } from '@/stores/leads'
+import { apiService } from '@/services/api'
 import { format, formatDistanceToNow } from 'date-fns'
 
 const route = useRoute()
@@ -150,6 +176,8 @@ const lead = computed(() => leadsStore.currentLead)
 const sending = ref(false)
 const replyError = ref('')
 const replyForm = reactive({ subject: '', body: '' })
+const creatingClient = ref(false)
+const createClientError = ref('')
 
 function formatService(service: string) {
   if (service === 'relaxation-massage') return 'Relaxation Massage'
@@ -164,6 +192,36 @@ function formatRelative(date: string) {
 
 function formatDateTime(date: string) {
   return format(new Date(date), 'MMM dd, yyyy h:mm a')
+}
+
+async function createClientFromLead() {
+  if (!lead.value || !lead.value.email) return
+  creatingClient.value = true
+  createClientError.value = ''
+  try {
+    const parts = lead.value.name.trim().split(/\s+/)
+    const firstName = parts[0] || lead.value.name
+    const lastName = parts.slice(1).join(' ')
+
+    const notesParts = [
+      lead.value.location ? `Location: ${lead.value.location}` : null,
+      `Created from enquiry: "${lead.value.message}"`,
+    ].filter(Boolean)
+
+    const newClient = await apiService.createClient({
+      firstName,
+      lastName,
+      email: lead.value.email,
+      phone: lead.value.phone || '',
+      notes: notesParts.join('\n'),
+    })
+
+    await leadsStore.linkClient(lead.value.id, newClient.id)
+  } catch (err: any) {
+    createClientError.value = err?.message || 'Failed to create client'
+  } finally {
+    creatingClient.value = false
+  }
 }
 
 async function sendReply() {

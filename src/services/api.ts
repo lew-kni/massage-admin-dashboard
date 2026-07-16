@@ -266,7 +266,7 @@ class ApiService {
     return data
   }
 
-  async updateLead(id: string, lead: Partial<Pick<Lead, 'isRead'>>): Promise<Lead> {
+  async updateLead(id: string, lead: Partial<Pick<Lead, 'isRead' | 'clientId'>>): Promise<Lead> {
     const { data } = await this.client.patch(`/api/leads/${id}`, lead)
     return data
   }

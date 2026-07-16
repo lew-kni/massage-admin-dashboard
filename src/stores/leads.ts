@@ -73,6 +73,23 @@ export const useLeadsStore = defineStore('leads', () => {
     }
   }
 
+  async function linkClient(id: string, clientId: string) {
+    try {
+      const updated = await apiService.updateLead(id, { clientId })
+      const index = leads.value.findIndex((l) => l.id === id)
+      if (index !== -1) {
+        leads.value[index] = updated
+      }
+      if (currentLead.value?.id === id) {
+        currentLead.value = updated
+      }
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to link client'
+      throw err
+    }
+  }
+
   async function fetchLeadsForClient(clientId: string): Promise<Lead[]> {
     try {
       return await apiService.getLeads(clientId)
@@ -91,6 +108,7 @@ export const useLeadsStore = defineStore('leads', () => {
     fetchLead,
     setRead,
     replyToLead,
+    linkClient,
     fetchLeadsForClient,
   }
 })
