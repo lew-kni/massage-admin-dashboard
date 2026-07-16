@@ -46,11 +46,54 @@
               <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
               <input v-model="form.date" type="date" class="input-field" required />
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+            <div v-if="customTime">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Start Time (custom)</label>
               <input v-model="form.time" type="time" class="input-field" required />
             </div>
           </div>
+
+          <!-- Available slots (default) -->
+          <div v-if="!customTime" class="mt-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Available times</label>
+            <p v-if="slotsLoading" class="text-sm text-gray-500">Checking availability…</p>
+            <template v-else>
+              <!-- Day off (weekly schedule) -->
+              <div v-if="dayUnavailableReason" class="mb-2 p-2 bg-amber-50 border border-amber-200 rounded">
+                <p class="text-sm text-amber-700"><i class="fas fa-circle-info mr-1"></i>{{ dayUnavailableReason }}</p>
+              </div>
+              <!-- Unavailable blocks covering this date -->
+              <div v-if="dayBlocks.length" class="mb-2 p-2 bg-amber-50 border border-amber-200 rounded space-y-1">
+                <p v-for="(bl, i) in dayBlocks" :key="i" class="text-sm text-amber-700">
+                  <i class="fas fa-ban mr-1"></i>No availability {{ bl.start }}–{{ bl.end }}<span v-if="bl.reason"> · {{ bl.reason }}</span>
+                </p>
+              </div>
+
+              <div v-if="availableSlots.length > 0" class="flex flex-wrap gap-2">
+                <button
+                  v-for="slot in availableSlots"
+                  :key="slot"
+                  type="button"
+                  @click="form.time = slot"
+                  :class="['px-3 py-1.5 rounded border text-sm', form.time === slot ? 'bg-sage-600 text-white border-sage-600' : 'border-gray-300 hover:bg-gray-50']"
+                >{{ slot }}</button>
+              </div>
+              <p v-else-if="!dayUnavailableReason && !dayBlocks.length" class="text-sm text-gray-400">No available times on this date.</p>
+            </template>
+            <button type="button" @click="enableCustomTime" class="text-sm text-sage-600 hover:text-sage-700 mt-2 inline-flex items-center gap-1">
+              <i class="fas fa-pen"></i><span>Need a custom time?</span>
+            </button>
+          </div>
+
+          <!-- Custom time mode -->
+          <div v-else class="mt-2">
+            <p class="text-xs text-amber-600">
+              <i class="fas fa-triangle-exclamation mr-1"></i>Custom time bypasses the availability check and the buffer between appointments — for same-household back-to-back sessions or bookings outside your core hours.
+            </p>
+            <button type="button" @click="disableCustomTime" class="text-sm text-sage-600 hover:text-sage-700 mt-2 inline-flex items-center gap-1">
+              <i class="fas fa-arrow-left"></i><span>Choose from available times</span>
+            </button>
+          </div>
+
           <p v-if="endTimeLabel" class="text-sm text-gray-500 mt-2">
             Ends at <span class="font-medium">{{ endTimeLabel }}</span> ({{ selectedMinutes }} min)
           </p>
@@ -88,10 +131,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
 import { useServicesStore } from '@/stores/services'
+import { apiService } from '@/services/api'
 import type { Client, Booking, ServiceDuration } from '@/types'
 
 const props = defineProps<{ client: Client }>()
@@ -104,6 +148,13 @@ const error = ref('')
 
 const selectedServiceId = ref<string>('')
 const selectedMinutes = ref<number>(60)
+
+// Slot picker (default) vs. free-form custom time (manual override)
+const customTime = ref(false)
+const availableSlots = ref<string[]>([])
+const slotsLoading = ref(false)
+const dayBlocks = ref<Array<{ start: string; end: string; reason: string | null }>>([])
+const dayUnavailableReason = ref('')
 
 const bookableServices = computed(() =>
   servicesStore.services.filter((s) => s.isActive && s.bookable)
@@ -138,6 +189,43 @@ function onServiceChange() {
   if (first) selectedMinutes.value = first.minutes
 }
 
+async function fetchSlots() {
+  if (customTime.value || !form.date || !selectedMinutes.value) {
+    availableSlots.value = []
+    return
+  }
+  slotsLoading.value = true
+  try {
+    const res = await apiService.getSlots(form.date, selectedMinutes.value)
+    availableSlots.value = res.available ? res.slots : []
+    dayBlocks.value = res.blocks || []
+    dayUnavailableReason.value = res.available ? '' : (res.reason || '')
+  } catch {
+    availableSlots.value = []
+    dayBlocks.value = []
+    dayUnavailableReason.value = ''
+  } finally {
+    slotsLoading.value = false
+  }
+  // Drop a chosen time that's no longer offered
+  if (form.time && !availableSlots.value.includes(form.time)) {
+    form.time = ''
+  }
+}
+
+function enableCustomTime() {
+  customTime.value = true
+}
+
+function disableCustomTime() {
+  customTime.value = false
+  form.time = ''
+  fetchSlots()
+}
+
+// Re-fetch slots whenever the date or duration changes (slot mode only)
+watch([() => form.date, selectedMinutes], fetchSlots)
+
 async function submitForm() {
   if (!currentService.value) {
     error.value = 'Please select a service'
@@ -165,6 +253,7 @@ async function submitForm() {
       service: currentService.value.name,
       status: form.status,
       notes: form.notes || undefined,
+      override: customTime.value,
     } as any)
     emit('saved', created)
     emit('close')
@@ -185,5 +274,6 @@ onMounted(async () => {
     const firstDuration = first.durations.find((d) => d.isActive !== false)
     if (firstDuration) selectedMinutes.value = firstDuration.minutes
   }
+  await fetchSlots()
 })
 </script>

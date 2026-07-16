@@ -12,7 +12,8 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Admin Dashboard</p>
           </div>
 
-          <nav class="mt-6 flex-1">
+          <!-- Top section -->
+          <nav class="mt-6 flex-1 overflow-y-auto">
             <RouterLink
               v-for="item in navigation"
               :key="item.name"
@@ -31,20 +32,34 @@
             </RouterLink>
           </nav>
 
-          <div class="p-6 border-t border-gray-200 dark:border-gray-800 space-y-3">
+          <!-- Bottom section -->
+          <div class="border-t border-gray-200 dark:border-gray-800 py-2">
+            <!-- Settings group -->
             <button
-              @click="toggleDarkMode"
-              class="w-full btn-secondary flex items-center justify-center gap-2"
-              :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+              @click="settingsOpen = !settingsOpen"
+              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
             >
-              <i :class="isDarkMode ? 'fas fa-sun' : 'fas fa-moon'"></i>
-              <span>{{ isDarkMode ? 'Light' : 'Dark' }}</span>
+              <i class="w-5 text-center fas fa-gear"></i>
+              <span>Settings</span>
+              <i class="ml-auto text-xs fas" :class="settingsOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
             </button>
+            <div v-show="settingsOpen">
+              <RouterLink
+                v-for="child in settingsChildren"
+                :key="child.name"
+                :to="child.to"
+                class="flex items-center pl-14 pr-6 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+                :class="{ 'bg-sage-50 dark:bg-gray-800 text-sage-600 dark:text-sage-400 border-l-2 border-sage-600': isActive(child.to) }"
+              >
+                <span>{{ child.name }}</span>
+              </RouterLink>
+            </div>
+
             <button
               @click="logout"
-              class="w-full btn-secondary flex items-center justify-center gap-2"
+              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
             >
-              <i class="fas fa-sign-out-alt"></i>
+              <i class="w-5 text-center fas fa-sign-out-alt"></i>
               <span>Logout</span>
             </button>
           </div>
@@ -65,12 +80,14 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLeadsStore } from '@/stores/leads'
 import { useBookingsStore } from '@/stores/bookings'
+import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const leadsStore = useLeadsStore()
 const bookingsStore = useBookingsStore()
-const isDarkMode = ref(false)
+const { initTheme } = useTheme()
+const settingsOpen = ref(false)
 
 const pendingBookingsCount = computed(
   () => bookingsStore.bookings.filter((b) => b.status === 'PENDING').length
@@ -81,25 +98,29 @@ const navigation = computed(() => [
   { name: 'Leads', to: '/leads', icon: 'fas fa-inbox', badge: leadsStore.unreadCount },
   { name: 'Clients', to: '/clients', icon: 'fas fa-users' },
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
-  { name: 'Services', to: '/services', icon: 'fas fa-spa' },
-  { name: 'Availability', to: '/availability', icon: 'fas fa-clock' },
   { name: 'Emails', to: '/emails', icon: 'fas fa-envelope' },
 ])
+
+const settingsChildren = [
+  { name: 'Appearance', to: '/settings/appearance' },
+  { name: 'General', to: '/settings/general' },
+  { name: 'Availability', to: '/settings/availability' },
+  { name: 'Services', to: '/settings/services' },
+  { name: 'Email', to: '/settings/email' },
+]
 
 function isActive(path: string) {
   return router.currentRoute.value.path === path
 }
 
-function toggleDarkMode() {
-  isDarkMode.value = !isDarkMode.value
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark')
-    localStorage.setItem('darkMode', 'true')
-  } else {
-    document.documentElement.classList.remove('dark')
-    localStorage.setItem('darkMode', 'false')
-  }
-}
+// Keep the Settings group expanded whenever a settings sub-page is open
+watch(
+  () => router.currentRoute.value.path,
+  (path) => {
+    if (path.startsWith('/settings')) settingsOpen.value = true
+  },
+  { immediate: true }
+)
 
 function logout() {
   authStore.logout()
@@ -107,11 +128,7 @@ function logout() {
 }
 
 onMounted(() => {
-  const savedDarkMode = localStorage.getItem('darkMode') === 'true'
-  isDarkMode.value = savedDarkMode
-  if (savedDarkMode) {
-    document.documentElement.classList.add('dark')
-  }
+  initTheme()
 })
 
 // Fetch badge data whenever the user is authenticated (including on initial load

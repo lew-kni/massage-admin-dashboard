@@ -12,6 +12,7 @@ import type {
   Promotion,
   Lead,
   LeadReply,
+  AppSettings,
 } from '@/types'
 
 class ApiService {
@@ -121,13 +122,39 @@ class ApiService {
     return data
   }
 
-  async getAllAvailability(): Promise<Availability[]> {
+  async getAllAvailability(): Promise<any[]> {
     const { data } = await this.client.get('/api/availability/all')
     return data
   }
 
-  async setAvailability(availability: Omit<Availability, 'id'>): Promise<Availability> {
+  async setAvailability(availability: { dayOfWeek: number; startTime: string; endTime: string; isActive: boolean }): Promise<Availability> {
     const { data } = await this.client.post('/api/availability/set-day', availability)
+    return data
+  }
+
+  async getAvailabilitySettings(): Promise<{ bufferMinutes: number; slotIntervalMinutes: number }> {
+    const { data } = await this.client.get('/api/availability/settings')
+    return data
+  }
+
+  async updateAvailabilitySettings(settings: { bufferMinutes?: number; slotIntervalMinutes?: number }): Promise<{ bufferMinutes: number; slotIntervalMinutes: number }> {
+    const { data } = await this.client.put('/api/availability/settings', settings)
+    return data
+  }
+
+  async getSlots(date: string, duration: number): Promise<{ available: boolean; slots: string[]; reason?: string; blocks?: Array<{ start: string; end: string; reason: string | null }> }> {
+    const { data } = await this.client.get('/api/availability/slots', { params: { date, duration } })
+    return data
+  }
+
+  // App settings
+  async getSettings(): Promise<AppSettings> {
+    const { data } = await this.client.get('/api/settings')
+    return data
+  }
+
+  async updateSettings(settings: Partial<AppSettings>): Promise<AppSettings> {
+    const { data } = await this.client.put('/api/settings', settings)
     return data
   }
 

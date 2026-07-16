@@ -131,13 +131,22 @@
             <h3 class="font-semibold">Client Match</h3>
           </div>
           <div class="card-body">
+            <div v-if="changeClientError" class="p-2 mb-3 bg-red-50 border border-red-200 rounded">
+              <p class="text-xs text-red-700">{{ changeClientError }}</p>
+            </div>
             <div v-if="lead.client">
               <p class="font-medium">{{ lead.client.firstName }} {{ lead.client.lastName }}</p>
               <p class="text-sm text-gray-500">{{ lead.client.email }}</p>
-              <RouterLink :to="`/clients/${lead.client.id}`" class="inline-flex items-center gap-1 mt-3 text-sage-600 hover:text-sage-700 text-sm font-medium">
-                <i class="fas fa-user"></i>
-                <span>View Client Profile</span>
-              </RouterLink>
+              <div class="flex flex-col gap-2 mt-3">
+                <RouterLink :to="`/clients/${lead.client.id}`" class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
+                  <i class="fas fa-user"></i>
+                  <span>View Client Profile</span>
+                </RouterLink>
+                <button @click="showChangeClient = true" class="btn-secondary w-full text-sm">
+                  <i class="fas fa-arrows-rotate"></i>
+                  <span>Change Client</span>
+                </button>
+              </div>
             </div>
             <div v-else>
               <p class="text-sm text-gray-400 mb-3">No matching client found for this lead's email/phone.</p>
@@ -145,20 +154,34 @@
               <div v-if="createClientError" class="p-2 mb-3 bg-red-50 border border-red-200 rounded">
                 <p class="text-xs text-red-700">{{ createClientError }}</p>
               </div>
-              <button
-                v-if="lead.email"
-                @click="createClientFromLead"
-                :disabled="creatingClient"
-                class="btn-secondary w-full text-sm"
-              >
-                <i class="fas fa-user-plus"></i>
-                <span>{{ creatingClient ? 'Creating...' : 'Create New Client' }}</span>
-              </button>
+              <div class="flex flex-col gap-2">
+                <button
+                  v-if="lead.email"
+                  @click="createClientFromLead"
+                  :disabled="creatingClient"
+                  class="btn-secondary w-full text-sm"
+                >
+                  <i class="fas fa-user-plus"></i>
+                  <span>{{ creatingClient ? 'Creating...' : 'Create New Client' }}</span>
+                </button>
+                <button @click="showChangeClient = true" class="btn-secondary w-full text-sm">
+                  <i class="fas fa-user-check"></i>
+                  <span>Link Existing Client</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <ChangeClientModal
+      v-if="showChangeClient && lead"
+      :current-client-id="lead.clientId"
+      :title="lead.clientId ? 'Change Client' : 'Link Existing Client'"
+      @close="showChangeClient = false"
+      @select="onSelectClient"
+    />
   </div>
 </template>
 
@@ -168,6 +191,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { useLeadsStore } from '@/stores/leads'
 import { apiService } from '@/services/api'
 import { format, formatDistanceToNow } from 'date-fns'
+import ChangeClientModal from '@/components/ChangeClientModal.vue'
 
 const route = useRoute()
 const leadsStore = useLeadsStore()
@@ -178,6 +202,8 @@ const replyError = ref('')
 const replyForm = reactive({ subject: '', body: '' })
 const creatingClient = ref(false)
 const createClientError = ref('')
+const showChangeClient = ref(false)
+const changeClientError = ref('')
 
 function formatService(service: string) {
   if (service === 'relaxation-massage') return 'Relaxation Massage'
@@ -192,6 +218,17 @@ function formatRelative(date: string) {
 
 function formatDateTime(date: string) {
   return format(new Date(date), 'MMM dd, yyyy h:mm a')
+}
+
+async function onSelectClient(clientId: string) {
+  if (!lead.value) return
+  changeClientError.value = ''
+  try {
+    await leadsStore.linkClient(lead.value.id, clientId)
+    showChangeClient.value = false
+  } catch (err: any) {
+    changeClientError.value = err?.message || 'Failed to change client'
+  }
 }
 
 async function createClientFromLead() {

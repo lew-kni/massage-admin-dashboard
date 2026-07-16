@@ -11,6 +11,8 @@ import BookingDetailView from '@/views/BookingDetailView.vue'
 import ServicesView from '@/views/ServicesView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
 import EmailsView from '@/views/EmailsView.vue'
+import SettingsView from '@/views/SettingsView.vue'
+import ComingSoonView from '@/views/ComingSoonView.vue'
 
 const routes = [
   {
@@ -61,23 +63,50 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/services',
-    name: 'Services',
-    component: ServicesView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/availability',
-    name: 'Availability',
-    component: AvailabilityView,
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/emails',
     name: 'Emails',
     component: EmailsView,
     meta: { requiresAuth: true },
   },
+
+  // Settings section
+  { path: '/settings', redirect: '/settings/appearance' },
+  {
+    path: '/settings/appearance',
+    name: 'SettingsAppearance',
+    component: ComingSoonView,
+    props: { title: 'Appearance', subtitle: 'Branding' },
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/general',
+    name: 'SettingsGeneral',
+    component: ComingSoonView,
+    props: { title: 'General', subtitle: 'Contact Information' },
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/availability',
+    name: 'SettingsAvailability',
+    component: AvailabilityView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/services',
+    name: 'SettingsServices',
+    component: ServicesView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/email',
+    name: 'SettingsEmail',
+    component: SettingsView,
+    meta: { requiresAuth: true },
+  },
+
+  // Legacy paths — keep old links working by redirecting into Settings
+  { path: '/services', redirect: '/settings/services' },
+  { path: '/availability', redirect: '/settings/availability' },
 ]
 
 const router = createRouter({

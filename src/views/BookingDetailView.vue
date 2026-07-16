@@ -6,6 +6,10 @@
         <i class="fas fa-arrow-left mr-1"></i>Back to Bookings
       </RouterLink>
       <div v-if="booking" class="flex items-center gap-3">
+        <button v-if="!isEditing" @click="showSendEmail = true" class="btn-secondary text-sm">
+          <i class="fas fa-envelope"></i>
+          <span>Send Email</span>
+        </button>
         <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary text-sm">
           <i class="fas fa-edit"></i>
           <span>Edit</span>
@@ -56,13 +60,25 @@
             <div>
               <div class="flex justify-between items-center mb-3">
                 <h3 class="font-semibold text-gray-900">Client Information</h3>
-                <RouterLink
-                  v-if="booking.clientId"
-                  :to="`/clients/${booking.clientId}`"
-                  class="text-sage-600 hover:text-sage-700 text-sm font-medium"
-                >
-                  View Profile<i class="fas fa-arrow-right ml-1"></i>
-                </RouterLink>
+                <div class="flex items-center gap-3">
+                  <button
+                    @click="showChangeClient = true"
+                    class="text-sage-600 hover:text-sage-700 text-sm font-medium inline-flex items-center gap-1"
+                  >
+                    <i class="fas fa-arrows-rotate"></i>
+                    <span>Change Client</span>
+                  </button>
+                  <RouterLink
+                    v-if="booking.clientId"
+                    :to="`/clients/${booking.clientId}`"
+                    class="text-sage-600 hover:text-sage-700 text-sm font-medium"
+                  >
+                    View Profile<i class="fas fa-arrow-right ml-1"></i>
+                  </RouterLink>
+                </div>
+              </div>
+              <div v-if="changeClientError" class="mb-3 p-2 bg-red-50 border border-red-200 rounded">
+                <p class="text-xs text-red-700">{{ changeClientError }}</p>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
@@ -301,6 +317,20 @@
         </div>
       </div>
     </div>
+
+    <ChangeClientModal
+      v-if="showChangeClient && booking"
+      :current-client-id="booking.clientId"
+      @close="showChangeClient = false"
+      @select="onSelectClient"
+    />
+
+    <SendEmailModal
+      v-if="showSendEmail && booking && booking.client"
+      :client="booking.client"
+      :booking="booking"
+      @close="showSendEmail = false"
+    />
   </div>
 </template>
 
@@ -310,11 +340,28 @@ import { RouterLink, useRoute } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
 import type { Booking } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
+import ChangeClientModal from '@/components/ChangeClientModal.vue'
+import SendEmailModal from '@/components/SendEmailModal.vue'
 
 const route = useRoute()
 const bookingsStore = useBookingsStore()
 
 const booking = ref<Booking | null>(null)
+const showChangeClient = ref(false)
+const changeClientError = ref('')
+const showSendEmail = ref(false)
+
+async function onSelectClient(clientId: string) {
+  if (!booking.value) return
+  changeClientError.value = ''
+  try {
+    const updated = await bookingsStore.updateBooking(booking.value.id, { clientId } as Partial<Booking>)
+    booking.value = updated
+    showChangeClient.value = false
+  } catch (err: any) {
+    changeClientError.value = err?.message || 'Failed to change client'
+  }
+}
 
 // Full postal address for the client, assembled from address / city / postcode
 const clientAddress = computed(() => {

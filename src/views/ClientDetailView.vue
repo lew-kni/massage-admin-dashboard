@@ -222,7 +222,7 @@
         <div class="card">
           <div class="card-header flex justify-between items-center">
             <h2 class="text-lg font-semibold"><i class="fas fa-envelope mr-2"></i>Communications</h2>
-            <button class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
+            <button @click="showSendEmail = true" class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
               <i class="fas fa-plus"></i>
               <span>Send Email</span>
             </button>
@@ -257,7 +257,7 @@
             <h3 class="font-semibold">Quick Actions</h3>
           </div>
           <div class="card-body space-y-3">
-            <button class="btn-primary w-full text-sm">
+            <button @click="showSendEmail = true" class="btn-primary w-full text-sm">
               <i class="fas fa-envelope"></i>
               <span>Send Email</span>
             </button>
@@ -332,6 +332,13 @@
       @saved="handleBookingSaved"
     />
 
+    <SendEmailModal
+      v-if="showSendEmail && clientsStore.currentClient"
+      :client="clientsStore.currentClient"
+      @close="showSendEmail = false"
+      @sent="handleEmailSent"
+    />
+
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
@@ -362,6 +369,7 @@ import { formatDistanceToNow, format } from 'date-fns'
 import type { Booking, Communication, Lead } from '@/types'
 import ClientForm from '@/components/ClientForm.vue'
 import NewBookingModal from '@/components/NewBookingModal.vue'
+import SendEmailModal from '@/components/SendEmailModal.vue'
 import Pagination from '@/components/Pagination.vue'
 
 const route = useRoute()
@@ -370,6 +378,7 @@ const clientsStore = useClientsStore()
 const leadsStore = useLeadsStore()
 const editMode = ref(false)
 const showNewBooking = ref(false)
+const showSendEmail = ref(false)
 const showDeleteConfirm = ref(false)
 const deletingClient = ref(false)
 const bookings = ref<Booking[]>([])
@@ -456,6 +465,11 @@ function handleClientSaved() {
 
 async function handleBookingSaved() {
   showNewBooking.value = false
+  await loadClientData()
+}
+
+async function handleEmailSent() {
+  showSendEmail.value = false
   await loadClientData()
 }
 

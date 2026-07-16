@@ -105,6 +105,25 @@ export interface EmailTemplate {
   updatedAt: string
 }
 
+// App Settings
+export interface AppSettings {
+  emailEnabled: boolean
+  overrideEnabled: boolean
+  overrideEmail: string | null
+  fromName: string
+  fromEmail: string | null
+  replyToEmail: string | null
+  smtpHost: string | null
+  smtpPort: number | null
+  smtpSecure: boolean
+  smtpUser: string | null
+  smtpPassSet?: boolean
+  smtpPass?: string
+  businessEmail: string | null
+  businessPhone: string | null
+  businessAddress: string | null
+}
+
 // Communication Types
 export interface Communication {
   id: string
