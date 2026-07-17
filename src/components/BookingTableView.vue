@@ -73,7 +73,7 @@
                   <span>Reject</span>
                 </button>
                 <button
-                  v-else-if="booking.status === 'CONFIRMED'"
+                  v-else-if="booking.status === 'CONFIRMED' && !isBookingPast(booking)"
                   @click="$emit('cancel', booking)"
                   class="btn-danger text-xs py-1 px-2 whitespace-nowrap"
                   title="Cancel booking"
@@ -103,7 +103,7 @@ import type { Booking } from '@/types'
 
 defineProps<{
   bookings: Booking[]
-  filterStatus: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | null
+  filterStatus: 'PENDING' | 'ACTIVE' | 'PAST' | 'CANCELLED' | null
 }>()
 
 defineEmits<{
@@ -112,6 +112,10 @@ defineEmits<{
   cancel: [booking: Booking]
   edit: [booking: Booking]
 }>()
+
+function isBookingPast(booking: Booking): boolean {
+  return new Date(booking.startTime) <= new Date()
+}
 
 function formatDate(date: string) {
   return format(new Date(date), 'MMM dd, yyyy')

@@ -33,10 +33,16 @@
             Pending ({{ bookingsStore.bookings.filter(b => b.status === 'PENDING').length }})
           </button>
           <button
-            @click="filterStatus = 'CONFIRMED'"
-            :class="['btn-secondary text-sm', filterStatus === 'CONFIRMED' && 'ring-2 ring-sage-500']"
+            @click="filterStatus = 'ACTIVE'"
+            :class="['btn-secondary text-sm', filterStatus === 'ACTIVE' && 'ring-2 ring-sage-500']"
           >
-            Confirmed ({{ bookingsStore.bookings.filter(b => b.status === 'CONFIRMED').length }})
+            Active ({{ futureConfirmedBookings.length }})
+          </button>
+          <button
+            @click="filterStatus = 'PAST'"
+            :class="['btn-secondary text-sm', filterStatus === 'PAST' && 'ring-2 ring-sage-500']"
+          >
+            Past ({{ pastConfirmedBookings.length }})
           </button>
           <button
             @click="filterStatus = 'CANCELLED'"
@@ -105,8 +111,8 @@
           </div>
 
           <!-- Confirmed Bookings (by date) -->
-          <div v-if="confirmedBookings.length > 0 && (!filterStatus || filterStatus === 'CONFIRMED')">
-            <h2 class="text-lg font-semibold text-green-600 mb-3"><i class="fas fa-check mr-2"></i>Confirmed ({{ confirmedBookings.length }})</h2>
+          <div v-if="futureConfirmedBookings.length > 0 && (!filterStatus || filterStatus === 'ACTIVE')">
+            <h2 class="text-lg font-semibold text-green-600 mb-3"><i class="fas fa-check mr-2"></i>Active ({{ futureConfirmedBookings.length }})</h2>
             <div class="space-y-3">
               <BookingCard
                 v-for="booking in paginatedConfirmedBookings"
@@ -118,6 +124,22 @@
               />
             </div>
             <Pagination v-model="confirmedPage" :total-pages="confirmedTotalPages" />
+          </div>
+
+          <!-- Past Bookings -->
+          <div v-if="pastConfirmedBookings.length > 0 && (!filterStatus || filterStatus === 'PAST')">
+            <h2 class="text-lg font-semibold text-gray-600 mb-3"><i class="fas fa-history mr-2"></i>Past ({{ pastConfirmedBookings.length }})</h2>
+            <div class="space-y-3">
+              <BookingCard
+                v-for="booking in paginatedPastConfirmedBookings"
+                :key="booking.id"
+                :booking="booking"
+                :pending="false"
+                :is-past="true"
+                @edit="editBooking"
+              />
+            </div>
+            <Pagination v-model="pastPage" :total-pages="pastTotalPages" />
           </div>
 
           <!-- Rejected Bookings -->
@@ -430,7 +452,7 @@ const availabilityStore = useAvailabilityStore()
 const viewMode = ref<'list' | 'calendar'>('list')
 const listDisplayMode = ref<'cards' | 'table'>('table')
 const calendarViewMode = ref<'1d' | '7d' | '30d'>('1d')
-const filterStatus = ref<'PENDING' | 'CONFIRMED' | 'CANCELLED' | null>(null)
+const filterStatus = ref<'PENDING' | 'ACTIVE' | 'PAST' | 'CANCELLED' | null>(null)
 const editingBooking = ref<Booking | null>(null)
 const selectedBooking = ref<Booking | null>(null)
 const currentPage = ref(1)
@@ -440,6 +462,10 @@ const timeSlots = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
 
 const filteredBookings = computed(() => {
   if (!filterStatus.value) return bookingsStore.bookings
+  
+  if (filterStatus.value === 'ACTIVE') return futureConfirmedBookings.value
+  if (filterStatus.value === 'PAST') return pastConfirmedBookings.value
+  
   return bookingsStore.bookings.filter(b => b.status === filterStatus.value)
 })
 
@@ -467,6 +493,20 @@ const confirmedBookings = computed(() => {
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 })
 
+const futureConfirmedBookings = computed(() => {
+  const now = new Date()
+  return bookingsStore.bookings
+    .filter(b => b.status === 'CONFIRMED' && new Date(b.startTime) > now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+})
+
+const pastConfirmedBookings = computed(() => {
+  const now = new Date()
+  return bookingsStore.bookings
+    .filter(b => b.status === 'CONFIRMED' && new Date(b.startTime) <= now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+})
+
 const rejectedBookings = computed(() => {
   return bookingsStore.bookings
     .filter(b => b.status === 'CANCELLED')
@@ -476,17 +516,22 @@ const rejectedBookings = computed(() => {
 const CARD_PAGE_SIZE = 5
 const pendingPage = ref(1)
 const confirmedPage = ref(1)
+const pastPage = ref(1)
 const rejectedPage = ref(1)
 
 const pendingTotalPages = computed(() => Math.max(1, Math.ceil(pendingBookings.value.length / CARD_PAGE_SIZE)))
-const confirmedTotalPages = computed(() => Math.max(1, Math.ceil(confirmedBookings.value.length / CARD_PAGE_SIZE)))
+const confirmedTotalPages = computed(() => Math.max(1, Math.ceil(futureConfirmedBookings.value.length / CARD_PAGE_SIZE)))
+const pastTotalPages = computed(() => Math.max(1, Math.ceil(pastConfirmedBookings.value.length / CARD_PAGE_SIZE)))
 const rejectedTotalPages = computed(() => Math.max(1, Math.ceil(rejectedBookings.value.length / CARD_PAGE_SIZE)))
 
 const paginatedPendingBookings = computed(() =>
   pendingBookings.value.slice((pendingPage.value - 1) * CARD_PAGE_SIZE, pendingPage.value * CARD_PAGE_SIZE)
 )
 const paginatedConfirmedBookings = computed(() =>
-  confirmedBookings.value.slice((confirmedPage.value - 1) * CARD_PAGE_SIZE, confirmedPage.value * CARD_PAGE_SIZE)
+  futureConfirmedBookings.value.slice((confirmedPage.value - 1) * CARD_PAGE_SIZE, confirmedPage.value * CARD_PAGE_SIZE)
+)
+const paginatedPastConfirmedBookings = computed(() =>
+  pastConfirmedBookings.value.slice((pastPage.value - 1) * CARD_PAGE_SIZE, pastPage.value * CARD_PAGE_SIZE)
 )
 const paginatedRejectedBookings = computed(() =>
   rejectedBookings.value.slice((rejectedPage.value - 1) * CARD_PAGE_SIZE, rejectedPage.value * CARD_PAGE_SIZE)
@@ -788,6 +833,7 @@ watch(filterStatus, () => {
   currentPage.value = 1
   pendingPage.value = 1
   confirmedPage.value = 1
+  pastPage.value = 1
   rejectedPage.value = 1
 })
 
@@ -796,7 +842,7 @@ onMounted(() => {
   availabilityStore.fetchUnavailableBlocks()
 
   const statusParam = route.query.status
-  if (statusParam === 'PENDING' || statusParam === 'CONFIRMED' || statusParam === 'CANCELLED') {
+  if (statusParam === 'PENDING' || statusParam === 'ACTIVE' || statusParam === 'PAST' || statusParam === 'CANCELLED') {
     filterStatus.value = statusParam
   }
 })

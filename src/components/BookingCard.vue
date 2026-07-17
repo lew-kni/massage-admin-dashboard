@@ -57,7 +57,7 @@
           <span>Reject</span>
         </button>
         <button
-          v-else
+          v-else-if="!isPast"
           @click="$emit('cancel', booking)"
           class="btn-danger text-xs py-1"
         >
@@ -82,6 +82,7 @@ import type { Booking } from '@/types'
 defineProps<{
   booking: Booking
   pending: boolean
+  isPast?: boolean
 }>()
 
 defineEmits<{
