@@ -58,6 +58,11 @@ export interface Booking {
   firstTime?: boolean | null
   allergies?: string | null
   promotionId?: string | null
+  promotion?: Promotion | null
+  // Pricing captured at booking time (whole GBP). `discountedPrice` is the
+  // promotion-adjusted price; null when no promotion applied.
+  price?: number | null
+  discountedPrice?: number | null
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null
   preFormCompletedAt?: string | null
@@ -195,12 +200,26 @@ export interface Service {
 }
 
 // Promotion Types
+export interface PromotionBookingSummary {
+  id: string
+  bookingNumber: number
+  status: string
+  startTime: string
+  service?: string | null
+  price?: number | null
+  discountedPrice?: number | null
+  client?: { id: string; firstName: string; lastName: string } | null
+}
+
 export interface Promotion {
   id: string
   active: boolean
   message: string
   discountPercentage: number
   applicableTo: 'all' | string[]
+  // Present depending on endpoint: count on the list, full rows on the detail.
+  bookingCount?: number
+  bookings?: PromotionBookingSummary[]
 }
 
 // API Response Types

@@ -35,7 +35,7 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
           <textarea v-model="body" rows="10" class="input-field font-normal" placeholder="Write your message..."></textarea>
-          <p class="text-xs text-gray-400 mt-1">Sent inside the branded Fettleworks email template. Blank lines start a new paragraph.</p>
+          <p class="text-xs text-gray-400 mt-1">Sent inside the branded LK Bodyworks email template. Blank lines start a new paragraph.</p>
         </div>
 
         <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded">

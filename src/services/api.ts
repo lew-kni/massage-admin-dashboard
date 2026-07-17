@@ -114,6 +114,12 @@ class ApiService {
     await this.client.delete(`/api/bookings/${id}`)
   }
 
+  // Revoke the applied promotion from a booking (reverts to full list price)
+  async removeBookingPromotion(id: string): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${id}/remove-promotion`)
+    return data
+  }
+
   // Availability
   async getAvailability(date: string): Promise<any> {
     const { data } = await this.client.get('/api/availability', {
@@ -265,6 +271,12 @@ class ApiService {
   // Promotions
   async getPromotions(): Promise<Promotion[]> {
     const { data } = await this.client.get('/api/promotions', { params: { all: true } })
+    return data
+  }
+
+  // Single promotion including the bookings that used it
+  async getPromotion(id: string): Promise<Promotion> {
+    const { data } = await this.client.get(`/api/promotions/${id}`, { params: { all: true } })
     return data
   }
 

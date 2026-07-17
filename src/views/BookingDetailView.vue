@@ -141,6 +141,37 @@
                     </p>
                     <input v-else v-model="editForm.service" type="text" class="input-field mt-1" />
                   </div>
+                  <div>
+                    <label class="text-sm text-gray-500">Price</label>
+                    <p class="font-medium">
+                      <template v-if="booking.price !== null && booking.price !== undefined">
+                        <span
+                          v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
+                          class="text-gray-400 line-through mr-1"
+                        >£{{ booking.price }}</span>
+                        <span>£{{ booking.discountedPrice ?? booking.price }}</span>
+                        <span
+                          v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
+                          class="ml-2 badge bg-amber-100 text-amber-800"
+                        >Promotion</span>
+                      </template>
+                      <span v-else class="text-gray-400">Not set</span>
+                    </p>
+                    <!-- Applied promotion + revoke (e.g. TOS abuse) -->
+                    <div v-if="booking.promotion" class="mt-1 flex items-center flex-wrap gap-2">
+                      <span class="text-xs text-amber-700">
+                        <i class="fas fa-tag mr-1"></i>{{ booking.promotion.message }}
+                      </span>
+                      <button
+                        @click="onRemovePromotion"
+                        :disabled="removingPromotion"
+                        class="text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                      >
+                        {{ removingPromotion ? 'Removing…' : 'Remove promotion' }}
+                      </button>
+                    </div>
+                    <p v-if="promotionError" class="mt-1 text-xs text-red-700">{{ promotionError }}</p>
+                  </div>
                 </div>
                 <div v-if="isEditing">
                   <label class="text-sm text-gray-500">Status</label>
@@ -350,6 +381,22 @@ const booking = ref<Booking | null>(null)
 const showChangeClient = ref(false)
 const changeClientError = ref('')
 const showSendEmail = ref(false)
+const removingPromotion = ref(false)
+const promotionError = ref('')
+
+async function onRemovePromotion() {
+  if (!booking.value?.promotion) return
+  if (!confirm(`Remove the "${booking.value.promotion.message}" promotion from this booking? The price will revert to the full amount.`)) return
+  removingPromotion.value = true
+  promotionError.value = ''
+  try {
+    booking.value = await bookingsStore.removePromotion(booking.value.id)
+  } catch (err: any) {
+    promotionError.value = err?.message || 'Failed to remove promotion'
+  } finally {
+    removingPromotion.value = false
+  }
+}
 
 async function onSelectClient(clientId: string) {
   if (!booking.value) return

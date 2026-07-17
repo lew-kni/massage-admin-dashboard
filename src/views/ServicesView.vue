@@ -116,6 +116,13 @@
               <span v-if="promo.applicableTo === 'all'">all services</span>
               <span v-else>{{ (promo.applicableTo as string[]).join(', ') }}</span>
             </p>
+            <button
+              @click="toggleBookings(promo)"
+              class="mt-2 text-sm text-sage-600 hover:text-sage-700 font-medium inline-flex items-center gap-1"
+            >
+              <i class="fas" :class="expandedPromoId === promo.id ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+              <span>{{ promo.bookingCount ?? 0 }} booking{{ (promo.bookingCount ?? 0) === 1 ? '' : 's' }}</span>
+            </button>
           </div>
           <div class="flex gap-2 shrink-0">
             <button @click="editPromotion(promo)" class="btn-secondary text-sm">
@@ -126,6 +133,30 @@
               <i class="fas fa-trash-alt"></i>
             </button>
           </div>
+        </div>
+
+        <!-- Bookings that used this promotion -->
+        <div v-if="expandedPromoId === promo.id" class="border-t border-gray-100 dark:border-gray-800 px-6 py-4">
+          <p v-if="loadingPromoBookings" class="text-sm text-gray-500">Loading bookings…</p>
+          <p v-else-if="promoBookings.length === 0" class="text-sm text-gray-500">No bookings have used this promotion.</p>
+          <ul v-else class="divide-y divide-gray-100 dark:divide-gray-800">
+            <li v-for="b in promoBookings" :key="b.id" class="py-2 flex items-center justify-between text-sm">
+              <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium">
+                #{{ b.bookingNumber }}
+                <span class="text-gray-500 font-normal">
+                  · {{ b.client ? `${b.client.firstName} ${b.client.lastName}` : 'Unknown client' }}
+                  · {{ formatBookingDate(b.startTime) }}
+                </span>
+              </RouterLink>
+              <span class="text-gray-700 dark:text-gray-300">
+                <span v-if="b.discountedPrice != null && b.price != null && b.discountedPrice !== b.price">
+                  <span class="text-gray-400 line-through mr-1">£{{ b.price }}</span>£{{ b.discountedPrice }}
+                </span>
+                <span v-else-if="b.discountedPrice != null">£{{ b.discountedPrice }}</span>
+                <span v-else-if="b.price != null">£{{ b.price }}</span>
+              </span>
+            </li>
+          </ul>
         </div>
       </div>
 
@@ -151,7 +182,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useServicesStore } from '@/stores/services'
-import type { Service, Promotion } from '@/types'
+import { apiService } from '@/services/api'
+import type { Service, Promotion, PromotionBookingSummary } from '@/types'
 import ServiceFormModal from '@/components/ServiceFormModal.vue'
 import PromotionFormModal from '@/components/PromotionFormModal.vue'
 import Pagination from '@/components/Pagination.vue'
@@ -208,6 +240,35 @@ async function confirmDeletePromotion(promo: Promotion) {
   if (confirm('Delete this promotion? This cannot be undone.')) {
     await store.deletePromotion(promo.id)
   }
+}
+
+// Expandable list of bookings that used a promotion (fetched on demand — the
+// list endpoint only returns the count).
+const expandedPromoId = ref<string | null>(null)
+const promoBookings = ref<PromotionBookingSummary[]>([])
+const loadingPromoBookings = ref(false)
+
+async function toggleBookings(promo: Promotion) {
+  if (expandedPromoId.value === promo.id) {
+    expandedPromoId.value = null
+    return
+  }
+  expandedPromoId.value = promo.id
+  promoBookings.value = []
+  loadingPromoBookings.value = true
+  try {
+    const full = await apiService.getPromotion(promo.id)
+    promoBookings.value = full.bookings || []
+  } catch {
+    promoBookings.value = []
+  } finally {
+    loadingPromoBookings.value = false
+  }
+}
+
+function formatBookingDate(iso: string): string {
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function onSaved() {

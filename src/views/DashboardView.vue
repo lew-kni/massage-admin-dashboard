@@ -120,8 +120,18 @@ const pendingCount = computed(() =>
   bookings.value.filter((b) => b.status === 'PENDING').length
 )
 const monthlyRevenue = computed(() => {
-  // This is a placeholder - calculate based on your pricing
-  return (upcomingBookingsCount.value * 50).toFixed(2)
+  // Sum the as-booked price (promotion-adjusted where one applied) for this
+  // month's non-cancelled bookings. Bookings without a captured price count as 0.
+  const now = new Date()
+  const total = bookings.value.reduce((sum, b) => {
+    const start = new Date(b.startTime)
+    const inThisMonth =
+      start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth()
+    if (!inThisMonth || b.status === 'CANCELLED') return sum
+    const effective = b.discountedPrice ?? b.price ?? 0
+    return sum + effective
+  }, 0)
+  return total.toFixed(2)
 })
 
 const todaysBookings = computed(() => {

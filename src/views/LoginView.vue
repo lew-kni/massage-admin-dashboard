@@ -3,7 +3,7 @@
     <div class="w-full max-w-md">
       <div class="bg-white rounded-lg shadow-lg p-8">
         <div class="mb-8 text-center">
-          <h1 class="text-3xl font-bold text-sage-600">Fettleworks</h1>
+          <h1 class="text-3xl font-bold text-sage-600">LK Bodyworks</h1>
           <p class="text-gray-500 mt-2">Admin Dashboard</p>
         </div>
 

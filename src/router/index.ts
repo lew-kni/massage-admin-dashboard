@@ -13,6 +13,7 @@ import AvailabilityView from '@/views/AvailabilityView.vue'
 import EmailsView from '@/views/EmailsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import ComingSoonView from '@/views/ComingSoonView.vue'
+import AppearanceView from '@/views/AppearanceView.vue'
 
 const routes = [
   {
@@ -74,8 +75,7 @@ const routes = [
   {
     path: '/settings/appearance',
     name: 'SettingsAppearance',
-    component: ComingSoonView,
-    props: { title: 'Appearance', subtitle: 'Branding' },
+    component: AppearanceView,
     meta: { requiresAuth: true },
   },
   {

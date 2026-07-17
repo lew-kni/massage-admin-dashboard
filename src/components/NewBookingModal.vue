@@ -31,11 +31,25 @@
               <label class="block text-sm font-medium text-gray-700 mb-1">Duration</label>
               <select v-model.number="selectedMinutes" class="input-field">
                 <option v-for="d in currentDurations" :key="d.id || d.minutes" :value="d.minutes">
-                  {{ d.minutes }} min{{ d.price !== null && d.price !== undefined ? ` · £${d.price}` : '' }}
+                  {{ durationLabel(d) }}
                 </option>
               </select>
             </div>
           </div>
+
+          <!-- Price + promotion summary for the selected duration -->
+          <div v-if="selectedListPrice !== null" class="mt-3 flex items-center gap-2 text-sm">
+            <span class="text-gray-500">Price:</span>
+            <template v-if="selectedDiscountedPrice !== null && selectedDiscountedPrice !== selectedListPrice">
+              <span class="text-gray-400 line-through">£{{ selectedListPrice }}</span>
+              <span class="font-semibold text-gray-900">£{{ selectedDiscountedPrice }}</span>
+              <span class="badge bg-amber-100 text-amber-800">{{ currentPromotion?.discountPercentage }}% off</span>
+            </template>
+            <span v-else class="font-semibold text-gray-900">£{{ selectedListPrice }}</span>
+          </div>
+          <p v-if="currentPromotion" class="mt-1 text-xs text-amber-700">
+            <i class="fas fa-tag mr-1"></i>{{ currentPromotion.message }}
+          </p>
         </div>
 
         <!-- Date & Time -->
@@ -135,6 +149,7 @@ import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
 import { useServicesStore } from '@/stores/services'
+import { usePromotionPricing } from '@/composables/usePromotionPricing'
 import { apiService } from '@/services/api'
 import type { Client, Booking, ServiceDuration } from '@/types'
 
@@ -143,6 +158,7 @@ const emit = defineEmits<{ close: []; saved: [booking: Booking] }>()
 
 const bookingsStore = useBookingsStore()
 const servicesStore = useServicesStore()
+const { getApplicablePromotion, discountedPrice } = usePromotionPricing()
 const loading = ref(false)
 const error = ref('')
 
@@ -166,6 +182,29 @@ const currentService = computed(() =>
 
 const currentDurations = computed<ServiceDuration[]>(() =>
   (currentService.value?.durations || []).filter((d) => d.isActive !== false)
+)
+
+// Promotion (if any) that applies to the currently selected service.
+const currentPromotion = computed(() => getApplicablePromotion(currentService.value?.slug))
+
+// Label for a duration option, showing the promotion-adjusted price when one applies.
+function durationLabel(d: ServiceDuration): string {
+  const minutes = `${d.minutes} min`
+  if (d.price === null || d.price === undefined) return minutes
+  const discounted = discountedPrice(d.price, currentService.value?.slug)
+  if (discounted !== null && discounted !== d.price) {
+    return `${minutes} · £${discounted} (was £${d.price})`
+  }
+  return `${minutes} · £${d.price}`
+}
+
+// Pricing summary for the selected duration (drives the price line under the times).
+const selectedDurationData = computed<ServiceDuration | undefined>(() =>
+  currentDurations.value.find((d) => d.minutes === selectedMinutes.value)
+)
+const selectedListPrice = computed<number | null>(() => selectedDurationData.value?.price ?? null)
+const selectedDiscountedPrice = computed<number | null>(() =>
+  discountedPrice(selectedListPrice.value, currentService.value?.slug)
 )
 
 const form = reactive({
@@ -251,6 +290,10 @@ async function submitForm() {
       startTime: start.toISOString(),
       endTime: end.toISOString(),
       service: currentService.value.name,
+      // Send the slug + duration so the backend can look up the list price and
+      // apply any active promotion (authoritative, promotion-aware pricing).
+      serviceSlug: currentService.value.slug,
+      durationMinutes: selectedMinutes.value,
       status: form.status,
       notes: form.notes || undefined,
       override: customTime.value,
@@ -267,6 +310,9 @@ async function submitForm() {
 onMounted(async () => {
   if (servicesStore.services.length === 0) {
     await servicesStore.fetchServices()
+  }
+  if (servicesStore.promotions.length === 0) {
+    await servicesStore.fetchPromotions()
   }
   const first = bookableServices.value[0]
   if (first) {

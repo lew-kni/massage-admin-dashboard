@@ -8,7 +8,7 @@
         <!-- Sidebar -->
         <aside class="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col relative">
           <div class="p-6">
-            <h1 class="text-2xl font-bold text-sage-600">Fettleworks</h1>
+            <h1 class="text-2xl font-bold text-sage-600">LK Bodyworks</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Admin Dashboard</p>
           </div>
 
@@ -75,18 +75,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLeadsStore } from '@/stores/leads'
 import { useBookingsStore } from '@/stores/bookings'
-import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const leadsStore = useLeadsStore()
 const bookingsStore = useBookingsStore()
-const { initTheme } = useTheme()
 const settingsOpen = ref(false)
 
 const pendingBookingsCount = computed(
@@ -126,10 +124,6 @@ function logout() {
   authStore.logout()
   router.push('/login')
 }
-
-onMounted(() => {
-  initTheme()
-})
 
 // Fetch badge data whenever the user is authenticated (including on initial load
 // if a session already exists), so nav counts are correct on any page.

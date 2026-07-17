@@ -66,6 +66,24 @@ export const useBookingsStore = defineStore('bookings', () => {
     }
   }
 
+  async function removePromotion(id: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const updated = await apiService.removeBookingPromotion(id)
+      const index = bookings.value.findIndex(b => b.id === id)
+      if (index !== -1) {
+        bookings.value[index] = updated
+      }
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to remove promotion'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function cancelBooking(id: string) {
     loading.value = true
     error.value = null
@@ -106,6 +124,7 @@ export const useBookingsStore = defineStore('bookings', () => {
     fetchBookingsForDateRange,
     createBooking,
     updateBooking,
+    removePromotion,
     cancelBooking,
     deleteBooking,
   }
