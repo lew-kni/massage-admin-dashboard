@@ -5,24 +5,6 @@
       <RouterLink to="/bookings" class="text-sage-600 hover:text-sage-700 dark:text-sage-400 dark:hover:text-sage-300">
         <i class="fas fa-arrow-left mr-1"></i>Back to Bookings
       </RouterLink>
-      <div v-if="booking" class="flex items-center gap-3">
-        <button v-if="!isEditing" @click="showSendEmail = true" class="btn-secondary text-sm">
-          <i class="fas fa-envelope"></i>
-          <span>Send Email</span>
-        </button>
-        <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary text-sm">
-          <i class="fas fa-edit"></i>
-          <span>Edit</span>
-        </button>
-        <template v-else>
-          <button @click="saveBooking" :disabled="saving" class="btn-primary text-sm">
-            {{ saving ? 'Saving...' : 'Save' }}
-          </button>
-          <button @click="cancelEdit" class="btn-secondary text-sm">
-            Cancel
-          </button>
-        </template>
-      </div>
     </div>
 
     <!-- Save Error -->
@@ -293,11 +275,23 @@
             <h3 class="font-semibold">Quick Actions</h3>
           </div>
           <div class="card-body space-y-3">
-            <button class="btn-primary w-full text-sm">
+            <button v-if="!isEditing" @click="showSendEmail = true" class="btn-primary w-full text-sm">
               <i class="fas fa-envelope"></i>
               <span>Send Email</span>
             </button>
-            <button class="btn-danger w-full text-sm">
+            <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary w-full text-sm">
+              <i class="fas fa-edit"></i>
+              <span>Edit</span>
+            </button>
+            <template v-else>
+              <button @click="saveBooking" :disabled="saving" class="btn-primary w-full text-sm">
+                {{ saving ? 'Saving...' : 'Save Changes' }}
+              </button>
+              <button @click="cancelEdit" class="btn-secondary w-full text-sm">
+                Cancel Edit
+              </button>
+            </template>
+            <button v-if="!isEditing && !isBookingPast(booking)" class="btn-danger w-full text-sm">
               <i class="fas fa-trash-alt"></i>
               <span>Cancel Booking</span>
             </button>
@@ -566,5 +560,10 @@ function cancelEdit() {
   initEditForm()
   saveError.value = ''
   isEditing.value = false
+}
+
+function isBookingPast(b: Booking | null): boolean {
+  if (!b) return false
+  return new Date(b.startTime) <= new Date()
 }
 </script>
