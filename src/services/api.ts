@@ -13,6 +13,7 @@ import type {
   Lead,
   LeadReply,
   AppSettings,
+  IntakeForm,
 } from '@/types'
 
 class ApiService {
@@ -117,6 +118,20 @@ class ApiService {
   // Revoke the applied promotion from a booking (reverts to full list price)
   async removeBookingPromotion(id: string): Promise<Booking> {
     const { data } = await this.client.post(`/api/bookings/${id}/remove-promotion`)
+    return data
+  }
+
+  // Pre-visit intake form
+  async sendPreForm(id: string): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${id}/send-preform`)
+    return data
+  }
+  async getPreFormLink(id: string): Promise<{ token: string; url: string }> {
+    const { data } = await this.client.post(`/api/bookings/${id}/preform-link`)
+    return data
+  }
+  async getIntake(id: string): Promise<IntakeForm | null> {
+    const { data } = await this.client.get(`/api/bookings/${id}/intake`)
     return data
   }
 

@@ -97,6 +97,7 @@ const navigation = computed(() => [
   { name: 'Clients', to: '/clients', icon: 'fas fa-users' },
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
   { name: 'Emails', to: '/emails', icon: 'fas fa-envelope' },
+  { name: 'Accounting', to: '/accounting', icon: 'fas fa-sterling-sign' },
 ])
 
 const settingsChildren = [

@@ -255,14 +255,63 @@
             </span>
           </div>
           <div class="card-body">
-            <div class="border-l-4 border-sage-300 pl-4 py-2 space-y-2">
-              <p class="text-gray-700 font-medium">Pre massage form question results here</p>
-              <p class="text-sm text-gray-500">This section will display the client's pre-massage form responses once they have completed the form.</p>
+            <!-- Completed: render responses -->
+            <div v-if="booking.preFormStatus === 'COMPLETED' && intake">
+              <!-- Contraindication / GP-permission alert -->
+              <div v-if="intake.hasContraindications || intake.gpPermissionGiven" class="mb-4 p-3 rounded bg-red-50 border border-red-200">
+                <p class="text-sm font-semibold text-red-800"><i class="fas fa-triangle-exclamation mr-1"></i>Review before treatment</p>
+                <p v-if="intake.hasContraindications" class="text-sm text-red-700 mt-1">Client reported possible contraindications<span v-if="(intake.contraindicationFlags || []).length"> — {{ (intake.contraindicationFlags || []).join(', ') }}</span>.</p>
+                <p v-if="intake.gpPermissionGiven" class="text-sm text-red-700 mt-1">GP/consultant permission indicated — check the referral letter.</p>
+              </div>
+
+              <div class="flex items-center gap-2 mb-4 text-xs">
+                <span class="badge" :class="intake.completedInPerson ? 'bg-sky-100 text-sky-800' : 'bg-green-100 text-green-800'">
+                  {{ intake.completedInPerson ? 'Filled in by you (in person)' : 'Completed by client' }}
+                </span>
+                <span v-if="intake.submittedAt" class="text-gray-400">{{ formatDateTime(intake.submittedAt) }}</span>
+              </div>
+
+              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div v-for="row in intakeRows" :key="row.label" :class="row.wide ? 'sm:col-span-2' : ''">
+                  <dt class="text-gray-500">{{ row.label }}</dt>
+                  <dd class="font-medium whitespace-pre-wrap">{{ row.value }}</dd>
+                </div>
+              </dl>
+
+              <!-- Body diagram -->
+              <div v-if="intake.bodyDiagram && intake.bodyDiagram.length" class="mt-6 border-t pt-4">
+                <h3 class="font-semibold text-gray-900 mb-3">Areas of concern</h3>
+                <BodyDiagramView :markers="intake.bodyDiagram" />
+              </div>
+
+              <p class="mt-4 text-xs text-gray-500">Signed: <span class="font-medium">{{ intake.signatureName }}</span></p>
             </div>
-            <button v-if="(booking.preFormStatus || 'NOT_SENT') === 'NOT_SENT'" class="mt-4 btn-primary text-sm">
-              <i class="fas fa-envelope"></i>
-              <span>Send Form to Client</span>
-            </button>
+
+            <!-- Not completed: placeholder -->
+            <div v-else class="border-l-4 border-sage-300 pl-4 py-2 space-y-1">
+              <p class="text-gray-700 font-medium">No responses yet</p>
+              <p class="text-sm text-gray-500">
+                <span v-if="booking.preFormStatus === 'SENT'">Form sent{{ booking.preFormSentAt ? ` ${formatRelative(booking.preFormSentAt)}` : '' }} — waiting for the client to complete it.</span>
+                <span v-else>Send the client their pre-visit form, or fill it in with them.</span>
+              </p>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-4 flex flex-wrap gap-2">
+              <button @click="onSendPreForm" :disabled="sendingPreform" class="btn-primary text-sm">
+                <i class="fas fa-envelope"></i>
+                <span>{{ sendingPreform ? 'Sending…' : (booking.preFormStatus === 'NOT_SENT' ? 'Send Form to Client' : 'Resend Form') }}</span>
+              </button>
+              <button @click="onFillOnBehalf" class="btn-secondary text-sm">
+                <i class="fas fa-pen-to-square"></i>
+                <span>Fill in on their behalf</span>
+              </button>
+              <button @click="onCopyLink" class="btn-secondary text-sm">
+                <i class="fas" :class="linkCopied ? 'fa-check' : 'fa-link'"></i>
+                <span>{{ linkCopied ? 'Copied' : 'Copy link' }}</span>
+              </button>
+            </div>
+            <p v-if="preformError" class="mt-2 text-sm text-red-700">{{ preformError }}</p>
           </div>
         </div>
       </div>
@@ -295,6 +344,10 @@
               <i class="fas fa-trash-alt"></i>
               <span>Cancel Booking</span>
             </button>
+            <button v-if="!isEditing && !booking.isPaid" @click="showPaymentModal = true" class="btn-primary w-full text-sm bg-emerald-600 hover:bg-emerald-700">
+              <i class="fas fa-check-circle"></i>
+              <span>Mark as Paid</span>
+            </button>
           </div>
         </div>
 
@@ -323,6 +376,20 @@
             <div>
               <p class="text-gray-500">Created</p>
               <p class="font-medium">{{ formatDateTime(booking.createdAt) }}</p>
+            </div>
+            <div class="border-t pt-4">
+              <p class="text-gray-500 mb-3">Payment Status</p>
+              <div class="flex items-center justify-between">
+                <span class="font-medium">{{ booking.isPaid ? 'Paid' : 'Unpaid' }}</span>
+                <div v-if="!booking.isPaid" class="flex gap-2">
+                  <button @click="showPaymentModal = true" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
+                    <i class="fas fa-plus-circle mr-1"></i>Mark Paid
+                  </button>
+                </div>
+              </div>
+              <div v-if="booking.isPaid && booking.paymentMethod" class="text-sm mt-2">
+                <p class="text-gray-600">Method: <span class="font-medium">{{ booking.paymentMethod }}</span></p>
+              </div>
             </div>
           </div>
         </div>
@@ -356,6 +423,13 @@
       :booking="booking"
       @close="showSendEmail = false"
     />
+
+    <PaymentMethodModal
+      v-if="showPaymentModal"
+      :saving="savingPayment"
+      @close="showPaymentModal = false"
+      @confirm="confirmPaymentMethod"
+    />
   </div>
 </template>
 
@@ -363,10 +437,13 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
-import type { Booking } from '@/types'
+import { apiService } from '@/services/api'
+import type { Booking, IntakeForm } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
+import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
+import BodyDiagramView from '@/components/BodyDiagramView.vue'
 
 const route = useRoute()
 const bookingsStore = useBookingsStore()
@@ -375,8 +452,92 @@ const booking = ref<Booking | null>(null)
 const showChangeClient = ref(false)
 const changeClientError = ref('')
 const showSendEmail = ref(false)
+const showPaymentModal = ref(false)
 const removingPromotion = ref(false)
 const promotionError = ref('')
+// Pre-visit intake form
+const intake = ref<IntakeForm | null>(null)
+const sendingPreform = ref(false)
+const preformError = ref('')
+const linkCopied = ref(false)
+
+const yn = (v?: boolean | null) => (v === true ? 'Yes' : v === false ? 'No' : '—')
+
+const intakeRows = computed(() => {
+  const f = intake.value
+  if (!f) return [] as { label: string; value: string; wide?: boolean }[]
+  const rows: { label: string; value: string; wide?: boolean }[] = [
+    { label: 'Full name', value: f.fullName || '—' },
+    { label: 'Date of birth', value: f.dateOfBirth || '—' },
+    { label: 'Contact number', value: f.phone || '—' },
+    { label: 'Occupation', value: f.occupation || '—' },
+    { label: 'Address', value: f.address || '—', wide: true },
+    { label: 'Emergency contact', value: [f.emergencyName, f.emergencyPhone, f.emergencyRelationship].filter(Boolean).join(' · ') || '—', wide: true },
+    { label: 'GP', value: [f.gpName, f.gpPhone, f.gpSurgery].filter(Boolean).join(' · ') || '—', wide: true },
+    { label: 'Contraindications in last 6 months?', value: yn(f.hasContraindications) },
+    { label: 'Visited GP in last 6 months?', value: yn(f.visitedGpRecently) },
+  ]
+  if (f.hasContraindications && f.contraindicationDetails) rows.push({ label: 'Contraindication details', value: f.contraindicationDetails, wide: true })
+  if (f.visitedGpRecently && f.gpVisitDetails) rows.push({ label: 'GP visit details', value: f.gpVisitDetails, wide: true })
+  if (f.currentMedications) rows.push({ label: 'Current medications', value: f.currentMedications, wide: true })
+  if (f.reasonForVisit) rows.push({ label: 'Reason for visit', value: f.reasonForVisit, wide: true })
+  if (f.subjectiveHistory) rows.push({ label: 'Anything else', value: f.subjectiveHistory, wide: true })
+  return rows
+})
+
+async function loadIntake() {
+  if (!booking.value || booking.value.preFormStatus !== 'COMPLETED') return
+  try {
+    intake.value = await apiService.getIntake(booking.value.id)
+  } catch {
+    intake.value = null
+  }
+}
+
+async function onSendPreForm() {
+  if (!booking.value) return
+  if (booking.value.preFormStatus !== 'NOT_SENT' && !confirm('Resend the pre-visit form link to the client?')) return
+  sendingPreform.value = true
+  preformError.value = ''
+  try {
+    booking.value = await apiService.sendPreForm(booking.value.id)
+  } catch (err: any) {
+    preformError.value = err?.response?.data?.error || err?.message || 'Failed to send the form'
+  } finally {
+    sendingPreform.value = false
+  }
+}
+
+async function onFillOnBehalf() {
+  if (!booking.value) return
+  preformError.value = ''
+  try {
+    const { url } = await apiService.getPreFormLink(booking.value.id)
+    window.open(`${url}?by=therapist`, '_blank')
+  } catch (err: any) {
+    preformError.value = err?.response?.data?.error || 'Failed to open the form'
+  }
+}
+
+async function onCopyLink() {
+  if (!booking.value) return
+  preformError.value = ''
+  try {
+    const { url } = await apiService.getPreFormLink(booking.value.id)
+    await navigator.clipboard.writeText(url)
+    linkCopied.value = true
+    setTimeout(() => (linkCopied.value = false), 2000)
+  } catch (err: any) {
+    preformError.value = err?.response?.data?.error || 'Failed to copy the link'
+  }
+}
+const editingPayment = ref(false)
+const savingPayment = ref(false)
+const paymentError = ref('')
+const editingPaymentForm = reactive({
+  isPaid: false,
+  paymentMethod: '' as 'CASH' | 'BACS' | '',
+})
 
 async function onRemovePromotion() {
   if (!booking.value?.promotion) return
@@ -453,6 +614,8 @@ onMounted(async () => {
   const bookingId = route.params.id as string
   booking.value = bookingsStore.bookings.find(b => b.id === bookingId) || null
   initEditForm()
+  initPaymentForm()
+  await loadIntake()
 })
 
 function formatPressure(value?: string | null): string {
@@ -565,5 +728,53 @@ function cancelEdit() {
 function isBookingPast(b: Booking | null): boolean {
   if (!b) return false
   return new Date(b.startTime) <= new Date()
+}
+
+function initPaymentForm() {
+  if (!booking.value) return
+  editingPaymentForm.isPaid = booking.value.isPaid || false
+  editingPaymentForm.paymentMethod = (booking.value.paymentMethod as any) || ''
+}
+
+async function savePaymentStatus() {
+  if (!booking.value) return
+  savingPayment.value = true
+  paymentError.value = ''
+  try {
+    const updated = await bookingsStore.updateBooking(booking.value.id, {
+      isPaid: editingPaymentForm.isPaid,
+      paymentMethod: editingPaymentForm.isPaid ? (editingPaymentForm.paymentMethod as 'CASH' | 'BACS') : null,
+    } as Partial<Booking>)
+    booking.value = updated
+    editingPayment.value = false
+  } catch (err: any) {
+    paymentError.value = err?.message || 'Failed to save payment status'
+  } finally {
+    savingPayment.value = false
+  }
+}
+
+function cancelPaymentEdit() {
+  editingPayment.value = false
+  initPaymentForm()
+  paymentError.value = ''
+}
+
+async function confirmPaymentMethod(method: 'CASH' | 'BACS') {
+  if (!booking.value) return
+  savingPayment.value = true
+  paymentError.value = ''
+  try {
+    const updated = await bookingsStore.updateBooking(booking.value.id, {
+      isPaid: true,
+      paymentMethod: method,
+    } as Partial<Booking>)
+    booking.value = updated
+    showPaymentModal.value = false
+  } catch (err: any) {
+    paymentError.value = err?.message || 'Failed to save payment status'
+  } finally {
+    savingPayment.value = false
+  }
 }
 </script>

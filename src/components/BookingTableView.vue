@@ -53,7 +53,11 @@
               </span>
             </td>
             <td class="px-4 py-3 text-sm">
-              <div class="flex justify-end gap-1">
+              <!-- Past bookings are read-only: no actions in this column. -->
+              <div v-if="isBookingPast(booking)" class="flex justify-end">
+                <span class="text-gray-400">—</span>
+              </div>
+              <div v-else class="flex justify-end gap-1">
                 <button
                   v-if="booking.status === 'PENDING'"
                   @click="$emit('confirm', booking)"
@@ -73,7 +77,7 @@
                   <span>Reject</span>
                 </button>
                 <button
-                  v-else-if="booking.status === 'CONFIRMED' && !isBookingPast(booking)"
+                  v-else-if="booking.status === 'CONFIRMED'"
                   @click="$emit('cancel', booking)"
                   class="btn-danger text-xs py-1 px-2 whitespace-nowrap"
                   title="Cancel booking"

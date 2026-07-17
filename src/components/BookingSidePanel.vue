@@ -59,7 +59,12 @@
         <router-link :to="`/bookings/${booking.id}`" class="block w-full text-center px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 font-medium">
           View Full Details
         </router-link>
-        <button @click="cancelBooking" class="w-full px-3 py-2 bg-red-50 text-red-600 rounded text-sm hover:bg-red-100 font-medium">
+        <!-- Confirmed bookings in the past can't be cancelled. -->
+        <button
+          v-if="!isPast && booking.status !== 'CANCELLED'"
+          @click="cancelBooking(booking)"
+          class="w-full px-3 py-2 bg-red-50 text-red-600 rounded text-sm hover:bg-red-100 font-medium"
+        >
           Cancel Booking
         </button>
       </div>
@@ -71,10 +76,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { format } from 'date-fns'
 import type { Booking } from '@/types'
 
-defineProps<{
+const props = defineProps<{
   booking: Booking | null
 }>()
 
@@ -82,6 +88,12 @@ const emit = defineEmits<{
   close: []
   cancel: [booking: Booking]
 }>()
+
+// A booking is "past" once its start time has passed — matches the bookings
+// table and the Past filter, so a past confirmed booking can't be cancelled.
+const isPast = computed(() =>
+  props.booking ? new Date(props.booking.startTime) <= new Date() : false
+)
 
 function closePanel() {
   emit('close')

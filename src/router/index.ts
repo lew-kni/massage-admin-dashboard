@@ -11,6 +11,7 @@ import BookingDetailView from '@/views/BookingDetailView.vue'
 import ServicesView from '@/views/ServicesView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
 import EmailsView from '@/views/EmailsView.vue'
+import AccountingView from '@/views/AccountingView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import ComingSoonView from '@/views/ComingSoonView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
@@ -67,6 +68,12 @@ const routes = [
     path: '/emails',
     name: 'Emails',
     component: EmailsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/accounting',
+    name: 'Accounting',
+    component: AccountingView,
     meta: { requiresAuth: true },
   },
 

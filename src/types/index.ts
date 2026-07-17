@@ -63,11 +63,57 @@ export interface Booking {
   // promotion-adjusted price; null when no promotion applied.
   price?: number | null
   discountedPrice?: number | null
+  preFormToken?: string | null
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null
   preFormCompletedAt?: string | null
+  isPaid?: boolean | null
+  paymentMethod?: 'CASH' | 'BACS' | null
   createdAt: string
   updatedAt: string
+}
+
+// Pre-visit intake form
+export interface BodyMarker {
+  view: 'front' | 'back'
+  x: number
+  y: number
+  type: 'pain' | 'tension' | 'injury' | 'avoid'
+  note?: string
+}
+
+export interface IntakeForm {
+  id: string
+  bookingId: string
+  fullName?: string | null
+  dateOfBirth?: string | null
+  gender?: string | null
+  occupation?: string | null
+  phone?: string | null
+  address?: string | null
+  emergencyName?: string | null
+  emergencyPhone?: string | null
+  emergencyRelationship?: string | null
+  gpName?: string | null
+  gpPhone?: string | null
+  gpSurgery?: string | null
+  hasContraindications?: boolean | null
+  contraindicationDetails?: string | null
+  contraindicationFlags?: string[]
+  visitedGpRecently?: boolean | null
+  gpVisitDetails?: string | null
+  gpPermissionGiven?: boolean | null
+  currentMedications?: string | null
+  reasonForVisit?: string | null
+  subjectiveHistory?: string | null
+  bodyDiagram?: BodyMarker[]
+  consentAccurate?: boolean
+  consentProceed?: boolean
+  signatureName?: string | null
+  signedAt?: string | null
+  completedBy?: 'CLIENT' | 'THERAPIST' | null
+  completedInPerson?: boolean
+  submittedAt?: string | null
 }
 
 // Availability Types
