@@ -87,7 +87,7 @@
                 v-model="form.fromName"
                 type="text"
                 class="input-field"
-                placeholder="LK Bodyworks"
+                placeholder="North Peak Massage"
               />
             </div>
             <div>
@@ -99,7 +99,7 @@
                 v-model="form.fromEmail"
                 type="email"
                 class="input-field"
-                placeholder="hello@lkbodyworks..."
+                placeholder="hello@northpeakmassage..."
               />
             </div>
             <div class="sm:col-span-2">

@@ -36,12 +36,10 @@
               <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">
                 Date
               </label>
-              <input
-                id="startDate"
+              <AvailabilityDatePicker
                 v-model="form.startDate"
-                type="date"
-                class="input-field"
-                required
+                :duration="form.duration"
+                :exclude-booking-id="props.booking?.id"
               />
             </div>
             <div>
@@ -131,6 +129,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
 import { format } from 'date-fns'
+import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import type { Booking } from '@/types'
 
 const emit = defineEmits<{

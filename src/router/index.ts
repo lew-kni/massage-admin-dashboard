@@ -12,6 +12,8 @@ import ServicesView from '@/views/ServicesView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
 import EmailsView from '@/views/EmailsView.vue'
 import AccountingView from '@/views/AccountingView.vue'
+import AccountingExpensesView from '@/views/AccountingExpensesView.vue'
+import AccountingReceiptsView from '@/views/AccountingReceiptsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import ComingSoonView from '@/views/ComingSoonView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
@@ -70,10 +72,24 @@ const routes = [
     component: EmailsView,
     meta: { requiresAuth: true },
   },
+  // Accounting section
+  { path: '/accounting', redirect: '/accounting/dashboard' },
   {
-    path: '/accounting',
-    name: 'Accounting',
+    path: '/accounting/dashboard',
+    name: 'AccountingDashboard',
     component: AccountingView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/accounting/receipts',
+    name: 'AccountingReceipts',
+    component: AccountingReceiptsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/accounting/expenses',
+    name: 'AccountingExpenses',
+    component: AccountingExpensesView,
     meta: { requiresAuth: true },
   },
 
@@ -121,12 +137,17 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
 
+  // The session lives in an httpOnly cookie we can't inspect, so ask the server
+  // once per page load. Without this a refresh would always bounce to /login.
+  await authStore.ensureResolved()
+
   if (requiresAuth && !authStore.isAuthenticated) {
-    next('/login')
+    // Remember where they were headed so sign-in can return them there.
+    next({ path: '/login', query: to.fullPath === '/' ? {} : { redirect: to.fullPath } })
   } else if (to.path === '/login' && authStore.isAuthenticated) {
     next('/')
   } else {

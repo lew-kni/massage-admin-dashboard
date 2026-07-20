@@ -103,7 +103,13 @@
                   <div>
                     <label class="text-sm text-gray-500">Date</label>
                     <p v-if="!isEditing" class="font-medium">{{ formatDate(booking.startTime) }}</p>
-                    <input v-else v-model="editForm.startDate" type="date" class="input-field mt-1" />
+                    <AvailabilityDatePicker
+                      v-else
+                      v-model="editForm.startDate"
+                      :duration="Number(editForm.duration) || null"
+                      :exclude-booking-id="booking.id"
+                      class="mt-1"
+                    />
                   </div>
                   <div>
                     <label class="text-sm text-gray-500">Start Time</label>
@@ -314,6 +320,9 @@
             <p v-if="preformError" class="mt-2 text-sm text-red-700">{{ preformError }}</p>
           </div>
         </div>
+
+        <!-- Therapist's own assessment for this session -->
+        <AssessmentSection :booking-id="booking.id" />
       </div>
 
       <!-- Sidebar -->
@@ -444,6 +453,8 @@ import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 import BodyDiagramView from '@/components/BodyDiagramView.vue'
+import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
+import AssessmentSection from '@/components/AssessmentSection.vue'
 
 const route = useRoute()
 const bookingsStore = useBookingsStore()

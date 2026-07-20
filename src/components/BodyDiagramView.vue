@@ -18,6 +18,10 @@ const markerTypes = [
   { key: 'avoid', label: 'Avoid', color: '#334155' },
 ] as const
 
+// Right half of the generic body outline (kept in sync with the client component).
+const BODY_HALF =
+  'M100 22 C120 22 130 40 130 56 C130 67 125 74 118 79 C118 84 117 87 117 91 C126 95 139 100 151 110 C159 118 161 139 159 162 C158 185 154 206 151 226 C153 235 150 241 144 240 C139 239 139 233 140 226 C142 204 144 182 145 159 C145 140 141 124 134 118 C130 142 128 164 126 186 C125 202 130 215 136 227 C140 272 135 342 127 404 C125 430 123 450 122 460 C122 468 126 472 130 468 C124 474 112 474 108 469 C107 462 110 458 111 453 C113 420 112 372 111 330 C109 300 105 274 102 252 C101 247 100 247 100 250'
+
 const currentView = ref<'front' | 'back'>('front')
 const colorFor = (type: string) => markerTypes.find((t) => t.key === type)?.color || '#334155'
 const viewMarkers = computed(() => (props.markers || []).filter((m) => m.view === currentView.value))
@@ -26,20 +30,10 @@ const usedTypes = computed(() => markerTypes.filter((t) => (props.markers || [])
 
 <template>
   <div>
-    <div class="flex items-center justify-between mb-2">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
       <div class="inline-flex rounded border border-gray-200 overflow-hidden text-sm">
-        <button
-          type="button"
-          class="px-3 py-1"
-          :class="currentView === 'front' ? 'bg-sage-600 text-white' : 'bg-white text-gray-600'"
-          @click="currentView = 'front'"
-        >Front</button>
-        <button
-          type="button"
-          class="px-3 py-1"
-          :class="currentView === 'back' ? 'bg-sage-600 text-white' : 'bg-white text-gray-600'"
-          @click="currentView = 'back'"
-        >Back</button>
+        <button type="button" class="px-3 py-1" :class="currentView === 'front' ? 'bg-sage-600 text-white' : 'bg-white text-gray-600'" @click="currentView = 'front'">Front</button>
+        <button type="button" class="px-3 py-1" :class="currentView === 'back' ? 'bg-sage-600 text-white' : 'bg-white text-gray-600'" @click="currentView = 'back'">Back</button>
       </div>
       <div class="flex flex-wrap gap-3 text-xs">
         <span v-for="t in usedTypes" :key="t.key" class="inline-flex items-center gap-1">
@@ -48,18 +42,13 @@ const usedTypes = computed(() => markerTypes.filter((t) => (props.markers || [])
       </div>
     </div>
 
-    <div class="relative mx-auto" style="max-width: 220px">
-      <svg viewBox="0 0 200 440" class="block w-full h-auto" aria-hidden="true">
-        <g fill="rgba(107,127,94,0.18)" stroke="#4b5a41" stroke-width="1.5">
-          <circle cx="100" cy="40" r="26" />
-          <rect x="88" y="60" width="24" height="22" />
-          <rect x="56" y="76" width="88" height="142" rx="26" />
-          <rect x="32" y="84" width="24" height="152" rx="12" />
-          <rect x="144" y="84" width="24" height="152" rx="12" />
-          <rect x="62" y="205" width="32" height="225" rx="16" />
-          <rect x="106" y="205" width="32" height="225" rx="16" />
+    <div class="relative mx-auto" style="max-width: 210px">
+      <svg viewBox="0 0 200 480" class="block w-full h-auto" aria-hidden="true">
+        <g fill="rgba(107,127,94,0.16)" stroke="#4b5a41" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+          <path :d="BODY_HALF" />
+          <path :d="BODY_HALF" transform="translate(200,0) scale(-1,1)" />
         </g>
-        <line v-if="currentView === 'back'" x1="100" y1="84" x2="100" y2="210" stroke="#4b5a41" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5" />
+        <line v-if="currentView === 'back'" x1="100" y1="98" x2="100" y2="218" stroke="#4b5a41" stroke-width="1.5" stroke-dasharray="4 5" opacity="0.4" />
       </svg>
       <span
         v-for="(m, i) in viewMarkers"

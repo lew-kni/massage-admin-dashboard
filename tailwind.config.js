@@ -7,6 +7,11 @@ export default {
   ],
   theme: {
     extend: {
+      // Named breakpoint for the admin sidebar collapsing into a burger menu —
+      // doesn't match Tailwind's default scale, so it needs its own name.
+      screens: {
+        sidebar: '920px',
+      },
       colors: {
         sage: {
           50: '#f8faf7',

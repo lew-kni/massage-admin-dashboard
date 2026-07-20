@@ -1,0 +1,64 @@
+name: Deploy admin dashboard to Cloudflare Pages
+
+# The admin dashboard is a client-routed SPA (vue-router history mode — see
+# src/router/index.ts). A hard refresh on any route other than "/" needs the
+# server to fall back to index.html rather than 404 on a literal path match.
+# Cloudflare Pages does this automatically; a raw storage bucket (R2 or S3)
+# does not, which is why this deploys to a Pages project instead.
+
+on:
+  push:
+    branches: [master, main]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+  workflow_dispatch: {}
+
+# One deploy at a time; a newer push supersedes an in-flight one.
+concurrency:
+  group: deploy-admin
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        # `npm run build` runs the Vitest suite before `vite build` (see
+        # package.json) — a red test fails this step and blocks the deploy.
+        # VITE_API_BASE_URL must be set here: Vite inlines VITE_*-prefixed env
+        # vars into the bundle at build time, not read at runtime.
+        env:
+          VITE_API_BASE_URL: ${{ vars.API_BASE_URL || 'https://api.northpeakmassage.com' }}
+        run: npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || 'massage-admin' }} --branch=main
+
+      - name: Summary
+        run: |
+          {
+            echo "### Admin dashboard deployed"
+            echo ""
+            echo "- Cloudflare Pages project: \`${{ vars.CLOUDFLARE_PAGES_PROJECT || 'massage-admin' }}\`"
+            echo "- API base baked in: \`${{ vars.API_BASE_URL || 'https://api.northpeakmassage.com' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

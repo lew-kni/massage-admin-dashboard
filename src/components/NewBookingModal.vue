@@ -58,7 +58,7 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input v-model="form.date" type="date" class="input-field" required />
+              <AvailabilityDatePicker v-model="form.date" :duration="selectedMinutes" :min-date="new Date()" />
             </div>
             <div v-if="customTime">
               <label class="block text-sm font-medium text-gray-700 mb-1">Start Time (custom)</label>
@@ -151,6 +151,7 @@ import { useBookingsStore } from '@/stores/bookings'
 import { useServicesStore } from '@/stores/services'
 import { usePromotionPricing } from '@/composables/usePromotionPricing'
 import { apiService } from '@/services/api'
+import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import type { Client, Booking, ServiceDuration } from '@/types'
 
 const props = defineProps<{ client: Client }>()

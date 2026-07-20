@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from 'axios'
-import { useAuthStore } from '@/stores/auth'
+import type { AdminUser } from '@/stores/auth'
 import type {
   Client,
   Booking,
@@ -14,35 +14,41 @@ import type {
   LeadReply,
   AppSettings,
   IntakeForm,
+  BookingAssessment,
+  BookingAssessmentInput,
+  Expense,
+  Receipt,
+  ReceiptDetail,
 } from '@/types'
 
 class ApiService {
   private client: AxiosInstance
 
+  // Set by the app on boot. Avoids importing the store here, which would create
+  // a circular dependency (store -> api -> store).
+  public onUnauthorized: (() => void) | null = null
+
   constructor() {
     this.client = axios.create({
       baseURL: import.meta.env.VITE_API_BASE_URL,
+      // Send the httpOnly session cookie on every request. There is no bearer
+      // token to attach — the browser handles credentials for us.
+      withCredentials: true,
       headers: {
         'Content-Type': 'application/json',
       },
-    })
-
-    // Add auth header to requests
-    this.client.interceptors.request.use((config) => {
-      const authStore = useAuthStore()
-      if (authStore.apiKey) {
-        config.headers['X-API-Key'] = authStore.apiKey
-      }
-      return config
     })
 
     // Handle errors
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
-          const authStore = useAuthStore()
-          authStore.logout()
+        // A 401 means the session expired or was revoked. Drop local state and
+        // send them back to sign in — except on the probe itself, where 401 is
+        // simply the expected "not signed in" answer.
+        const url: string = error.config?.url || ''
+        if (error.response?.status === 401 && !url.includes('/api/auth/me')) {
+          this.onUnauthorized?.()
         }
 
         // Convert API error responses to proper error messages
@@ -56,6 +62,25 @@ class ApiService {
         return Promise.reject(error)
       }
     )
+  }
+
+  // Auth
+  async getCurrentUser(): Promise<AdminUser> {
+    const { data } = await this.client.get('/api/auth/me')
+    return data
+  }
+
+  async loginWithGoogle(credential: string): Promise<AdminUser> {
+    const { data } = await this.client.post('/api/auth/google', { credential })
+    return data
+  }
+
+  async logout(): Promise<void> {
+    await this.client.post('/api/auth/logout')
+  }
+
+  async logoutEverywhere(): Promise<void> {
+    await this.client.post('/api/auth/logout-all')
   }
 
   // Clients
@@ -135,6 +160,17 @@ class ApiService {
     return data
   }
 
+  // Therapist's pre-massage assessment
+  async getAssessment(id: string): Promise<BookingAssessment | null> {
+    const { data } = await this.client.get(`/api/bookings/${id}/assessment`)
+    return data
+  }
+
+  async saveAssessment(id: string, assessment: BookingAssessmentInput): Promise<BookingAssessment> {
+    const { data } = await this.client.put(`/api/bookings/${id}/assessment`, assessment)
+    return data
+  }
+
   // Availability
   async getAvailability(date: string): Promise<any> {
     const { data } = await this.client.get('/api/availability', {
@@ -153,13 +189,26 @@ class ApiService {
     return data
   }
 
-  async getAvailabilitySettings(): Promise<{ bufferMinutes: number; slotIntervalMinutes: number }> {
+  async getAvailabilitySettings(): Promise<{ bufferMinutes: number; slotIntervalMinutes: number; maxAdvanceDays: number }> {
     const { data } = await this.client.get('/api/availability/settings')
     return data
   }
 
-  async updateAvailabilitySettings(settings: { bufferMinutes?: number; slotIntervalMinutes?: number }): Promise<{ bufferMinutes: number; slotIntervalMinutes: number }> {
+  async updateAvailabilitySettings(settings: { bufferMinutes?: number; slotIntervalMinutes?: number; maxAdvanceDays?: number }): Promise<{ bufferMinutes: number; slotIntervalMinutes: number; maxAdvanceDays: number }> {
     const { data } = await this.client.put('/api/availability/settings', settings)
+    return data
+  }
+
+  // Dates in the range with no bookable slot for the given duration
+  async getUnavailableDates(
+    startDate: string,
+    endDate: string,
+    duration: number,
+    excludeBookingId?: string
+  ): Promise<{ dates: string[] }> {
+    const { data } = await this.client.get('/api/availability/unavailable-dates', {
+      params: { startDate, endDate, duration, ...(excludeBookingId ? { excludeBookingId } : {}) },
+    })
     return data
   }
 
@@ -328,6 +377,94 @@ class ApiService {
   async replyToLead(id: string, reply: { subject: string; body: string }): Promise<LeadReply> {
     const { data } = await this.client.post(`/api/leads/${id}/reply`, reply)
     return data
+  }
+
+  // Expenses
+  async getExpenses(): Promise<Expense[]> {
+    const { data } = await this.client.get('/api/expenses')
+    return data
+  }
+
+  async getExpense(id: string): Promise<Expense> {
+    const { data } = await this.client.get(`/api/expenses/${id}`)
+    return data
+  }
+
+  async createExpense(expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>): Promise<Expense> {
+    const { data } = await this.client.post('/api/expenses', expense)
+    return data
+  }
+
+  async updateExpense(id: string, expense: Partial<Expense>): Promise<Expense> {
+    const { data } = await this.client.patch(`/api/expenses/${id}`, expense)
+    return data
+  }
+
+  async deleteExpense(id: string): Promise<void> {
+    await this.client.delete(`/api/expenses/${id}`)
+  }
+
+  // Receipts
+  async getReceipts(): Promise<Receipt[]> {
+    const { data } = await this.client.get('/api/receipts')
+    return data
+  }
+
+  async getReceipt(id: string): Promise<ReceiptDetail> {
+    const { data } = await this.client.get(`/api/receipts/${id}`)
+    return data
+  }
+
+  async getReceiptFileUrl(id: string): Promise<{ url: string }> {
+    const { data } = await this.client.get(`/api/receipts/${id}/file`)
+    return data
+  }
+
+  async createReceipt(payload: {
+    file: File
+    vendor?: string | null
+    date?: string | null
+    totalAmount?: number | null
+    notes?: string | null
+  }): Promise<Receipt> {
+    const form = new FormData()
+    form.append('file', payload.file)
+    if (payload.vendor) form.append('vendor', payload.vendor)
+    if (payload.date) form.append('date', payload.date)
+    if (payload.totalAmount != null) form.append('totalAmount', String(payload.totalAmount))
+    if (payload.notes) form.append('notes', payload.notes)
+    const { data } = await this.client.post('/api/receipts', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
+  }
+
+  async updateReceipt(id: string, receipt: Partial<Receipt>): Promise<Receipt> {
+    const { data } = await this.client.patch(`/api/receipts/${id}`, receipt)
+    return data
+  }
+
+  async deleteReceipt(id: string): Promise<void> {
+    await this.client.delete(`/api/receipts/${id}`)
+  }
+
+  // Create a new expense "under" a receipt — same shape as createExpense, the
+  // receipt just pre-fills vendor/date server-side when omitted and the two
+  // get linked automatically.
+  async createExpenseUnderReceipt(
+    receiptId: string,
+    expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<Expense> {
+    const { data } = await this.client.post(`/api/receipts/${receiptId}/expenses`, expense)
+    return data
+  }
+
+  async linkExpenseToReceipt(receiptId: string, expenseId: string): Promise<void> {
+    await this.client.post(`/api/receipts/${receiptId}/link`, { expenseId })
+  }
+
+  async unlinkExpenseFromReceipt(receiptId: string, expenseId: string): Promise<void> {
+    await this.client.delete(`/api/receipts/${receiptId}/link/${expenseId}`)
   }
 }
 

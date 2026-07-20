@@ -116,6 +116,39 @@ export interface IntakeForm {
   submittedAt?: string | null
 }
 
+// Therapist's pre-massage assessment (the paper palpation/observation sheet)
+export interface AssessmentFinding {
+  id?: string
+  bodyPart: string
+  side?: 'LEFT' | 'RIGHT' | 'BOTH' | 'N/A' | null
+  muscles: string[]
+  source: 'OBSERVED' | 'REPORTED'
+  posture?: string | null
+  movement?: string | null
+  palpation?: string | null
+  functionalScale?: number | null
+  notes?: string | null
+  sortOrder?: number
+}
+
+export interface BookingAssessment {
+  id: string
+  bookingId: string
+  clinicalFindings?: string | null
+  proposedAction?: string | null
+  generalNotes?: string | null
+  findings: AssessmentFinding[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface BookingAssessmentInput {
+  clinicalFindings?: string | null
+  proposedAction?: string | null
+  generalNotes?: string | null
+  findings: AssessmentFinding[]
+}
+
 // Availability Types
 export interface Availability {
   id: string
@@ -268,6 +301,72 @@ export interface Promotion {
   bookings?: PromotionBookingSummary[]
 }
 
+// Expense Types
+export type ExpenseCategory =
+  | 'MILEAGE'
+  | 'TRAVEL'
+  | 'SUPPLIES'
+  | 'INSURANCE_MEMBERSHIP'
+  | 'TRAINING'
+  | 'MARKETING'
+  | 'PHONE_ADMIN'
+  | 'CLOTHING_LAUNDRY'
+  | 'OTHER'
+
+export interface Expense {
+  id: string
+  date: string
+  amount: number // pence — server-computed for MILEAGE, see src/utils/mileage.ts
+  category: ExpenseCategory
+  description: string
+  vendor?: string | null
+  notes?: string | null
+  // Only set when category is MILEAGE.
+  miles?: number | null
+  createdAt: string
+  updatedAt: string
+  // Present on GET /api/expenses (list).
+  receiptCount?: number
+  // Present on GET /api/expenses/:id (detail) — receipts attached to this expense.
+  receipts?: ReceiptSummary[]
+}
+
+// Receipt Types
+export interface ReceiptSummary {
+  id: string
+  vendor?: string | null
+  date?: string | null
+  totalAmount?: number | null // pence
+  fileName: string
+}
+
+export interface Receipt {
+  id: string
+  vendor?: string | null
+  date?: string | null
+  totalAmount?: number | null // pence
+  notes?: string | null
+  fileName: string
+  fileType: string
+  fileSize: number
+  filePath: string
+  createdAt: string
+  updatedAt: string
+  // Present on GET /api/receipts (list) and /:id (detail).
+  expenseCount: number
+  loggedTotal: number // pence, sum of linked expenses' amounts
+}
+
+export interface ReceiptDetail extends Receipt {
+  expenses: {
+    id: string
+    date: string
+    category: ExpenseCategory
+    description: string
+    amount: number
+  }[]
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   success?: boolean
@@ -276,10 +375,10 @@ export interface ApiResponse<T> {
   message?: string
 }
 
-// Auth Types
+// Auth Types — the session is an httpOnly cookie, so nothing secret is held here.
 export interface AuthStore {
-  apiKey: string | null
+  user: { email: string; name?: string | null; picture?: string | null } | null
   isAuthenticated: boolean
-  login(apiKey: string): void
-  logout(): void
+  loginWithGoogle(credential: string): Promise<void>
+  logout(): Promise<void>
 }

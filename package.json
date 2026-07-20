@@ -5,26 +5,32 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "vitest run && vite build",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
-    "vue": "^3.3.0",
-    "vue-router": "^4.2.0",
-    "pinia": "^2.1.0",
+    "@fortawesome/fontawesome-free": "^6.5.1",
+    "@vuepic/vue-datepicker": "^14.0.0",
     "axios": "^1.4.0",
     "date-fns": "^2.30.0",
-    "@fortawesome/fontawesome-free": "^6.5.1"
+    "pinia": "^2.1.0",
+    "vue": "^3.3.0",
+    "vue-router": "^4.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.3.0",
-    "vite": "^4.4.0",
-    "vue-tsc": "^1.8.0",
-    "typescript": "^5.2.0",
-    "tailwindcss": "^3.3.0",
+    "@vue/test-utils": "^2.4.11",
+    "autoprefixer": "^10.4.16",
+    "jsdom": "^29.1.1",
     "postcss": "^8.4.31",
-    "autoprefixer": "^10.4.16"
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5.9.3",
+    "vite": "^4.4.0",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.7"
   }
 }

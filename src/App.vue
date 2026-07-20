@@ -5,11 +5,51 @@
     </template>
     <template v-else>
       <div class="flex h-screen bg-gray-50 dark:bg-gray-950">
+        <!-- Mobile topbar: only the sidebar's own toggle lives below the
+             `sidebar` breakpoint (920px) — everything else stays as-is. -->
+        <div class="sidebar:hidden fixed top-0 inset-x-0 z-30 h-14 flex items-center gap-3 px-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+          <button
+            @click="sidebarOpen = true"
+            class="text-gray-600 dark:text-gray-300 text-xl w-8 h-8 flex items-center justify-center"
+            aria-label="Open menu"
+          >
+            <i class="fas fa-bars"></i>
+          </button>
+          <img src="/logo.png" alt="North Peak Massage" class="h-8 w-auto" />
+        </div>
+
+        <!-- Backdrop, closes the drawer on click -->
+        <div
+          v-if="sidebarOpen"
+          class="sidebar:hidden fixed inset-0 bg-black/50 z-40"
+          @click="sidebarOpen = false"
+        ></div>
+
         <!-- Sidebar -->
-        <aside class="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col relative">
-          <div class="p-6">
-            <h1 class="text-2xl font-bold text-sage-600">LK Bodyworks</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Admin Dashboard</p>
+        <aside
+          class="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col fixed inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out sidebar:relative sidebar:translate-x-0 sidebar:z-auto"
+          :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        >
+          <div class="px-6 pt-6 pb-5 border-b border-gray-100 dark:border-gray-800">
+            <!-- In dark mode the logo sits on a light plate rather than being
+                 filtered: its wordmark is a deep green that only reaches ~3:1
+                 against the dark sidebar, and brightening it enough to fix that
+                 clips the blue towards cyan and distorts the brand colours. -->
+            <RouterLink
+              to="/"
+              class="block group rounded-xl transition-all duration-200 dark:bg-white/95 dark:p-3 dark:shadow-sm"
+            >
+              <img
+                src="/logo.png"
+                alt="North Peak Massage"
+                width="180"
+                height="127"
+                class="w-[180px] h-auto mx-auto transition-transform duration-200 group-hover:scale-[1.02]"
+              />
+            </RouterLink>
+            <p class="text-[0.7rem] uppercase tracking-[0.22em] text-gray-400 dark:text-gray-500 mt-3 text-center">
+              Admin Dashboard
+            </p>
           </div>
 
           <!-- Top section -->
@@ -30,6 +70,27 @@
                 {{ item.badge }}
               </span>
             </RouterLink>
+
+            <!-- Accounting group -->
+            <button
+              @click="accountingOpen = !accountingOpen"
+              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+            >
+              <i class="w-5 text-center fas fa-sterling-sign"></i>
+              <span>Accounting</span>
+              <i class="ml-auto text-xs fas" :class="accountingOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+            <div v-show="accountingOpen">
+              <RouterLink
+                v-for="child in accountingChildren"
+                :key="child.name"
+                :to="child.to"
+                class="flex items-center pl-14 pr-6 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+                :class="{ 'bg-sage-50 dark:bg-gray-800 text-sage-600 dark:text-sage-400 border-l-2 border-sage-600': isActive(child.to) }"
+              >
+                <span>{{ child.name }}</span>
+              </RouterLink>
+            </div>
           </nav>
 
           <!-- Bottom section -->
@@ -66,7 +127,7 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950">
+        <main class="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 pt-14 sidebar:pt-0">
           <RouterView />
         </main>
       </div>
@@ -86,6 +147,10 @@ const authStore = useAuthStore()
 const leadsStore = useLeadsStore()
 const bookingsStore = useBookingsStore()
 const settingsOpen = ref(false)
+const accountingOpen = ref(false)
+// Sidebar drawer state below the `sidebar` breakpoint (920px) — irrelevant
+// above it, where the sidebar is always visible regardless of this value.
+const sidebarOpen = ref(false)
 
 const pendingBookingsCount = computed(
   () => bookingsStore.bookings.filter((b) => b.status === 'PENDING').length
@@ -97,8 +162,13 @@ const navigation = computed(() => [
   { name: 'Clients', to: '/clients', icon: 'fas fa-users' },
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
   { name: 'Emails', to: '/emails', icon: 'fas fa-envelope' },
-  { name: 'Accounting', to: '/accounting', icon: 'fas fa-sterling-sign' },
 ])
+
+const accountingChildren = [
+  { name: 'Dashboard', to: '/accounting/dashboard' },
+  { name: 'Expenses', to: '/accounting/expenses' },
+  { name: 'Receipts', to: '/accounting/receipts' },
+]
 
 const settingsChildren = [
   { name: 'Appearance', to: '/settings/appearance' },
@@ -112,17 +182,22 @@ function isActive(path: string) {
   return router.currentRoute.value.path === path
 }
 
-// Keep the Settings group expanded whenever a settings sub-page is open
+// Keep a group expanded whenever one of its sub-pages is open, and close the
+// mobile drawer on every navigation (a no-op above the `sidebar` breakpoint).
 watch(
   () => router.currentRoute.value.path,
   (path) => {
     if (path.startsWith('/settings')) settingsOpen.value = true
+    if (path.startsWith('/accounting')) accountingOpen.value = true
+    sidebarOpen.value = false
   },
   { immediate: true }
 )
 
-function logout() {
-  authStore.logout()
+async function logout() {
+  // Await the server round-trip so the session row is actually revoked, not just
+  // forgotten locally.
+  await authStore.logout()
   router.push('/login')
 }
 

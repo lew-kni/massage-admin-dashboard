@@ -60,6 +60,21 @@
               </div>
               <p class="text-xs text-gray-400 mt-1 max-w-md">Granularity of offered start times (e.g. every 30 minutes).</p>
             </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Book up to</label>
+              <div class="flex items-center gap-2">
+                <input
+                  v-model.number="maxAdvanceDays"
+                  type="number"
+                  min="1"
+                  max="730"
+                  step="1"
+                  class="input-field text-sm w-24"
+                />
+                <span class="text-sm text-gray-500">days ahead</span>
+              </div>
+              <p class="text-xs text-gray-400 mt-1 max-w-md">How far in advance clients can book on the website. Dates beyond this aren't offered. You can still book any date manually in the admin.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -215,6 +230,7 @@ const generalAvailability = reactive([
 
 const bufferMinutes = ref(30)
 const slotIntervalMinutes = ref(30)
+const maxAdvanceDays = ref(60)
 const saving = ref(false)
 const saveMessage = ref('')
 const saveError = ref('')
@@ -263,6 +279,7 @@ async function loadGeneralAvailability() {
     }
     bufferMinutes.value = settings.bufferMinutes
     slotIntervalMinutes.value = settings.slotIntervalMinutes
+    maxAdvanceDays.value = settings.maxAdvanceDays ?? 60
   } catch (err: any) {
     saveError.value = err?.message || 'Failed to load availability'
   }
@@ -286,6 +303,7 @@ async function saveGeneralAvailability() {
     await apiService.updateAvailabilitySettings({
       bufferMinutes: bufferMinutes.value,
       slotIntervalMinutes: slotIntervalMinutes.value,
+      maxAdvanceDays: maxAdvanceDays.value,
     })
     saveMessage.value = 'Saved'
     setTimeout(() => (saveMessage.value = ''), 3000)
