@@ -35,6 +35,13 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Pin npm to the version the lock file was generated with
+        # Node 20 bundles an older npm (~10.x) than local dev uses (11.x).
+        # Different npm majors validate/format package-lock.json differently,
+        # which makes `npm ci` reject an otherwise-valid lock file as
+        # out-of-sync. Matching npm versions avoids that entirely.
+        run: npm install -g npm@11
+
       - name: Install dependencies
         run: npm ci
 
