@@ -220,7 +220,7 @@ async function submitForm() {
 
     let saved: Client
 
-    if (isEditMode) {
+    if (isEditMode.value) {
       saved = await clientsStore.updateClient(props.client!.id, payload)
     } else {
       saved = await clientsStore.createClient(payload)
