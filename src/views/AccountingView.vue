@@ -28,6 +28,25 @@
     </div>
 
     <template v-else>
+      <!-- Income / Expenses / Profit -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="card p-6">
+          <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Income</p>
+          <p class="text-3xl font-bold text-emerald-600 mt-2">{{ gbp(collected) }}</p>
+          <p class="text-xs text-gray-500 mt-1">money actually collected this period</p>
+        </div>
+        <div class="card p-6">
+          <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Expenses</p>
+          <p class="text-3xl font-bold text-red-600 mt-2">{{ gbp(periodExpensesTotal) }}</p>
+          <p class="text-xs text-gray-500 mt-1">logged in Accounting → Expenses</p>
+        </div>
+        <div class="card p-6">
+          <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Profit</p>
+          <p class="text-3xl font-bold mt-2" :class="profit >= 0 ? 'text-sage-600' : 'text-red-600'">{{ gbp(profit) }}</p>
+          <p class="text-xs text-gray-500 mt-1">income minus expenses, this period</p>
+        </div>
+      </div>
+
       <!-- Summary stat cards -->
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         <div class="card p-6">
@@ -177,17 +196,25 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
+import { useExpensesStore } from '@/stores/expenses'
+import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import type { Booking } from '@/types'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 
 const bookingsStore = useBookingsStore()
+const expensesStore = useExpensesStore()
 
-type Period = 'month' | 'lastMonth' | 'year' | 'all'
+// taxYear/lastTaxYear alongside the calendar-based options for the same
+// reason as the Expenses view: at filing time you want the tax year that
+// just closed, not "this year"/"this month".
+type Period = 'month' | 'lastMonth' | 'taxYear' | 'lastTaxYear' | 'year' | 'all'
 const period = ref<Period>('month')
 const periodOptions: { value: Period; label: string }[] = [
   { value: 'month', label: 'This month' },
   { value: 'lastMonth', label: 'Last month' },
-  { value: 'year', label: 'This year' },
+  { value: 'taxYear', label: 'This tax year' },
+  { value: 'lastTaxYear', label: 'Last tax year' },
+  { value: 'year', label: 'This calendar year' },
   { value: 'all', label: 'All time' },
 ]
 
@@ -214,6 +241,12 @@ const periodRange = computed(() => {
       return { start: new Date(n.getFullYear(), n.getMonth(), 1), end: new Date(n.getFullYear(), n.getMonth() + 1, 1) }
     case 'lastMonth':
       return { start: new Date(n.getFullYear(), n.getMonth() - 1, 1), end: new Date(n.getFullYear(), n.getMonth(), 1) }
+    case 'taxYear':
+      return { start: taxYearStart(n), end: taxYearEnd(n) }
+    case 'lastTaxYear': {
+      const aYearAgo = new Date(n.getFullYear() - 1, n.getMonth(), n.getDate())
+      return { start: taxYearStart(aYearAgo), end: taxYearEnd(aYearAgo) }
+    }
     case 'year':
       return { start: new Date(n.getFullYear(), 0, 1), end: new Date(n.getFullYear() + 1, 0, 1) }
     default:
@@ -222,6 +255,10 @@ const periodRange = computed(() => {
 })
 function inPeriod(b: Booking): boolean {
   const t = new Date(b.startTime).getTime()
+  return t >= periodRange.value.start.getTime() && t < periodRange.value.end.getTime()
+}
+function dateInPeriod(dateStr: string): boolean {
+  const t = new Date(dateStr).getTime()
   return t >= periodRange.value.start.getTime() && t < periodRange.value.end.getTime()
 }
 
@@ -243,6 +280,17 @@ const upcoming = computed(() =>
 )
 const sessionsCount = computed(() => periodBookings.value.length)
 const avgValue = computed(() => (sessionsCount.value ? sum(periodBookings.value) / sessionsCount.value : 0))
+
+// --- income / expenses / profit --------------------------------------------
+// "Income" here deliberately means money actually collected in the period,
+// not money billed/invoiced — the right basis for a cash-basis sole trader's
+// Self Assessment, and what the "Collected" figure above already tracks.
+const periodExpensesTotal = computed(() =>
+  expensesStore.expenses
+    .filter((e) => dateInPeriod(e.date))
+    .reduce((s, e) => s + e.amount, 0) / 100
+)
+const profit = computed(() => collected.value - periodExpensesTotal.value)
 const discountsGiven = computed(() =>
   periodBookings.value.reduce(
     (s, b) => s + (b.price != null && b.discountedPrice != null ? b.price - b.discountedPrice : 0),
@@ -374,5 +422,6 @@ function formatDate(date: string): string {
 
 onMounted(() => {
   if (bookingsStore.bookings.length === 0) bookingsStore.fetchBookings()
+  if (expensesStore.expenses.length === 0) expensesStore.fetchExpenses()
 })
 </script>
