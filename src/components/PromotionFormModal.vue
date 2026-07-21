@@ -38,6 +38,19 @@
           </div>
         </div>
 
+        <!-- More info modal content -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            "More info" modal content <span class="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <textarea
+            v-model="detailsText"
+            rows="5"
+            class="input-field"
+            placeholder="Extra detail shown when a visitor clicks &quot;More info&quot; on the promotion banner. Separate paragraphs with a blank line. Leave empty to just show the message above."
+          ></textarea>
+        </div>
+
         <!-- Active -->
         <label class="flex items-center gap-2 text-sm pt-2 border-t">
           <input v-model="form.active" type="checkbox" class="w-4 h-4" /> Active (shown on the website)
@@ -84,6 +97,11 @@ const form = reactive({
   active: props.promotion?.active ?? false,
 })
 
+// A single textarea is friendlier to fill in than a repeatable list of
+// fields — paragraphs are just separated by a blank line, same as writing
+// an email. Joined/split at the boundary with the API's string[] shape.
+const detailsText = ref(props.promotion?.details?.join('\n\n') || '')
+
 async function submitForm() {
   if (!form.message.trim()) {
     error.value = 'Message is required'
@@ -94,11 +112,17 @@ async function submitForm() {
     return
   }
 
+  const details = detailsText.value
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+
   const payload: Partial<Promotion> = {
     message: form.message.trim(),
     discountPercentage: form.discountPercentage,
     active: form.active,
     applicableTo: scope.value === 'all' ? 'all' : selectedSlugs.value,
+    details: details.length ? details : null,
   }
 
   loading.value = true

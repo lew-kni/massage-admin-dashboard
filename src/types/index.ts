@@ -296,6 +296,9 @@ export interface Promotion {
   message: string
   discountPercentage: number
   applicableTo: 'all' | string[]
+  // Extended copy for the brochure's "more info" modal. null until an admin
+  // fills it in — the brochure falls back to showing just `message` there.
+  details?: string[] | null
   // Present depending on endpoint: count on the list, full rows on the detail.
   bookingCount?: number
   bookings?: PromotionBookingSummary[]
