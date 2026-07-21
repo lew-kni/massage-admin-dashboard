@@ -132,17 +132,24 @@ import { ref, computed, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { useExpensesStore } from '@/stores/expenses'
 import { EXPENSE_CATEGORIES, categoryLabel } from '@/constants/expenseCategories'
+import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import type { Expense } from '@/types'
 import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
 
 const store = useExpensesStore()
 
-type Period = 'month' | 'lastMonth' | 'year' | 'all'
+// taxYear/lastTaxYear exist alongside the calendar-based options rather than
+// replacing them: at actual filing time (after 5 April) you want the tax year
+// that just closed, not "this year"/"this month" — neither lines up with the
+// 6 Apr boundary HMRC actually uses.
+type Period = 'month' | 'lastMonth' | 'taxYear' | 'lastTaxYear' | 'year' | 'all'
 const period = ref<Period>('month')
 const periodOptions: { value: Period; label: string }[] = [
   { value: 'month', label: 'This month' },
   { value: 'lastMonth', label: 'Last month' },
-  { value: 'year', label: 'This year' },
+  { value: 'taxYear', label: 'This tax year' },
+  { value: 'lastTaxYear', label: 'Last tax year' },
+  { value: 'year', label: 'This calendar year' },
   { value: 'all', label: 'All time' },
 ]
 
@@ -157,6 +164,14 @@ const periodRange = computed(() => {
       return { start: new Date(n.getFullYear(), n.getMonth(), 1), end: new Date(n.getFullYear(), n.getMonth() + 1, 1) }
     case 'lastMonth':
       return { start: new Date(n.getFullYear(), n.getMonth() - 1, 1), end: new Date(n.getFullYear(), n.getMonth(), 1) }
+    case 'taxYear':
+      return { start: taxYearStart(n), end: taxYearEnd(n) }
+    case 'lastTaxYear': {
+      // A date safely inside last tax year, regardless of where "now" falls
+      // relative to the 6 Apr boundary.
+      const aYearAgo = new Date(n.getFullYear() - 1, n.getMonth(), n.getDate())
+      return { start: taxYearStart(aYearAgo), end: taxYearEnd(aYearAgo) }
+    }
     case 'year':
       return { start: new Date(n.getFullYear(), 0, 1), end: new Date(n.getFullYear() + 1, 0, 1) }
     default:
