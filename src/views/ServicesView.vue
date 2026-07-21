@@ -79,6 +79,7 @@
               <span class="font-medium">{{ d.minutes }} min</span>
               <span class="text-gray-500">·</span>
               <span>{{ d.price === null || d.price === undefined ? 'TBC' : '£' + d.price }}</span>
+              <i v-if="d.promotionId" class="fas fa-tag text-amber-600 text-xs" title="Has a promotion pinned to this duration"></i>
             </span>
             <span v-if="service.durations.length === 0" class="text-sm text-gray-400">No durations set</span>
           </div>
@@ -109,6 +110,9 @@
                 {{ promo.active ? 'Active' : 'Inactive' }}
               </span>
               <span class="badge bg-orange-100 text-orange-800">{{ promo.discountPercentage }}% off</span>
+              <span v-if="promo.internal" class="badge bg-gray-200 text-gray-700" title="Never shown on the website">
+                <i class="fas fa-eye-slash mr-1"></i>Internal
+              </span>
             </div>
             <p class="font-medium mt-2">{{ promo.message }}</p>
             <p class="text-sm text-gray-500 mt-1">

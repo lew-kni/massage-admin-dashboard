@@ -53,7 +53,18 @@
 
         <!-- Active -->
         <label class="flex items-center gap-2 text-sm pt-2 border-t">
-          <input v-model="form.active" type="checkbox" class="w-4 h-4" /> Active (shown on the website)
+          <input v-model="form.active" type="checkbox" class="w-4 h-4" /> Active (usable for pricing)
+        </label>
+
+        <!-- Internal -->
+        <label class="flex items-start gap-2 text-sm">
+          <input v-model="form.internal" type="checkbox" class="w-4 h-4 mt-0.5" />
+          <span>
+            Internal only
+            <span class="block text-xs text-gray-500 font-normal">
+              Never shown on the website — for one-off discounts you apply yourself, e.g. comping a friend's booking. Still needs "Active" checked to be usable.
+            </span>
+          </span>
         </label>
 
         <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded">
@@ -95,6 +106,7 @@ const form = reactive({
   message: props.promotion?.message || '',
   discountPercentage: props.promotion?.discountPercentage ?? 0,
   active: props.promotion?.active ?? false,
+  internal: props.promotion?.internal ?? false,
 })
 
 // A single textarea is friendlier to fill in than a repeatable list of
@@ -121,6 +133,7 @@ async function submitForm() {
     message: form.message.trim(),
     discountPercentage: form.discountPercentage,
     active: form.active,
+    internal: form.internal,
     applicableTo: scope.value === 'all' ? 'all' : selectedSlugs.value,
     details: details.length ? details : null,
   }

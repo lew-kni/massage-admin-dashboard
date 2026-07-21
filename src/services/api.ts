@@ -146,6 +146,12 @@ class ApiService {
     return data
   }
 
+  // Attach a promotion to an already-created booking, recomputing its price.
+  async applyBookingPromotion(id: string, promotionId: string): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${id}/apply-promotion`, { promotionId })
+    return data
+  }
+
   // Pre-visit intake form
   async sendPreForm(id: string): Promise<Booking> {
     const { data } = await this.client.post(`/api/bookings/${id}/send-preform`)

@@ -158,6 +158,24 @@
                         {{ removingPromotion ? 'Removing…' : 'Remove promotion' }}
                       </button>
                     </div>
+                    <!-- Apply a promotion after the fact, e.g. comping a friend
+                         while keeping their existing intake form/assessment. -->
+                    <div v-else class="mt-1 flex items-center flex-wrap gap-2">
+                      <select v-model="selectedPromotionId" class="input-field text-xs py-1 w-48">
+                        <option value="">Apply a promotion…</option>
+                        <option v-for="p in servicesStore.promotions.filter((p) => p.active)" :key="p.id" :value="p.id">
+                          {{ p.message }}{{ p.internal ? ' (internal)' : '' }}
+                        </option>
+                      </select>
+                      <button
+                        v-if="selectedPromotionId"
+                        @click="onApplyPromotion"
+                        :disabled="applyingPromotion"
+                        class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
+                      >
+                        {{ applyingPromotion ? 'Applying…' : 'Apply' }}
+                      </button>
+                    </div>
                     <p v-if="promotionError" class="mt-1 text-xs text-red-700">{{ promotionError }}</p>
                   </div>
                 </div>
@@ -446,6 +464,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
+import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
 import type { Booking, IntakeForm } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -458,6 +477,7 @@ import AssessmentSection from '@/components/AssessmentSection.vue'
 
 const route = useRoute()
 const bookingsStore = useBookingsStore()
+const servicesStore = useServicesStore()
 
 const booking = ref<Booking | null>(null)
 const showChangeClient = ref(false)
@@ -465,6 +485,8 @@ const changeClientError = ref('')
 const showSendEmail = ref(false)
 const showPaymentModal = ref(false)
 const removingPromotion = ref(false)
+const applyingPromotion = ref(false)
+const selectedPromotionId = ref('')
 const promotionError = ref('')
 // Pre-visit intake form
 const intake = ref<IntakeForm | null>(null)
@@ -564,6 +586,23 @@ async function onRemovePromotion() {
   }
 }
 
+// Attaches a promotion after the booking already exists -- e.g. comping a
+// friend's session. Only changes pricing; intake form and assessment (kept
+// on separate rows keyed off the booking) are untouched.
+async function onApplyPromotion() {
+  if (!booking.value || !selectedPromotionId.value) return
+  applyingPromotion.value = true
+  promotionError.value = ''
+  try {
+    booking.value = await bookingsStore.applyPromotion(booking.value.id, selectedPromotionId.value)
+    selectedPromotionId.value = ''
+  } catch (err: any) {
+    promotionError.value = err?.response?.data?.error || err?.message || 'Failed to apply promotion'
+  } finally {
+    applyingPromotion.value = false
+  }
+}
+
 async function onSelectClient(clientId: string) {
   if (!booking.value) return
   changeClientError.value = ''
@@ -627,6 +666,7 @@ onMounted(async () => {
   initEditForm()
   initPaymentForm()
   await loadIntake()
+  if (servicesStore.promotions.length === 0) servicesStore.fetchPromotions()
 })
 
 function formatPressure(value?: string | null): string {

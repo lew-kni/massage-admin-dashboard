@@ -255,6 +255,8 @@ export interface ServiceDuration {
   note?: string | null
   isActive?: boolean
   sortOrder?: number
+  // Pins a promotion to just this duration, overriding service-level matching.
+  promotionId?: string | null
 }
 
 export interface NoteBlock {
@@ -299,6 +301,9 @@ export interface Promotion {
   // Extended copy for the brochure's "more info" modal. null until an admin
   // fills it in — the brochure falls back to showing just `message` there.
   details?: string[] | null
+  // Usable for pricing (bookings, duration pins) but hidden from the public
+  // site — for one-off manual discounts, e.g. comping a friend's booking.
+  internal: boolean
   // Present depending on endpoint: count on the list, full rows on the detail.
   bookingCount?: number
   bookings?: PromotionBookingSummary[]

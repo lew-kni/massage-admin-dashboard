@@ -69,7 +69,7 @@
             </button>
           </div>
           <div v-if="form.durations.length === 0" class="text-sm text-gray-400 py-2">No durations yet</div>
-          <div v-for="(d, i) in form.durations" :key="i" class="flex gap-2 items-start mb-2">
+          <div v-for="(d, i) in form.durations" :key="i" class="flex gap-2 items-start mb-2 flex-wrap">
             <div class="w-24">
               <input v-model.number="d.minutes" type="number" min="1" placeholder="min" class="input-field text-sm" />
             </div>
@@ -79,10 +79,14 @@
                 <input v-model="d.price" type="number" min="0" placeholder="price" class="input-field text-sm pl-6" />
               </div>
             </div>
-            <input v-model="d.note" type="text" placeholder="Note (optional)" class="input-field text-sm flex-1" />
+            <input v-model="d.note" type="text" placeholder="Note (optional)" class="input-field text-sm flex-1 min-w-[8rem]" />
+            <select v-model="d.promotionId" class="input-field text-sm w-44" title="Pin a promotion to just this duration">
+              <option value="">No promotion</option>
+              <option v-for="p in store.promotions" :key="p.id" :value="p.id">{{ p.message }}</option>
+            </select>
             <button type="button" @click="removeDuration(i)" class="text-red-500 hover:text-red-700 px-2 py-2 text-sm"><i class="fas fa-xmark"></i></button>
           </div>
-          <p class="text-xs text-gray-400 mt-1">Leave price blank if it's still to be confirmed.</p>
+          <p class="text-xs text-gray-400 mt-1">Leave price blank if it's still to be confirmed. A duration's promotion overrides the service-wide one from the Promotions tab.</p>
         </div>
 
         <!-- Contraindication note -->
@@ -158,7 +162,8 @@ const form = reactive({
     minutes: d.minutes,
     price: d.price === null || d.price === undefined ? '' : String(d.price),
     note: d.note || '',
-  })) as Array<{ id?: string; minutes: number | null; price: string; note: string }>,
+    promotionId: d.promotionId || '',
+  })) as Array<{ id?: string; minutes: number | null; price: string; note: string; promotionId: string }>,
 })
 
 function onNameInput() {
@@ -173,7 +178,7 @@ function onNameInput() {
 }
 
 function addDuration() {
-  form.durations.push({ minutes: null, price: '', note: '' })
+  form.durations.push({ minutes: null, price: '', note: '', promotionId: '' })
 }
 
 function removeDuration(i: number) {
@@ -204,6 +209,7 @@ function collectDurations(): ServiceDuration[] {
       price: d.price === '' ? null : Number(d.price),
       note: d.note.trim() || null,
       sortOrder: idx,
+      promotionId: d.promotionId || null,
     }))
 }
 
