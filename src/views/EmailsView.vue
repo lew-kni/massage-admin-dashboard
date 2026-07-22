@@ -5,15 +5,6 @@
       <p class="text-gray-600 dark:text-gray-400 mt-2">Templates and sent history</p>
     </div>
 
-    <!-- Email Settings Alert -->
-    <div class="card mb-8 p-4 bg-blue-50 border-blue-200">
-      <p class="text-sm text-blue-700">
-        <strong><i class="fas fa-envelope mr-1"></i>Note:</strong> Email sending is currently disabled for local development.
-        Set <code class="bg-white px-2 py-1 rounded">EMAILS_ENABLED=true</code> in your environment to enable sending.
-        Compose and send emails from a client's profile.
-      </p>
-    </div>
-
     <!-- Tabs -->
     <div class="flex gap-2 mb-8 border-b dark:border-gray-700">
       <button
@@ -51,7 +42,10 @@
           </div>
         </div>
       </div>
-      <p class="text-xs text-gray-400 px-1">Templates are read-only here for now. Use them when composing from a client's profile.</p>
+      <p class="text-xs text-gray-400 px-1">
+        Shown here for reference. To create or edit templates, go to
+        <RouterLink to="/settings/email-templates" class="text-sage-600 hover:underline">Settings &rsaquo; Email Templates</RouterLink>.
+      </p>
     </div>
 
     <!-- Send History Tab -->
