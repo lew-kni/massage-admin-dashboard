@@ -7,13 +7,33 @@
       </RouterLink>
       <div v-if="lead" class="flex items-center gap-3">
         <button
+          v-if="!lead.deletedAt"
           @click="leadsStore.setRead(lead.id, !lead.isRead)"
           class="btn-secondary text-sm"
         >
           <i :class="lead.isRead ? 'fas fa-envelope' : 'fas fa-envelope-open'"></i>
           <span>{{ lead.isRead ? 'Mark as unread' : 'Mark as read' }}</span>
         </button>
+        <button
+          v-if="!lead.deletedAt"
+          @click="leadsStore.setSpam(lead.id, !lead.isSpam)"
+          class="btn-secondary text-sm"
+        >
+          <i class="fas fa-triangle-exclamation"></i>
+          <span>{{ lead.isSpam ? 'Not spam' : 'Mark as spam' }}</span>
+        </button>
+        <button v-if="lead.deletedAt" @click="leadsStore.restore(lead.id)" class="btn-secondary text-sm">
+          <i class="fas fa-trash-restore"></i>
+          <span>Restore</span>
+        </button>
       </div>
+    </div>
+
+    <div v-if="lead?.isSpam" class="card mb-6 p-4 bg-red-50 border-red-200">
+      <p class="text-sm text-red-700"><i class="fas fa-triangle-exclamation mr-1"></i>Flagged as spam.</p>
+    </div>
+    <div v-if="lead?.deletedAt" class="card mb-6 p-4 bg-gray-100 border-gray-200">
+      <p class="text-sm text-gray-600"><i class="fas fa-trash-alt mr-1"></i>This lead is in Trash.</p>
     </div>
 
     <!-- Loading State -->

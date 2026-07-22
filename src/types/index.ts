@@ -33,6 +33,8 @@ export interface Lead {
   message: string
   healthNotes: string | null
   isRead: boolean
+  isSpam: boolean
+  deletedAt: string | null
   clientId: string | null
   client?: Client | null
   replies?: LeadReply[]

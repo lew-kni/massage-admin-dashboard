@@ -370,18 +370,39 @@ class ApiService {
     return data
   }
 
+  // Soft-deleted leads (the admin's Trash view).
+  async getDeletedLeads(): Promise<Lead[]> {
+    const { data } = await this.client.get('/api/leads', { params: { trash: 'true' } })
+    return data
+  }
+
   async getLead(id: string): Promise<Lead> {
     const { data } = await this.client.get(`/api/leads/${id}`)
     return data
   }
 
-  async updateLead(id: string, lead: Partial<Pick<Lead, 'isRead' | 'clientId'>>): Promise<Lead> {
+  async updateLead(id: string, lead: Partial<Pick<Lead, 'isRead' | 'isSpam' | 'clientId'>>): Promise<Lead> {
     const { data } = await this.client.patch(`/api/leads/${id}`, lead)
     return data
   }
 
   async replyToLead(id: string, reply: { subject: string; body: string }): Promise<LeadReply> {
     const { data } = await this.client.post(`/api/leads/${id}/reply`, reply)
+    return data
+  }
+
+  // Soft delete (default) — moves the lead to Trash so it can be restored.
+  async deleteLead(id: string): Promise<void> {
+    await this.client.delete(`/api/leads/${id}`)
+  }
+
+  // Permanent delete — only allowed once the lead is already in Trash.
+  async permanentlyDeleteLead(id: string): Promise<void> {
+    await this.client.delete(`/api/leads/${id}`, { params: { permanent: 'true' } })
+  }
+
+  async restoreLead(id: string): Promise<Lead> {
+    const { data } = await this.client.post(`/api/leads/${id}/restore`)
     return data
   }
 

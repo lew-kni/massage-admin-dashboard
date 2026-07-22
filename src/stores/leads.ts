@@ -5,11 +5,13 @@ import type { Lead } from '@/types'
 
 export const useLeadsStore = defineStore('leads', () => {
   const leads = ref<Lead[]>([])
+  const deletedLeads = ref<Lead[]>([])
   const currentLead = ref<Lead | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const unreadCount = computed(() => leads.value.filter((l) => !l.isRead).length)
+  // Spam doesn't count towards the inbox unread badge — it has its own tab.
+  const unreadCount = computed(() => leads.value.filter((l) => !l.isRead && !l.isSpam).length)
 
   async function fetchLeads() {
     loading.value = true
@@ -18,6 +20,18 @@ export const useLeadsStore = defineStore('leads', () => {
       leads.value = await apiService.getLeads()
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to fetch leads'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function fetchDeletedLeads() {
+    loading.value = true
+    error.value = null
+    try {
+      deletedLeads.value = await apiService.getDeletedLeads()
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to fetch trash'
     } finally {
       loading.value = false
     }
@@ -98,17 +112,75 @@ export const useLeadsStore = defineStore('leads', () => {
     }
   }
 
+  async function setSpam(id: string, isSpam: boolean) {
+    try {
+      const updated = await apiService.updateLead(id, { isSpam })
+      const index = leads.value.findIndex((l) => l.id === id)
+      if (index !== -1) {
+        leads.value[index] = updated
+      }
+      if (currentLead.value?.id === id) {
+        currentLead.value = { ...currentLead.value, ...updated }
+      }
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to update lead'
+      throw err
+    }
+  }
+
+  // Soft delete — moves the lead from the active list into Trash.
+  async function softDelete(id: string) {
+    try {
+      await apiService.deleteLead(id)
+      leads.value = leads.value.filter((l) => l.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to delete lead'
+      throw err
+    }
+  }
+
+  // Restore from Trash back to the active list.
+  async function restore(id: string) {
+    try {
+      const restored = await apiService.restoreLead(id)
+      deletedLeads.value = deletedLeads.value.filter((l) => l.id !== id)
+      leads.value = [restored, ...leads.value]
+      return restored
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to restore lead'
+      throw err
+    }
+  }
+
+  // Permanent delete — only valid for a lead already in Trash.
+  async function permanentlyDelete(id: string) {
+    try {
+      await apiService.permanentlyDeleteLead(id)
+      deletedLeads.value = deletedLeads.value.filter((l) => l.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to permanently delete lead'
+      throw err
+    }
+  }
+
   return {
     leads,
+    deletedLeads,
     currentLead,
     loading,
     error,
     unreadCount,
     fetchLeads,
+    fetchDeletedLeads,
     fetchLead,
     setRead,
+    setSpam,
     replyToLead,
     linkClient,
     fetchLeadsForClient,
+    softDelete,
+    restore,
+    permanentlyDelete,
   }
 })
