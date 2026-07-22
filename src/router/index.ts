@@ -17,6 +17,7 @@ import AccountingReceiptsView from '@/views/AccountingReceiptsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import ComingSoonView from '@/views/ComingSoonView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
+import TemplatesView from '@/views/TemplatesView.vue'
 
 const routes = [
   {
@@ -124,6 +125,12 @@ const routes = [
     path: '/settings/email',
     name: 'SettingsEmail',
     component: SettingsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/email-templates',
+    name: 'SettingsEmailTemplates',
+    component: TemplatesView,
     meta: { requiresAuth: true },
   },
 

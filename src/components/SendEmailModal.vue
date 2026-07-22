@@ -1,45 +1,53 @@
 <template>
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto">
       <div class="card-header flex justify-between items-center sticky top-0 bg-white dark:bg-gray-900">
         <h2 class="text-lg font-semibold">Send Email</h2>
         <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-xmark"></i></button>
       </div>
 
-      <div class="card-body space-y-5">
-        <!-- Recipient -->
-        <div class="pb-4 border-b dark:border-gray-700">
-          <p class="text-sm text-gray-500">To</p>
-          <p class="font-medium">{{ client.firstName }} {{ client.lastName }}</p>
-          <p v-if="client.email" class="text-sm text-gray-500">{{ client.email }}</p>
-          <p v-else class="text-sm text-red-600"><i class="fas fa-triangle-exclamation mr-1"></i>This client has no email address on file.</p>
+      <div class="card-body grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="space-y-5">
+          <!-- Recipient -->
+          <div class="pb-4 border-b dark:border-gray-700">
+            <p class="text-sm text-gray-500">To</p>
+            <p class="font-medium">{{ client.firstName }} {{ client.lastName }}</p>
+            <p v-if="client.email" class="text-sm text-gray-500">{{ client.email }}</p>
+            <p v-else class="text-sm text-red-600"><i class="fas fa-triangle-exclamation mr-1"></i>This client has no email address on file.</p>
+          </div>
+
+          <!-- Template picker -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template</label>
+            <select v-model="selectedTemplateId" @change="applyTemplate" class="input-field">
+              <option value="">Blank — write your own</option>
+              <option v-for="t in templates" :key="t.id" :value="t.id">{{ templateLabel(t) }}</option>
+            </select>
+            <p class="text-xs text-gray-400 mt-1">Picking a template fills the subject and message below. You can edit both before sending.</p>
+          </div>
+
+          <!-- Subject -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
+            <input v-model="subject" type="text" class="input-field" placeholder="Email subject" />
+          </div>
+
+          <!-- Body -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
+            <textarea v-model="body" rows="10" class="input-field font-normal" placeholder="Write your message..."></textarea>
+            <p class="text-xs text-gray-400 mt-1">Sent inside the branded North Peak Massage email template. Blank lines start a new paragraph.</p>
+          </div>
+
+          <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded">
+            <p class="text-sm text-red-700">{{ error }}</p>
+          </div>
         </div>
 
-        <!-- Template picker -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template</label>
-          <select v-model="selectedTemplateId" @change="applyTemplate" class="input-field">
-            <option value="">Blank — write your own</option>
-            <option v-for="t in templates" :key="t.id" :value="t.id">{{ templateLabel(t) }}</option>
-          </select>
-          <p class="text-xs text-gray-400 mt-1">Picking a template fills the subject and message below. You can edit both before sending.</p>
-        </div>
-
-        <!-- Subject -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subject</label>
-          <input v-model="subject" type="text" class="input-field" placeholder="Email subject" />
-        </div>
-
-        <!-- Body -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
-          <textarea v-model="body" rows="10" class="input-field font-normal" placeholder="Write your message..."></textarea>
-          <p class="text-xs text-gray-400 mt-1">Sent inside the branded North Peak Massage email template. Blank lines start a new paragraph.</p>
-        </div>
-
-        <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded">
-          <p class="text-sm text-red-700">{{ error }}</p>
+        <!-- Live preview -->
+        <div class="lg:border-l lg:pl-6 dark:border-gray-700">
+          <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Live preview</p>
+          <EmailPreview :subject="subject" :body-html="textToHtml(body)" />
         </div>
       </div>
 
@@ -64,6 +72,8 @@ import { ref, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { apiService } from '@/services/api'
 import type { Client, Booking, EmailTemplate } from '@/types'
+import EmailPreview from '@/components/EmailPreview.vue'
+import { htmlToText, textToHtml } from '@/utils/emailPreview'
 
 const props = defineProps<{ client: Client; booking?: Booking }>()
 const emit = defineEmits<{ close: []; sent: [] }>()
@@ -102,30 +112,6 @@ function fillVars(text: string) {
     result = result.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'g'), value)
   }
   return result
-}
-
-// Template bodies are stored as HTML — flatten to plain text for editing.
-function htmlToText(html: string) {
-  return html
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-// Plain text back to simple paragraph HTML for the sent email.
-function textToHtml(text: string) {
-  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  return text
-    .trim()
-    .split(/\n{2,}/)
-    .map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`)
-    .join('\n')
 }
 
 function applyTemplate() {

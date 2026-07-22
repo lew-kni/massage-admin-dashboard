@@ -176,6 +176,7 @@ const settingsChildren = [
   { name: 'Availability', to: '/settings/availability' },
   { name: 'Services', to: '/settings/services' },
   { name: 'Email', to: '/settings/email' },
+  { name: 'Email Templates', to: '/settings/email-templates' },
 ]
 
 function isActive(path: string) {
