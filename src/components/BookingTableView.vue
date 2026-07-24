@@ -103,6 +103,7 @@
 
 <script setup lang="ts">
 import { format } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 
 defineProps<{
@@ -122,11 +123,11 @@ function isBookingPast(booking: Booking): boolean {
 }
 
 function formatDate(date: string) {
-  return format(new Date(date), 'MMM dd, yyyy')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy')
 }
 
 function formatTime(date: string) {
-  return format(new Date(date), 'h:mm a')
+  return format(toLondonFakeLocalDate(date), 'h:mm a')
 }
 
 function calculateDuration(start: string, end: string) {

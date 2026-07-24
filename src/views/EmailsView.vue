@@ -91,6 +91,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import { apiService } from '@/services/api'
 import type { EmailTemplate, Communication } from '@/types'
 import Pagination from '@/components/Pagination.vue'
@@ -123,7 +124,7 @@ function preview(html: string) {
 }
 
 function formatDateTime(date: string) {
-  return format(new Date(date), 'MMM dd, yyyy • h:mm a')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy • h:mm a')
 }
 
 function statusClass(status: string) {

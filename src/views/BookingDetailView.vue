@@ -498,6 +498,7 @@ import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
 import type { Booking, IntakeForm } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
+import { toLondonInputParts, londonWallTimeToUtc, toLondonFakeLocalDate } from '@/utils/formatLondon'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
@@ -716,8 +717,9 @@ const editForm = reactive({
 function initEditForm() {
   const b = booking.value
   if (!b) return
-  editForm.startDate = b.startTime.split('T')[0]
-  editForm.startTime = format(new Date(b.startTime), 'HH:mm')
+  const { date: startDate, time: startTime } = toLondonInputParts(b.startTime)
+  editForm.startDate = startDate
+  editForm.startTime = startTime
   editForm.duration = calculateDuration(b.startTime, b.endTime)
   editForm.service = b.service || ''
   editForm.status = b.status
@@ -747,7 +749,7 @@ function formatPressure(value?: string | null): string {
 
 function formatDate(date?: string): string {
   if (!date) return ''
-  return format(new Date(date), 'MMM dd, yyyy')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy')
 }
 
 function formatRelative(date?: string): string {
@@ -757,12 +759,12 @@ function formatRelative(date?: string): string {
 
 function formatTime(date?: string): string {
   if (!date) return ''
-  return format(new Date(date), 'h:mm a')
+  return format(toLondonFakeLocalDate(date), 'h:mm a')
 }
 
 function formatDateTime(date?: string): string {
   if (!date) return ''
-  return format(new Date(date), 'MMM dd, yyyy h:mm a')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy h:mm a')
 }
 
 function calculateDuration(start?: string, end?: string): number {
@@ -809,7 +811,7 @@ function getPreFormStatusClass(status?: string): string {
 
 async function saveBooking() {
   if (!booking.value) return
-  const start = new Date(`${editForm.startDate}T${editForm.startTime}:00`)
+  const start = londonWallTimeToUtc(editForm.startDate, editForm.startTime)
   if (isNaN(start.getTime())) {
     saveError.value = 'Invalid date or time'
     return

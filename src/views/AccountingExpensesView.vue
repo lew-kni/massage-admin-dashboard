@@ -133,6 +133,7 @@ import { format } from 'date-fns'
 import { useExpensesStore } from '@/stores/expenses'
 import { EXPENSE_CATEGORIES, categoryLabel } from '@/constants/expenseCategories'
 import { taxYearStart, taxYearEnd } from '@/utils/mileage'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Expense } from '@/types'
 import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
 
@@ -244,7 +245,7 @@ async function confirmDelete(e: Expense) {
 function exportCsv() {
   const header = ['Date', 'Category', 'Description', 'Paid to', 'Miles', 'Amount', 'Notes']
   const rows = sortedPeriodExpenses.value.map((e) => [
-    new Date(e.date).toLocaleDateString('en-GB'),
+    new Date(e.date).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }),
     categoryLabel(e.category),
     e.description,
     e.vendor || '',
@@ -264,7 +265,7 @@ function exportCsv() {
 }
 
 function formatDate(date: string): string {
-  return format(new Date(date), 'dd MMM yyyy')
+  return format(toLondonFakeLocalDate(date), 'dd MMM yyyy')
 }
 
 onMounted(() => {

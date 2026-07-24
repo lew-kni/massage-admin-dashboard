@@ -78,6 +78,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { format } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 
 const props = defineProps<{
@@ -100,11 +101,11 @@ function closePanel() {
 }
 
 function formatDate(date: string): string {
-  return format(new Date(date), 'MMM dd, yyyy')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy')
 }
 
 function formatTime(date: string): string {
-  return format(new Date(date), 'h:mm a')
+  return format(toLondonFakeLocalDate(date), 'h:mm a')
 }
 
 function calculateDuration(start: string, end: string): number {

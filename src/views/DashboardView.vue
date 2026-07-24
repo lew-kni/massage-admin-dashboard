@@ -107,6 +107,7 @@ import { useClientsStore } from '@/stores/clients'
 import { apiService } from '@/services/api'
 import type { Booking } from '@/types'
 import { formatDistanceToNow, format } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import StatCard from '@/components/StatCard.vue'
 
 const clientsStore = useClientsStore()
@@ -135,10 +136,12 @@ const monthlyRevenue = computed(() => {
 })
 
 const todaysBookings = computed(() => {
-  const now = new Date()
+  // Compared as London calendar days, not the viewing browser's own timezone
+  // -- "today" should mean the same thing regardless of where this is viewed from.
+  const now = toLondonFakeLocalDate(new Date())
   return bookings.value
     .filter((b) => {
-      const start = new Date(b.startTime)
+      const start = toLondonFakeLocalDate(b.startTime)
       return (
         b.status !== 'CANCELLED' &&
         start.getFullYear() === now.getFullYear() &&
@@ -161,7 +164,7 @@ function formatDate(date: string) {
 }
 
 function formatTime(date: string) {
-  return format(new Date(date), 'h:mm a')
+  return format(toLondonFakeLocalDate(date), 'h:mm a')
 }
 
 function getStatusBadgeClass(status: string) {

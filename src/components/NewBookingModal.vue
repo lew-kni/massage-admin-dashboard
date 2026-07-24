@@ -151,6 +151,7 @@ import { useBookingsStore } from '@/stores/bookings'
 import { useServicesStore } from '@/stores/services'
 import { usePromotionPricing } from '@/composables/usePromotionPricing'
 import { apiService } from '@/services/api'
+import { londonWallTimeToUtc, formatLondonTime } from '@/utils/formatLondon'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import type { Client, Booking, ServiceDuration } from '@/types'
 
@@ -217,10 +218,10 @@ const form = reactive({
 
 const endTimeLabel = computed(() => {
   if (!form.date || !form.time || !selectedMinutes.value) return ''
-  const start = new Date(`${form.date}T${form.time}:00`)
+  const start = londonWallTimeToUtc(form.date, form.time)
   if (isNaN(start.getTime())) return ''
   const end = new Date(start.getTime() + selectedMinutes.value * 60000)
-  return format(end, 'h:mm a')
+  return formatLondonTime(end, { hour: 'numeric', minute: '2-digit', hour12: true })
 })
 
 function onServiceChange() {
@@ -276,7 +277,7 @@ async function submitForm() {
     return
   }
 
-  const start = new Date(`${form.date}T${form.time}:00`)
+  const start = londonWallTimeToUtc(form.date, form.time)
   if (isNaN(start.getTime())) {
     error.value = 'Invalid date or time'
     return

@@ -77,6 +77,7 @@
 
 <script setup lang="ts">
 import { format, formatDistanceToNow } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 
 defineProps<{
@@ -93,11 +94,11 @@ defineEmits<{
 }>()
 
 function formatDate(date: string) {
-  return format(new Date(date), 'MMM dd, yyyy')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy')
 }
 
 function formatTime(date: string) {
-  return format(new Date(date), 'h:mm a')
+  return format(toLondonFakeLocalDate(date), 'h:mm a')
 }
 
 function formatRelativeTime(date: string) {

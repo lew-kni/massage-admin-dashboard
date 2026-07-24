@@ -41,6 +41,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { format, isSameDay } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { UnavailableBlock } from '@/types'
 
 const props = defineProps<{
@@ -59,8 +60,8 @@ const isPast = computed(() => {
 })
 
 function formatDateRange(startDate: string, endDate: string) {
-  const start = new Date(startDate)
-  const end = new Date(endDate)
+  const start = toLondonFakeLocalDate(startDate)
+  const end = toLondonFakeLocalDate(endDate)
 
   if (isSameDay(start, end)) {
     return format(start, 'EEEE, MMMM do, yyyy')

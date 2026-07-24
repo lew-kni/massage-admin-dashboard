@@ -101,6 +101,7 @@ import { format } from 'date-fns'
 import { useReceiptsStore } from '@/stores/receipts'
 import { useExpensesStore } from '@/stores/expenses'
 import { categoryLabel } from '@/constants/expenseCategories'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { ReceiptDetail } from '@/types'
 import ExpenseFormModal from './ExpenseFormModal.vue'
 
@@ -119,7 +120,7 @@ const expenseSearch = ref('')
 const gbp = (n: number) => '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
 function formatDate(date?: string | null): string {
-  return date ? format(new Date(date), 'dd MMM yyyy') : ''
+  return date ? format(toLondonFakeLocalDate(date), 'dd MMM yyyy') : ''
 }
 
 const remainingLabel = computed(() => {

@@ -399,6 +399,7 @@ import { useClientsStore } from '@/stores/clients'
 import { useLeadsStore } from '@/stores/leads'
 import { apiService } from '@/services/api'
 import { formatDistanceToNow, format } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking, Communication, Lead } from '@/types'
 import ClientForm from '@/components/ClientForm.vue'
 import NewBookingModal from '@/components/NewBookingModal.vue'
@@ -452,11 +453,11 @@ function formatDate(date: string) {
 }
 
 function formatDateTime(date: string) {
-  return format(new Date(date), 'MMM dd, yyyy • h:mm a')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy • h:mm a')
 }
 
 function formatDateOnly(date: string) {
-  return format(new Date(date), 'MMM dd, yyyy')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy')
 }
 
 function calculateDuration(start: string, end: string) {

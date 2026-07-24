@@ -128,7 +128,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { useBookingsStore } from '@/stores/bookings'
-import { format } from 'date-fns'
+import { toLondonInputParts, londonWallTimeToUtc } from '@/utils/formatLondon'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import type { Booking } from '@/types'
 
@@ -145,8 +145,7 @@ const bookingsStore = useBookingsStore()
 const loading = ref(false)
 const error = ref('')
 
-const startDate = format(new Date(props.booking.startTime), 'yyyy-MM-dd')
-const startTime = format(new Date(props.booking.startTime), 'HH:mm')
+const { date: startDate, time: startTime } = toLondonInputParts(props.booking.startTime)
 const duration = computed(() => {
   const start = new Date(props.booking.startTime)
   const end = new Date(props.booking.endTime)
@@ -171,7 +170,7 @@ async function submitForm() {
   error.value = ''
 
   try {
-    const newStartTime = new Date(`${form.startDate}T${form.startTime}:00`).toISOString()
+    const newStartTime = londonWallTimeToUtc(form.startDate, form.startTime).toISOString()
     const newEndTime = new Date(
       new Date(newStartTime).getTime() + form.duration * 60000
     ).toISOString()

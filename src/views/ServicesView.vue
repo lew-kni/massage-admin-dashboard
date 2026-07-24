@@ -272,7 +272,7 @@ async function toggleBookings(promo: Promotion) {
 
 function formatBookingDate(iso: string): string {
   const d = new Date(iso)
-  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 function onSaved() {

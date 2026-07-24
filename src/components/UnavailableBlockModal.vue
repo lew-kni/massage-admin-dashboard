@@ -132,6 +132,7 @@
 import { ref, reactive } from 'vue'
 import { useAvailabilityStore } from '@/stores/availability'
 import { format } from 'date-fns'
+import { toLondonFakeLocalDate, londonWallTimeToUtc, addLondonDays } from '@/utils/formatLondon'
 import type { UnavailableBlock } from '@/types'
 
 const emit = defineEmits<{
@@ -151,8 +152,8 @@ const blockType = ref<'full-day' | 'partial'>(props.block?.startTime ? 'partial'
 const today = format(new Date(), 'yyyy-MM-dd')
 
 const form = reactive({
-  startDate: props.block ? format(new Date(props.block.startDate), 'yyyy-MM-dd') : today,
-  endDate: props.block ? format(new Date(props.block.endDate), 'yyyy-MM-dd') : today,
+  startDate: props.block ? format(toLondonFakeLocalDate(props.block.startDate), 'yyyy-MM-dd') : today,
+  endDate: props.block ? format(toLondonFakeLocalDate(props.block.endDate), 'yyyy-MM-dd') : today,
   startTime: props.block?.startTime || '09:00',
   endTime: props.block?.endTime || '17:00',
   reason: props.block?.reason || '',
@@ -178,21 +179,22 @@ async function submitForm() {
   error.value = ''
 
   try {
-    // Build ISO datetime strings
+    // Build proper UTC ISO datetime strings from the London wall-clock values
+    // entered above -- sending a naive (no-offset) string here would leave the
+    // backend to parse it in whatever timezone its own process happens to run
+    // in (Render runs in UTC), silently storing the wrong instant.
     let startDateTime: string
     let endDateTime: string
 
     if (blockType.value === 'full-day') {
       // For full days, use midnight to end of day
-      startDateTime = `${form.startDate}T00:00:00`
+      startDateTime = londonWallTimeToUtc(form.startDate, '00:00').toISOString()
       // End date should be at the end of the day
-      const endDate = new Date(form.endDate)
-      endDate.setDate(endDate.getDate() + 1) // Add one day
-      endDateTime = format(endDate, 'yyyy-MM-dd') + 'T00:00:00'
+      endDateTime = londonWallTimeToUtc(addLondonDays(form.endDate, 1), '00:00').toISOString()
     } else {
       // For partial days, combine date and time
-      startDateTime = `${form.startDate}T${form.startTime}:00`
-      endDateTime = `${form.endDate}T${form.endTime}:00`
+      startDateTime = londonWallTimeToUtc(form.startDate, form.startTime).toISOString()
+      endDateTime = londonWallTimeToUtc(form.endDate, form.endTime).toISOString()
     }
 
     // Call the API directly through the availability store

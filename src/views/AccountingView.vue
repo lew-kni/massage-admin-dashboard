@@ -231,6 +231,7 @@ import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
 import { useExpensesStore } from '@/stores/expenses'
 import { taxYearStart, taxYearEnd } from '@/utils/mileage'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 
@@ -265,7 +266,7 @@ const accountable = computed(() =>
 // ============================================================================
 const taxYearOffset = ref(0) // 0 = current tax year, 1 = the one before, etc.
 const taxYearRefDate = computed(() => {
-  const n = new Date()
+  const n = toLondonFakeLocalDate(new Date())
   return new Date(n.getFullYear() - taxYearOffset.value, n.getMonth(), n.getDate())
 })
 const taxYearRange = computed(() => ({
@@ -357,7 +358,7 @@ const discountsGiven = computed(() =>
 
 // --- monthly trend (rolling 12 months, independent of either selector) ----
 const monthlyRevenue = computed(() => {
-  const n = new Date()
+  const n = toLondonFakeLocalDate(new Date())
   const months: { key: string; label: string; year: number; value: number }[] = []
   for (let i = 11; i >= 0; i--) {
     const d = new Date(n.getFullYear(), n.getMonth() - i, 1)
@@ -365,7 +366,7 @@ const monthlyRevenue = computed(() => {
     const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime()
     const value = sum(
       accountable.value.filter((b) => {
-        const t = new Date(b.startTime).getTime()
+        const t = toLondonFakeLocalDate(b.startTime).getTime()
         return b.isPaid && t >= start && t < end
       })
     )
@@ -449,7 +450,7 @@ function exportCsv() {
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
     .map((b) => [
       '#' + b.bookingNumber,
-      new Date(b.startTime).toLocaleDateString('en-GB'),
+      new Date(b.startTime).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }),
       `${b.client?.firstName ?? ''} ${b.client?.lastName ?? ''}`.trim(),
       b.service || '',
       b.price != null ? String(b.price) : '',
@@ -474,7 +475,7 @@ function exportCsv() {
 }
 
 function formatDate(date: string): string {
-  return format(new Date(date), 'dd MMM yyyy')
+  return format(toLondonFakeLocalDate(date), 'dd MMM yyyy')
 }
 
 onMounted(() => {

@@ -211,6 +211,7 @@ import { useRoute, RouterLink } from 'vue-router'
 import { useLeadsStore } from '@/stores/leads'
 import { apiService } from '@/services/api'
 import { format, formatDistanceToNow } from 'date-fns'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 
 const route = useRoute()
@@ -237,7 +238,7 @@ function formatRelative(date: string) {
 }
 
 function formatDateTime(date: string) {
-  return format(new Date(date), 'MMM dd, yyyy h:mm a')
+  return format(toLondonFakeLocalDate(date), 'MMM dd, yyyy h:mm a')
 }
 
 async function onSelectClient(clientId: string) {

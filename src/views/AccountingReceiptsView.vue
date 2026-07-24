@@ -65,6 +65,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { useReceiptsStore } from '@/stores/receipts'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Receipt } from '@/types'
 import ReceiptUploadModal from '@/components/ReceiptUploadModal.vue'
 import ReceiptDetailModal from '@/components/ReceiptDetailModal.vue'
@@ -76,7 +77,7 @@ const activeReceiptId = ref<string | null>(null)
 const gbp = (n: number) => '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
 function formatDate(date: string): string {
-  return format(new Date(date), 'dd MMM yyyy')
+  return format(toLondonFakeLocalDate(date), 'dd MMM yyyy')
 }
 function fileIcon(fileType: string): string {
   return fileType === 'application/pdf' ? 'fas fa-file-pdf' : 'fas fa-file-image'

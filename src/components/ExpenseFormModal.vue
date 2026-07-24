@@ -114,6 +114,7 @@ import { useReceiptsStore } from '@/stores/receipts'
 import { apiService } from '@/services/api'
 import { EXPENSE_CATEGORIES } from '@/constants/expenseCategories'
 import { calculateMileageAmountPence, taxYearStart, taxYearEnd } from '@/utils/mileage'
+import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Expense, ExpenseCategory, ReceiptSummary } from '@/types'
 
 const props = defineProps<{
@@ -179,7 +180,7 @@ async function unlinkReceipt(receiptId: string) {
 }
 
 function formatDate(date?: string | null): string {
-  return date ? format(new Date(date), 'dd MMM yyyy') : ''
+  return date ? format(toLondonFakeLocalDate(date), 'dd MMM yyyy') : ''
 }
 
 onMounted(refreshLinkedReceipts)
