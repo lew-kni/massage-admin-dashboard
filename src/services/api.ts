@@ -152,6 +152,13 @@ class ApiService {
     return data
   }
 
+  // Apply a one-off manual discount to a booking -- a percentage or a flat
+  // £ amount off, without creating a Promotion record for it.
+  async applyBookingDiscount(id: string, payload: { discountPercentage: number } | { discountAmount: number }): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${id}/apply-discount`, payload)
+    return data
+  }
+
   // Pre-visit intake form
   async sendPreForm(id: string): Promise<Booking> {
     const { data } = await this.client.post(`/api/bookings/${id}/send-preform`)

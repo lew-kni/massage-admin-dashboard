@@ -141,42 +141,68 @@
                         <span
                           v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
                           class="ml-2 badge bg-amber-100 text-amber-800"
-                        >Promotion</span>
+                        >{{ booking.promotion ? 'Promotion' : 'Discount' }}</span>
                       </template>
                       <span v-else class="text-gray-400">Not set</span>
                     </p>
-                    <!-- Applied promotion + revoke (e.g. TOS abuse) -->
-                    <div v-if="booking.promotion" class="mt-1 flex items-center flex-wrap gap-2">
+                    <!-- Applied promotion or manual discount + revoke (e.g. TOS abuse, or undoing a one-off) -->
+                    <div v-if="hasActiveDiscount" class="mt-1 flex items-center flex-wrap gap-2">
                       <span class="text-xs text-amber-700">
-                        <i class="fas fa-tag mr-1"></i>{{ booking.promotion.message }}
+                        <i class="fas fa-tag mr-1"></i>{{ booking.promotion ? booking.promotion.message : 'Manual discount' }}
                       </span>
                       <button
-                        @click="onRemovePromotion"
-                        :disabled="removingPromotion"
+                        @click="onRemoveDiscount"
+                        :disabled="removingDiscount"
                         class="text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
                       >
-                        {{ removingPromotion ? 'Removing…' : 'Remove promotion' }}
+                        {{ removingDiscount ? 'Removing…' : 'Remove' }}
                       </button>
                     </div>
-                    <!-- Apply a promotion after the fact, e.g. comping a friend
-                         while keeping their existing intake form/assessment. -->
-                    <div v-else class="mt-1 flex items-center flex-wrap gap-2">
-                      <select v-model="selectedPromotionId" class="input-field text-xs py-1 w-48">
-                        <option value="">Apply a promotion…</option>
-                        <option v-for="p in servicesStore.promotions.filter((p) => p.active)" :key="p.id" :value="p.id">
-                          {{ p.message }}{{ p.internal ? ' (internal)' : '' }}
-                        </option>
-                      </select>
-                      <button
-                        v-if="selectedPromotionId"
-                        @click="onApplyPromotion"
-                        :disabled="applyingPromotion"
-                        class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
-                      >
-                        {{ applyingPromotion ? 'Applying…' : 'Apply' }}
-                      </button>
+                    <!-- Nothing applied yet: apply a stored promotion after the
+                         fact (e.g. comping a friend), or a one-off manual
+                         discount that doesn't need a Promotion record at all. -->
+                    <div v-else class="mt-1 space-y-1.5">
+                      <div class="flex items-center flex-wrap gap-2">
+                        <select v-model="selectedPromotionId" class="input-field text-xs py-1 w-48">
+                          <option value="">Apply a promotion…</option>
+                          <option v-for="p in servicesStore.promotions.filter((p) => p.active)" :key="p.id" :value="p.id">
+                            {{ p.message }}{{ p.internal ? ' (internal)' : '' }}
+                          </option>
+                        </select>
+                        <button
+                          v-if="selectedPromotionId"
+                          @click="onApplyPromotion"
+                          :disabled="applyingPromotion"
+                          class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
+                        >
+                          {{ applyingPromotion ? 'Applying…' : 'Apply' }}
+                        </button>
+                      </div>
+                      <div v-if="booking.price != null" class="flex items-center flex-wrap gap-2">
+                        <select v-model="discountMode" class="input-field text-xs py-1 w-16">
+                          <option value="percent">%</option>
+                          <option value="amount">£</option>
+                        </select>
+                        <input
+                          v-model.number="discountValue"
+                          type="number"
+                          min="0"
+                          :max="discountMode === 'percent' ? 100 : undefined"
+                          step="1"
+                          placeholder="One-off discount"
+                          class="input-field text-xs py-1 w-32"
+                        />
+                        <button
+                          v-if="discountValue"
+                          @click="onApplyDiscount"
+                          :disabled="applyingDiscount"
+                          class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
+                        >
+                          {{ applyingDiscount ? 'Applying…' : 'Apply' }}
+                        </button>
+                      </div>
                     </div>
-                    <p v-if="promotionError" class="mt-1 text-xs text-red-700">{{ promotionError }}</p>
+                    <p v-if="discountError" class="mt-1 text-xs text-red-700">{{ discountError }}</p>
                   </div>
                 </div>
                 <div v-if="isEditing">
@@ -371,9 +397,13 @@
               <i class="fas fa-trash-alt"></i>
               <span>Cancel Booking</span>
             </button>
-            <button v-if="!isEditing && !booking.isPaid" @click="showPaymentModal = true" class="btn-primary w-full text-sm bg-emerald-600 hover:bg-emerald-700">
+            <button
+              v-if="!isEditing && !booking.isPaid"
+              @click="isFreeBooking ? onMarkComplimentary() : (showPaymentModal = true)"
+              class="btn-primary w-full text-sm bg-emerald-600 hover:bg-emerald-700"
+            >
               <i class="fas fa-check-circle"></i>
-              <span>Mark as Paid</span>
+              <span>{{ isFreeBooking ? 'Mark as Complimentary' : 'Mark as Paid' }}</span>
             </button>
           </div>
         </div>
@@ -407,14 +437,14 @@
             <div class="border-t pt-4">
               <p class="text-gray-500 mb-3">Payment Status</p>
               <div class="flex items-center justify-between">
-                <span class="font-medium">{{ booking.isPaid ? 'Paid' : 'Unpaid' }}</span>
+                <span class="font-medium">{{ booking.paymentMethod === 'COMPLIMENTARY' ? 'Complimentary' : booking.isPaid ? 'Paid' : 'Unpaid' }}</span>
                 <div v-if="!booking.isPaid" class="flex gap-2">
-                  <button @click="showPaymentModal = true" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
-                    <i class="fas fa-plus-circle mr-1"></i>Mark Paid
+                  <button @click="isFreeBooking ? onMarkComplimentary() : (showPaymentModal = true)" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
+                    <i class="fas fa-plus-circle mr-1"></i>{{ isFreeBooking ? 'Mark Complimentary' : 'Mark Paid' }}
                   </button>
                 </div>
               </div>
-              <div v-if="booking.isPaid && booking.paymentMethod" class="text-sm mt-2">
+              <div v-if="booking.isPaid && booking.paymentMethod && booking.paymentMethod !== 'COMPLIMENTARY'" class="text-sm mt-2">
                 <p class="text-gray-600">Method: <span class="font-medium">{{ booking.paymentMethod }}</span></p>
               </div>
             </div>
@@ -484,10 +514,29 @@ const showChangeClient = ref(false)
 const changeClientError = ref('')
 const showSendEmail = ref(false)
 const showPaymentModal = ref(false)
-const removingPromotion = ref(false)
+const removingDiscount = ref(false)
 const applyingPromotion = ref(false)
 const selectedPromotionId = ref('')
-const promotionError = ref('')
+const applyingDiscount = ref(false)
+const discountMode = ref<'percent' | 'amount'>('percent')
+const discountValue = ref<number | null>(null)
+const discountError = ref('')
+
+const hasActiveDiscount = computed(() => {
+  const b = booking.value
+  if (!b) return false
+  return b.discountedPrice !== null && b.discountedPrice !== undefined && b.discountedPrice !== b.price
+})
+
+// A discount (or a £0 list price) that brings the booking to £0 — no money
+// to collect, so payment status skips the Cash/BACS choice entirely.
+const isFreeBooking = computed(() => {
+  const b = booking.value
+  if (!b) return false
+  const effective = b.discountedPrice ?? b.price
+  return effective === 0
+})
+
 // Pre-visit intake form
 const intake = ref<IntakeForm | null>(null)
 const sendingPreform = ref(false)
@@ -572,17 +621,20 @@ const editingPaymentForm = reactive({
   paymentMethod: '' as 'CASH' | 'BACS' | '',
 })
 
-async function onRemovePromotion() {
-  if (!booking.value?.promotion) return
-  if (!confirm(`Remove the "${booking.value.promotion.message}" promotion from this booking? The price will revert to the full amount.`)) return
-  removingPromotion.value = true
-  promotionError.value = ''
+// Clears whatever pricing adjustment is on the booking -- a stored promotion
+// or a one-off manual discount both revert via the same endpoint.
+async function onRemoveDiscount() {
+  if (!booking.value || !hasActiveDiscount.value) return
+  const label = booking.value.promotion ? `the "${booking.value.promotion.message}" promotion` : 'the manual discount'
+  if (!confirm(`Remove ${label} from this booking? The price will revert to the full amount.`)) return
+  removingDiscount.value = true
+  discountError.value = ''
   try {
     booking.value = await bookingsStore.removePromotion(booking.value.id)
   } catch (err: any) {
-    promotionError.value = err?.message || 'Failed to remove promotion'
+    discountError.value = err?.message || 'Failed to remove discount'
   } finally {
-    removingPromotion.value = false
+    removingDiscount.value = false
   }
 }
 
@@ -592,14 +644,33 @@ async function onRemovePromotion() {
 async function onApplyPromotion() {
   if (!booking.value || !selectedPromotionId.value) return
   applyingPromotion.value = true
-  promotionError.value = ''
+  discountError.value = ''
   try {
     booking.value = await bookingsStore.applyPromotion(booking.value.id, selectedPromotionId.value)
     selectedPromotionId.value = ''
   } catch (err: any) {
-    promotionError.value = err?.response?.data?.error || err?.message || 'Failed to apply promotion'
+    discountError.value = err?.response?.data?.error || err?.message || 'Failed to apply promotion'
   } finally {
     applyingPromotion.value = false
+  }
+}
+
+// One-off manual discount -- a percentage or flat £ amount off, for deals
+// that don't warrant a standing (internal) Promotion record.
+async function onApplyDiscount() {
+  if (!booking.value || !discountValue.value || discountValue.value <= 0) return
+  applyingDiscount.value = true
+  discountError.value = ''
+  try {
+    const payload = discountMode.value === 'percent'
+      ? { discountPercentage: discountValue.value }
+      : { discountAmount: discountValue.value }
+    booking.value = await bookingsStore.applyDiscount(booking.value.id, payload)
+    discountValue.value = null
+  } catch (err: any) {
+    discountError.value = err?.response?.data?.error || err?.message || 'Failed to apply discount'
+  } finally {
+    applyingDiscount.value = false
   }
 }
 
@@ -824,6 +895,25 @@ async function confirmPaymentMethod(method: 'CASH' | 'BACS') {
     showPaymentModal.value = false
   } catch (err: any) {
     paymentError.value = err?.message || 'Failed to save payment status'
+  } finally {
+    savingPayment.value = false
+  }
+}
+
+// £0 bookings skip the Cash/BACS modal entirely -- there's no payment to
+// reconcile a method for.
+async function onMarkComplimentary() {
+  if (!booking.value) return
+  savingPayment.value = true
+  paymentError.value = ''
+  try {
+    const updated = await bookingsStore.updateBooking(booking.value.id, {
+      isPaid: true,
+      paymentMethod: 'COMPLIMENTARY',
+    } as Partial<Booking>)
+    booking.value = updated
+  } catch (err: any) {
+    paymentError.value = err?.message || 'Failed to mark as complimentary'
   } finally {
     savingPayment.value = false
   }

@@ -102,6 +102,24 @@ export const useBookingsStore = defineStore('bookings', () => {
     }
   }
 
+  async function applyDiscount(id: string, payload: { discountPercentage: number } | { discountAmount: number }) {
+    loading.value = true
+    error.value = null
+    try {
+      const updated = await apiService.applyBookingDiscount(id, payload)
+      const index = bookings.value.findIndex(b => b.id === id)
+      if (index !== -1) {
+        bookings.value[index] = updated
+      }
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to apply discount'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function cancelBooking(id: string) {
     loading.value = true
     error.value = null
@@ -144,6 +162,7 @@ export const useBookingsStore = defineStore('bookings', () => {
     updateBooking,
     removePromotion,
     applyPromotion,
+    applyDiscount,
     cancelBooking,
     deleteBooking,
   }

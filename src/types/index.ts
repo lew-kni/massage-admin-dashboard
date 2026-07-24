@@ -70,7 +70,9 @@ export interface Booking {
   preFormSentAt?: string | null
   preFormCompletedAt?: string | null
   isPaid?: boolean | null
-  paymentMethod?: 'CASH' | 'BACS' | null
+  // COMPLIMENTARY: a fully-discounted (£0) booking marked settled with no
+  // payment method, since none was collected.
+  paymentMethod?: 'CASH' | 'BACS' | 'COMPLIMENTARY' | null
   createdAt: string
   updatedAt: string
 }
