@@ -1,21 +1,20 @@
 <template>
-  <div class="bg-[#f4f5f2] rounded-lg p-6">
-    <div class="max-w-[420px] mx-auto bg-white rounded-xl overflow-hidden shadow-sm">
-      <div class="bg-[#4f7248] px-6 py-5">
-        <p class="m-0 text-[15px] font-bold text-white tracking-[1px] uppercase">North Peak</p>
-        <p class="m-0 mt-1 text-[9px] font-semibold text-[#8fd3f0] tracking-[3px] uppercase">Massage</p>
+  <div class="bg-[#f2f6ef] rounded-lg p-6">
+    <div class="max-w-[420px] mx-auto bg-white rounded-xl overflow-hidden border border-[#e0e6da]">
+      <div class="text-center px-6 pt-7 pb-6 border-b-[3px] border-[#4f7248]">
+        <img src="/logo-side.png" alt="North Peak Massage" class="inline-block h-[36px] w-auto" />
       </div>
       <div class="px-6 py-6">
         <p class="text-xs font-medium text-gray-400 mb-2 uppercase tracking-wide">Subject</p>
-        <p class="text-sm font-semibold text-[#2f3a2c] mb-4 break-words">{{ subject || '(no subject)' }}</p>
+        <p class="text-sm font-semibold text-[#202a20] mb-4 break-words">{{ subject || '(no subject)' }}</p>
         <div
-          class="text-[13px] leading-relaxed text-[#2f3a2c] email-preview-body"
+          class="text-[13px] leading-relaxed text-[#202a20] email-preview-body"
           v-html="bodyHtml || '<p class=\'text-gray-400 italic\'>(no message yet)</p>'"
         ></div>
       </div>
-      <div class="px-6 py-4 border-t border-[#eceee9]">
-        <p class="m-0 text-[10px] text-[#8a8f85]">North Peak Massage &middot; High Peak</p>
-        <p class="m-0 mt-1 text-[10px] text-[#8a8f85]">&copy; {{ year }} North Peak Massage. This message relates to your enquiry or appointment.</p>
+      <div class="px-6 py-4 border-t border-[#e0e6da]">
+        <p class="m-0 text-[10px] text-[#7a8778]">North Peak Massage &middot; High Peak</p>
+        <p class="m-0 mt-1 text-[10px] text-[#7a8778]">&copy; {{ year }} North Peak Massage. This message relates to your enquiry or appointment.</p>
       </div>
     </div>
   </div>
