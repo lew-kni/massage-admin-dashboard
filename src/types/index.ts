@@ -10,6 +10,16 @@ export interface Client {
   city?: string | null
   postcode?: string | null
   notes?: string | null
+  // Current/canonical contact details -- kept up to date via the pre-visit
+  // form's "has this changed?" flow (see intake.js), which also logs a note
+  // here when they change. Distinct from IntakeForm's own copies of these
+  // fields, which are a per-visit snapshot rather than the live record.
+  emergencyName?: string | null
+  emergencyPhone?: string | null
+  emergencyRelationship?: string | null
+  gpName?: string | null
+  gpPhone?: string | null
+  gpSurgery?: string | null
   createdAt: string
   updatedAt: string
 }

@@ -93,6 +93,39 @@
               </div>
             </div>
 
+            <!-- Emergency Contact & GP -->
+            <div class="border-t pt-6">
+              <h3 class="font-semibold text-gray-900 mb-3">Emergency Contact &amp; GP</h3>
+              <p class="text-xs text-gray-500 mb-3">Kept up to date via the client's pre-visit form -- any change there is logged below in Notes.</p>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <p class="text-sm text-gray-500">Emergency contact</p>
+                  <p class="font-medium">
+                    <template v-if="clientsStore.currentClient.emergencyName || clientsStore.currentClient.emergencyPhone">
+                      {{ [clientsStore.currentClient.emergencyName, clientsStore.currentClient.emergencyRelationship ? `(${clientsStore.currentClient.emergencyRelationship})` : null].filter(Boolean).join(' ') }}
+                      <a v-if="clientsStore.currentClient.emergencyPhone" :href="`tel:${clientsStore.currentClient.emergencyPhone}`" class="text-sage-600 hover:underline block">
+                        {{ clientsStore.currentClient.emergencyPhone }}
+                      </a>
+                    </template>
+                    <span v-else class="text-gray-400">Not provided</span>
+                  </p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-500">GP</p>
+                  <p class="font-medium">
+                    <template v-if="clientsStore.currentClient.gpName || clientsStore.currentClient.gpPhone">
+                      {{ clientsStore.currentClient.gpName }}
+                      <a v-if="clientsStore.currentClient.gpPhone" :href="`tel:${clientsStore.currentClient.gpPhone}`" class="text-sage-600 hover:underline block">
+                        {{ clientsStore.currentClient.gpPhone }}
+                      </a>
+                      <span v-if="clientsStore.currentClient.gpSurgery" class="text-sm text-gray-500 block">{{ clientsStore.currentClient.gpSurgery }}</span>
+                    </template>
+                    <span v-else class="text-gray-400">Not provided</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <!-- Notes Timeline -->
             <div class="border-t pt-6">
               <h3 class="font-semibold text-gray-900 mb-4"><i class="fas fa-note-sticky mr-2"></i>Notes</h3>

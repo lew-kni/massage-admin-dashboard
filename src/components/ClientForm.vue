@@ -116,6 +116,45 @@
           </div>
         </div>
 
+        <!-- Emergency Contact Row -->
+        <div class="border-t pt-6">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">Emergency Contact</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label for="emergencyName" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input id="emergencyName" v-model="form.emergencyName" type="text" class="input-field" />
+            </div>
+            <div>
+              <label for="emergencyPhone" class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input id="emergencyPhone" v-model="form.emergencyPhone" type="tel" class="input-field" />
+            </div>
+            <div>
+              <label for="emergencyRelationship" class="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+              <input id="emergencyRelationship" v-model="form.emergencyRelationship" type="text" class="input-field" />
+            </div>
+          </div>
+        </div>
+
+        <!-- GP Details Row -->
+        <div>
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">GP Details</h3>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label for="gpName" class="block text-sm font-medium text-gray-700 mb-1">GP name</label>
+              <input id="gpName" v-model="form.gpName" type="text" class="input-field" />
+            </div>
+            <div>
+              <label for="gpPhone" class="block text-sm font-medium text-gray-700 mb-1">Surgery phone</label>
+              <input id="gpPhone" v-model="form.gpPhone" type="tel" class="input-field" />
+            </div>
+            <div>
+              <label for="gpSurgery" class="block text-sm font-medium text-gray-700 mb-1">Surgery address</label>
+              <input id="gpSurgery" v-model="form.gpSurgery" type="text" class="input-field" />
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 -mt-4">Also kept up to date automatically via the client's pre-visit form.</p>
+
         <!-- Error Message -->
         <div v-if="error" class="p-4 bg-red-50 border border-red-200 rounded-lg">
           <p class="text-sm text-red-700">{{ error }}</p>
@@ -176,6 +215,12 @@ const form = reactive({
   address: '',
   city: '',
   postcode: '',
+  emergencyName: '',
+  emergencyPhone: '',
+  emergencyRelationship: '',
+  gpName: '',
+  gpPhone: '',
+  gpSurgery: '',
 })
 
 function initializeForm() {
@@ -187,6 +232,12 @@ function initializeForm() {
   form.address = props.client?.address || ''
   form.city = props.client?.city || ''
   form.postcode = props.client?.postcode || ''
+  form.emergencyName = props.client?.emergencyName || ''
+  form.emergencyPhone = props.client?.emergencyPhone || ''
+  form.emergencyRelationship = props.client?.emergencyRelationship || ''
+  form.gpName = props.client?.gpName || ''
+  form.gpPhone = props.client?.gpPhone || ''
+  form.gpSurgery = props.client?.gpSurgery || ''
 }
 
 // Initialize form when component mounts or when client prop changes
@@ -216,6 +267,12 @@ async function submitForm() {
     if (form.city?.trim()) payload.city = form.city.trim()
     if (form.postcode?.trim()) payload.postcode = form.postcode.trim()
     if (form.dateOfBirth?.trim()) payload.dateOfBirth = form.dateOfBirth.trim()
+    if (form.emergencyName?.trim()) payload.emergencyName = form.emergencyName.trim()
+    if (form.emergencyPhone?.trim()) payload.emergencyPhone = form.emergencyPhone.trim()
+    if (form.emergencyRelationship?.trim()) payload.emergencyRelationship = form.emergencyRelationship.trim()
+    if (form.gpName?.trim()) payload.gpName = form.gpName.trim()
+    if (form.gpPhone?.trim()) payload.gpPhone = form.gpPhone.trim()
+    if (form.gpSurgery?.trim()) payload.gpSurgery = form.gpSurgery.trim()
     // Notes are managed separately in the detail view, not in this form
 
     let saved: Client
