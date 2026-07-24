@@ -186,6 +186,42 @@
           </label>
         </div>
       </div>
+
+      <!-- Test delivery -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold">
+            <i class="fas fa-paper-plane mr-2"></i>Test Delivery
+          </h2>
+        </div>
+        <div class="card-body space-y-3">
+          <p class="text-sm text-gray-500">
+            Sends a real email through the settings above (save any changes first) --
+            the most reliable way to confirm delivery is actually working.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <input
+              v-model="testEmailTo"
+              type="email"
+              class="input-field flex-1"
+              placeholder="you@example.com"
+            />
+            <button
+              @click="sendTestEmail"
+              :disabled="sendingTestEmail || !testEmailTo"
+              class="btn-secondary whitespace-nowrap"
+            >
+              {{ sendingTestEmail ? "Sending..." : "Send test email" }}
+            </button>
+          </div>
+          <p v-if="testEmailResult" class="text-sm text-green-600">
+            <i class="fas fa-check mr-1"></i>{{ testEmailResult }}
+          </p>
+          <p v-if="testEmailError" class="text-sm text-red-700">
+            <i class="fas fa-triangle-exclamation mr-1"></i>{{ testEmailError }}
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -198,6 +234,10 @@ import type { AppSettings } from "@/types";
 const loading = ref(true);
 const saving = ref(false);
 const saveMessage = ref("");
+const testEmailTo = ref("");
+const sendingTestEmail = ref(false);
+const testEmailResult = ref("");
+const testEmailError = ref("");
 const saveError = ref("");
 const smtpPass = ref("");
 const smtpPassSet = ref(false);
@@ -257,6 +297,24 @@ async function save() {
       err?.response?.data?.error || err?.message || "Failed to save settings";
   } finally {
     saving.value = false;
+  }
+}
+
+async function sendTestEmail() {
+  if (!testEmailTo.value) return;
+  sendingTestEmail.value = true;
+  testEmailResult.value = "";
+  testEmailError.value = "";
+  try {
+    const result = await apiService.sendTestEmail(testEmailTo.value);
+    testEmailResult.value = result.message || `Sent to ${testEmailTo.value}`;
+  } catch (err: any) {
+    // The backend surfaces the real SMTP error here (auth failure, bad host,
+    // etc.) via error.message -- that's the whole point of this button.
+    testEmailError.value =
+      err?.response?.data?.error || err?.message || "Failed to send test email";
+  } finally {
+    sendingTestEmail.value = false;
   }
 }
 

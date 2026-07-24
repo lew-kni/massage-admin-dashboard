@@ -241,6 +241,13 @@ class ApiService {
     return data
   }
 
+  // Sends a real email through the current SMTP config -- the only reliable
+  // way to check delivery is actually working, short of watching an inbox.
+  async sendTestEmail(to: string): Promise<{ success: boolean; message: string }> {
+    const { data } = await this.client.post('/api/emails/test-email', { to })
+    return data
+  }
+
   async blockTime(blockedTime: { startTime: string; endTime: string; reason?: string }): Promise<BlockedTime> {
     const { data } = await this.client.post('/api/availability/block-time', blockedTime)
     return data
