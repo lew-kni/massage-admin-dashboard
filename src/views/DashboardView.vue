@@ -101,17 +101,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useClientsStore } from '@/stores/clients'
-import { apiService } from '@/services/api'
-import type { Booking } from '@/types'
+import { useBookingsStore } from '@/stores/bookings'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import StatCard from '@/components/StatCard.vue'
 
 const clientsStore = useClientsStore()
-const bookings = ref<Booking[]>([])
+// Shared store rather than this view's own fetch, so the dashboard reflects
+// the same (periodically polled, see App.vue) data as the sidebar badges and
+// every other view, instead of a snapshot from whenever this page happened
+// to last mount.
+const bookingsStore = useBookingsStore()
+const bookings = computed(() => bookingsStore.bookings)
 
 const clientsCount = computed(() => clientsStore.clients.length)
 const upcomingBookingsCount = computed(() =>
@@ -123,9 +127,10 @@ const pendingCount = computed(() =>
 const monthlyRevenue = computed(() => {
   // Sum the as-booked price (promotion-adjusted where one applied) for this
   // month's non-cancelled bookings. Bookings without a captured price count as 0.
-  const now = new Date()
+  // Compared as London calendar months, not the viewing browser's own timezone.
+  const now = toLondonFakeLocalDate(new Date())
   const total = bookings.value.reduce((sum, b) => {
-    const start = new Date(b.startTime)
+    const start = toLondonFakeLocalDate(b.startTime)
     const inThisMonth =
       start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth()
     if (!inThisMonth || b.status === 'CANCELLED') return sum
@@ -182,10 +187,9 @@ function getStatusBadgeClass(status: string) {
 
 onMounted(async () => {
   await clientsStore.fetchClients()
-  try {
-    bookings.value = await apiService.getBookings()
-  } catch (error) {
-    console.error('Failed to fetch bookings:', error)
-  }
+  // App.vue already fetches bookings on login and polls it periodically; only
+  // fetch here too if nothing's arrived yet (e.g. this is the very first view
+  // rendered, before that initial fetch resolves).
+  if (bookingsStore.bookings.length === 0) bookingsStore.fetchBookings()
 })
 </script>

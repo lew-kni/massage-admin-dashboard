@@ -136,7 +136,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useLeadsStore } from '@/stores/leads'
@@ -214,4 +214,53 @@ watch(
   },
   { immediate: true }
 )
+
+// This is an SPA -- the bookings/leads stores otherwise only refresh when a
+// page whose own onMounted happens to call fetchBookings()/fetchLeads() is
+// visited (BookingsView, LeadsView). Sitting on the Dashboard, or anywhere
+// else, while a new booking or lead comes in previously meant nothing update
+// -- sidebar badges included -- until a hard reload. Polling here (App.vue is
+// the one component that's always mounted for the whole authenticated
+// session) keeps every view that reads these stores current.
+const POLL_INTERVAL_MS = 45000
+let pollTimer: ReturnType<typeof setInterval> | null = null
+
+function pollFreshData() {
+  if (document.hidden || !authStore.isAuthenticated) return
+  leadsStore.fetchLeads()
+  bookingsStore.fetchBookings()
+}
+
+function startPolling() {
+  if (pollTimer) return
+  pollTimer = setInterval(pollFreshData, POLL_INTERVAL_MS)
+}
+
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+}
+
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated) startPolling()
+    else stopPolling()
+  },
+  { immediate: true }
+)
+
+// Don't wait out the rest of the interval after switching back to this tab --
+// refresh immediately, so returning from another tab/app shows current data
+// right away rather than up to POLL_INTERVAL_MS late.
+function onVisibilityChange() {
+  if (!document.hidden) pollFreshData()
+}
+document.addEventListener('visibilitychange', onVisibilityChange)
+onUnmounted(() => {
+  stopPolling()
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+})
 </script>
