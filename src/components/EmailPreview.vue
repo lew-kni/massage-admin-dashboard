@@ -9,7 +9,7 @@
         <p class="text-sm font-semibold text-[#202a20] mb-4 break-words">{{ subject || '(no subject)' }}</p>
         <div
           class="text-[13px] leading-relaxed text-[#202a20] email-preview-body"
-          v-html="bodyHtml || '<p class=\'text-gray-400 italic\'>(no message yet)</p>'"
+          v-html="safeBodyHtml"
         ></div>
       </div>
       <div class="px-6 py-4 border-t border-[#e0e6da]">
@@ -21,8 +21,21 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ subject: string; bodyHtml: string }>()
+import { computed } from 'vue'
+import DOMPurify from 'dompurify'
+
+const props = defineProps<{ subject: string; bodyHtml: string }>()
 const year = new Date().getFullYear()
+
+// Security boundary: this component renders its body via v-html. Everything that
+// reaches `bodyHtml` today is escaped upstream (utils/emailPreview.ts → textToHtml)
+// or admin-authored, but client-submitted data *can* flow in through template
+// variables like {{ firstName }}. Sanitising here means the v-html sink stays safe
+// no matter what a future caller passes in — scripts and inline event handlers are
+// stripped while ordinary email markup (p, a, strong, ul…) is preserved.
+const safeBodyHtml = computed(() =>
+  DOMPurify.sanitize(props.bodyHtml || '<p class="text-gray-400 italic">(no message yet)</p>')
+)
 </script>
 
 <style scoped>
