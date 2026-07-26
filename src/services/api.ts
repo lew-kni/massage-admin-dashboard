@@ -6,6 +6,7 @@ import type {
   Availability,
   BlockedTime,
   EmailTemplate,
+  EmailTrigger,
   Communication,
   Service,
   ServiceDuration,
@@ -290,6 +291,20 @@ class ApiService {
 
   async deleteTemplate(id: string): Promise<void> {
     await this.client.delete(`/api/templates/${id}`)
+  }
+
+  // Email Triggers (automated-email config)
+  async getEmailTriggers(): Promise<EmailTrigger[]> {
+    const { data } = await this.client.get('/api/email-triggers')
+    return data
+  }
+
+  async updateEmailTrigger(
+    key: string,
+    payload: Partial<Pick<EmailTrigger, 'enabled' | 'templateName' | 'offsetMinutes'>>,
+  ): Promise<EmailTrigger> {
+    const { data } = await this.client.patch(`/api/email-triggers/${key}`, payload)
+    return data
   }
 
   // Communications

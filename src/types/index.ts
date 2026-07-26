@@ -203,6 +203,19 @@ export interface EmailTemplate {
   updatedAt: string
 }
 
+// Automated email triggers (catalogue metadata merged with saved config)
+export interface EmailTrigger {
+  key: string
+  label: string
+  description: string
+  timing: 'event' | 'scheduled'
+  enabled: boolean
+  templateName: string | null
+  offsetMinutes: number | null
+  templateEditable: boolean
+  supportsOffset: boolean
+}
+
 // App Settings
 export interface AppSettings {
   emailEnabled: boolean

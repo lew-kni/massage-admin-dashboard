@@ -25,6 +25,7 @@
     </div>
 
     <EmailTemplatesTab v-if="activeTab === 'templates'" />
+    <EmailTriggersTab v-else-if="activeTab === 'triggers'" />
     <SendHistoryTab v-else-if="activeTab === 'history'" />
     <EmailDeliveryTab v-else />
   </div>
@@ -34,13 +35,15 @@
 import { ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import EmailTemplatesTab from '@/components/email/EmailTemplatesTab.vue'
+import EmailTriggersTab from '@/components/email/EmailTriggersTab.vue'
 import SendHistoryTab from '@/components/email/SendHistoryTab.vue'
 import EmailDeliveryTab from '@/components/email/EmailDeliveryTab.vue'
 
-type TabKey = 'templates' | 'history' | 'sending'
+type TabKey = 'templates' | 'triggers' | 'history' | 'sending'
 
 const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'templates', label: 'Email Templates', icon: 'fas fa-envelope-open-text' },
+  { key: 'triggers', label: 'Triggers', icon: 'fas fa-bolt' },
   { key: 'history', label: 'Send History', icon: 'fas fa-clock-rotate-left' },
   { key: 'sending', label: 'Sending & SMTP', icon: 'fas fa-server' },
 ]
@@ -49,7 +52,7 @@ const route = useRoute()
 const router = useRouter()
 
 function normalise(tab: unknown): TabKey {
-  return tab === 'history' || tab === 'sending' ? tab : 'templates'
+  return tab === 'triggers' || tab === 'history' || tab === 'sending' ? tab : 'templates'
 }
 
 const activeTab = ref<TabKey>(normalise(route.query.tab))
