@@ -211,6 +211,7 @@ export interface AppSettings {
   fromName: string
   fromEmail: string | null
   replyToEmail: string | null
+  adminEmail: string | null
   smtpHost: string | null
   smtpPort: number | null
   smtpSecure: boolean

@@ -10,14 +10,12 @@ import LeadDetailView from '@/views/LeadDetailView.vue'
 import BookingDetailView from '@/views/BookingDetailView.vue'
 import ServicesView from '@/views/ServicesView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
-import EmailsView from '@/views/EmailsView.vue'
 import AccountingView from '@/views/AccountingView.vue'
 import AccountingExpensesView from '@/views/AccountingExpensesView.vue'
 import AccountingReceiptsView from '@/views/AccountingReceiptsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import ComingSoonView from '@/views/ComingSoonView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
-import TemplatesView from '@/views/TemplatesView.vue'
 
 const routes = [
   {
@@ -65,12 +63,6 @@ const routes = [
     path: '/bookings/:id',
     name: 'BookingDetail',
     component: BookingDetailView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: '/emails',
-    name: 'Emails',
-    component: EmailsView,
     meta: { requiresAuth: true },
   },
   // Accounting section
@@ -127,16 +119,14 @@ const routes = [
     component: SettingsView,
     meta: { requiresAuth: true },
   },
-  {
-    path: '/settings/email-templates',
-    name: 'SettingsEmailTemplates',
-    component: TemplatesView,
-    meta: { requiresAuth: true },
-  },
 
   // Legacy paths — keep old links working by redirecting into Settings
   { path: '/services', redirect: '/settings/services' },
   { path: '/availability', redirect: '/settings/availability' },
+  // Email Templates and the standalone Emails page are now tabs within
+  // Settings → Email; redirect the old routes so existing links still work.
+  { path: '/emails', redirect: '/settings/email' },
+  { path: '/settings/email-templates', redirect: { path: '/settings/email', query: { tab: 'templates' } } },
 ]
 
 const router = createRouter({

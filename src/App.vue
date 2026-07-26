@@ -161,7 +161,6 @@ const navigation = computed(() => [
   { name: 'Leads', to: '/leads', icon: 'fas fa-inbox', badge: leadsStore.unreadCount },
   { name: 'Clients', to: '/clients', icon: 'fas fa-users' },
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
-  { name: 'Emails', to: '/emails', icon: 'fas fa-envelope' },
 ])
 
 const accountingChildren = [
@@ -176,7 +175,6 @@ const settingsChildren = [
   { name: 'Availability', to: '/settings/availability' },
   { name: 'Services', to: '/settings/services' },
   { name: 'Email', to: '/settings/email' },
-  { name: 'Email Templates', to: '/settings/email-templates' },
 ]
 
 function isActive(path: string) {
