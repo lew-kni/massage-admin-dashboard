@@ -393,12 +393,12 @@
                 Cancel Edit
               </button>
             </template>
-            <button v-if="!isEditing && !isBookingPast(booking)" class="btn-danger w-full text-sm">
+            <button v-if="!isEditing && !isBookingPast(booking) && booking.status !== 'CANCELLED'" @click="cancelBooking" :disabled="cancelling" class="btn-danger w-full text-sm">
               <i class="fas fa-trash-alt"></i>
-              <span>Cancel Booking</span>
+              <span>{{ cancelling ? 'Cancelling...' : 'Cancel Booking' }}</span>
             </button>
             <button
-              v-if="!isEditing && !booking.isPaid"
+              v-if="!isEditing && !booking.isPaid && booking.status !== 'CANCELLED'"
               @click="isFreeBooking ? onMarkComplimentary() : (showPaymentModal = true)"
               class="btn-primary w-full text-sm bg-emerald-600 hover:bg-emerald-700"
             >
@@ -438,7 +438,7 @@
               <p class="text-gray-500 mb-3">Payment Status</p>
               <div class="flex items-center justify-between">
                 <span class="font-medium">{{ booking.paymentMethod === 'COMPLIMENTARY' ? 'Complimentary' : booking.isPaid ? 'Paid' : 'Unpaid' }}</span>
-                <div v-if="!booking.isPaid" class="flex gap-2">
+                <div v-if="!booking.isPaid && booking.status !== 'CANCELLED'" class="flex gap-2">
                   <button @click="isFreeBooking ? onMarkComplimentary() : (showPaymentModal = true)" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
                     <i class="fas fa-plus-circle mr-1"></i>{{ isFreeBooking ? 'Mark Complimentary' : 'Mark Paid' }}
                   </button>
@@ -515,6 +515,7 @@ const showChangeClient = ref(false)
 const changeClientError = ref('')
 const showSendEmail = ref(false)
 const showPaymentModal = ref(false)
+const cancelling = ref(false)
 const removingDiscount = ref(false)
 const applyingPromotion = ref(false)
 const selectedPromotionId = ref('')
@@ -899,6 +900,19 @@ async function confirmPaymentMethod(method: 'CASH' | 'BACS') {
     paymentError.value = err?.message || 'Failed to save payment status'
   } finally {
     savingPayment.value = false
+  }
+}
+
+async function cancelBooking() {
+  if (!booking.value) return
+  if (!confirm('Cancel this booking? The client will be emailed a cancellation notice.')) return
+  cancelling.value = true
+  try {
+    booking.value = await bookingsStore.cancelBooking(booking.value.id)
+  } catch (err: any) {
+    alert(err?.message || 'Failed to cancel booking')
+  } finally {
+    cancelling.value = false
   }
 }
 
