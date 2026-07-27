@@ -52,11 +52,54 @@
           <p class="text-xs text-gray-400 mt-1">One paragraph per line</p>
         </div>
 
-        <!-- Good For -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Good for</label>
-          <textarea v-model="form.goodFor" rows="3" class="input-field" placeholder="One item per line"></textarea>
-          <p class="text-xs text-gray-400 mt-1">One item per line</p>
+        <!-- Benefits -->
+        <div class="border-t pt-4">
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-sm font-medium text-gray-700">Benefits</label>
+            <button type="button" @click="addBenefit" class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
+              <i class="fas fa-plus"></i>
+              <span>Add benefit</span>
+            </button>
+          </div>
+          <input v-model="form.benefitsTitle" type="text" placeholder="Section heading" class="input-field text-sm mb-2" />
+          <p class="text-xs text-gray-400 mb-2">Heading shown above this section on the website</p>
+          <div v-if="form.benefits.length === 0" class="text-sm text-gray-400 py-2">No benefits yet</div>
+          <div v-for="(b, i) in form.benefits" :key="i" class="bg-gray-50 p-3 rounded mb-2 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <input v-model="b.title" type="text" placeholder="Title" class="input-field text-sm" />
+              <input v-model="b.icon" type="text" placeholder="Icon (e.g. fa-heart-pulse)" class="input-field text-sm" />
+            </div>
+            <textarea v-model="b.description" rows="2" placeholder="Description" class="input-field text-sm w-full"></textarea>
+            <div class="flex justify-end">
+              <button type="button" @click="removeBenefit(i)" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">Icon should be a Font Awesome class like "fa-heart-pulse" or "fa-bolt"</p>
+        </div>
+
+        <!-- Personas (Who this is for) -->
+        <div class="border-t pt-4">
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-sm font-medium text-gray-700">Who this is for (Personas)</label>
+            <button type="button" @click="addPersona" class="inline-flex items-center gap-1 text-sage-600 hover:text-sage-700 text-sm font-medium">
+              <i class="fas fa-plus"></i>
+              <span>Add persona</span>
+            </button>
+          </div>
+          <input v-model="form.personasTitle" type="text" placeholder="Section heading" class="input-field text-sm mb-2" />
+          <p class="text-xs text-gray-400 mb-2">Heading shown above this section on the website</p>
+          <div v-if="form.personas.length === 0" class="text-sm text-gray-400 py-2">No personas yet</div>
+          <div v-for="(p, i) in form.personas" :key="i" class="bg-gray-50 p-3 rounded mb-2 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <input v-model="p.title" type="text" placeholder="Title (e.g. Runners & Athletes)" class="input-field text-sm" />
+              <input v-model="p.icon" type="text" placeholder="Icon (e.g. fa-person-running)" class="input-field text-sm" />
+            </div>
+            <textarea v-model="p.description" rows="2" placeholder="Description" class="input-field text-sm w-full"></textarea>
+            <div class="flex justify-end">
+              <button type="button" @click="removePersona(i)" class="text-red-500 hover:text-red-700 text-sm"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-1">Icon should be a Font Awesome class like "fa-person-running" or "fa-dumbbell"</p>
         </div>
 
         <!-- Durations -->
@@ -87,20 +130,6 @@
             <button type="button" @click="removeDuration(i)" class="text-red-500 hover:text-red-700 px-2 py-2 text-sm"><i class="fas fa-xmark"></i></button>
           </div>
           <p class="text-xs text-gray-400 mt-1">Leave price blank if it's still to be confirmed. A duration's promotion overrides the service-wide one from the Promotions tab.</p>
-        </div>
-
-        <!-- Contraindication note -->
-        <div class="border-t pt-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Contraindication note</label>
-          <input v-model="form.contraTitle" type="text" class="input-field mb-2" placeholder="Heading (optional — leave blank for a plain note)" />
-          <textarea v-model="form.contraContent" rows="3" class="input-field" placeholder="One paragraph per line"></textarea>
-        </div>
-
-        <!-- Post-booking note -->
-        <div class="border-t pt-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Post-booking note</label>
-          <input v-model="form.postTitle" type="text" class="input-field mb-2" placeholder="Heading (required to show this note)" />
-          <textarea v-model="form.postContent" rows="3" class="input-field" placeholder="One paragraph per line"></textarea>
         </div>
 
         <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded">
@@ -135,28 +164,26 @@ const error = ref('')
 const linesToText = (lines?: string[] | null) => (lines || []).join('\n')
 const textToLines = (text: string) => text.split('\n').map((l) => l.trim()).filter(Boolean)
 
-// Break the polymorphic contraindicationNote into a title + content textarea
-function loadContra(note: Service['contraindicationNote']) {
-  if (!note) return { title: '', content: '' }
-  if (typeof note === 'string') return { title: '', content: note }
-  return { title: note.title, content: linesToText(note.content) }
-}
-
-const contra = loadContra(props.service?.contraindicationNote)
-
 const form = reactive({
   name: props.service?.name || '',
   slug: props.service?.slug || '',
   category: (props.service?.category || 'relaxation') as ServiceCategory,
   summary: props.service?.summary || '',
   description: linesToText(props.service?.description),
-  goodFor: linesToText(props.service?.goodFor),
   bookable: props.service?.bookable ?? true,
   isActive: props.service?.isActive ?? true,
-  contraTitle: contra.title,
-  contraContent: contra.content,
-  postTitle: props.service?.postBookingNote?.title || '',
-  postContent: linesToText(props.service?.postBookingNote?.content),
+  benefits: (props.service?.benefits || []).map((b) => ({
+    title: b.title || '',
+    description: b.description || '',
+    icon: b.icon || '',
+  })) as Array<{ title: string; description: string; icon: string }>,
+  benefitsTitle: props.service?.benefitsTitle || "What you'll get",
+  personasTitle: props.service?.personasTitle || 'Who this is for',
+  personas: (props.service?.personas || []).map((p) => ({
+    title: p.title || '',
+    description: p.description || '',
+    icon: p.icon || '',
+  })) as Array<{ title: string; description: string; icon: string }>,
   durations: (props.service?.durations || []).map((d) => ({
     id: d.id,
     minutes: d.minutes,
@@ -185,20 +212,20 @@ function removeDuration(i: number) {
   form.durations.splice(i, 1)
 }
 
-function buildContra(): string | NoteBlock | null {
-  const lines = textToLines(form.contraContent)
-  if (form.contraTitle.trim()) {
-    return { title: form.contraTitle.trim(), content: lines }
-  }
-  return lines.length ? lines.join('\n') : null
+function addBenefit() {
+  form.benefits.push({ title: '', description: '', icon: '' })
 }
 
-function buildPostNote(): NoteBlock | null {
-  const lines = textToLines(form.postContent)
-  if (form.postTitle.trim() && lines.length) {
-    return { title: form.postTitle.trim(), content: lines }
-  }
-  return null
+function removeBenefit(i: number) {
+  form.benefits.splice(i, 1)
+}
+
+function addPersona() {
+  form.personas.push({ title: '', description: '', icon: '' })
+}
+
+function removePersona(i: number) {
+  form.personas.splice(i, 1)
 }
 
 function collectDurations(): ServiceDuration[] {
@@ -219,14 +246,25 @@ async function submitForm() {
     return
   }
   const durations = collectDurations()
+  const benefits = form.benefits.filter(b => b.title.trim() || b.description.trim() || b.icon.trim()).map(b => ({
+    title: b.title.trim() || null,
+    description: b.description.trim() || null,
+    icon: b.icon.trim() || null,
+  }))
+  const personas = form.personas.filter(p => p.title.trim() || p.description.trim() || p.icon.trim()).map(p => ({
+    title: p.title.trim() || null,
+    description: p.description.trim() || null,
+    icon: p.icon.trim() || null,
+  }))
   const scalar = {
     name: form.name.trim(),
     category: form.category,
     summary: form.summary.trim(),
     description: textToLines(form.description),
-    goodFor: textToLines(form.goodFor),
-    contraindicationNote: buildContra(),
-    postBookingNote: buildPostNote(),
+    benefits,
+    benefitsTitle: form.benefitsTitle.trim() || undefined,
+    personas,
+    personasTitle: form.personasTitle.trim() || undefined,
     bookable: form.bookable,
     isActive: form.isActive,
   }

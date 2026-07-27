@@ -292,6 +292,18 @@ export interface NoteBlock {
   content: string[]
 }
 
+export interface ServiceBenefit {
+  title: string
+  description: string
+  icon: string
+}
+
+export interface ServicePersona {
+  title: string
+  description: string
+  icon: string
+}
+
 export interface Service {
   id: string
   slug: string
@@ -299,6 +311,10 @@ export interface Service {
   category: ServiceCategory
   summary: string
   description: string[]
+  benefits?: ServiceBenefit[]
+  benefitsTitle?: string
+  personas?: ServicePersona[]
+  personasTitle?: string
   goodFor: string[]
   contraindicationNote?: string | NoteBlock | null
   postBookingNote?: NoteBlock | null
