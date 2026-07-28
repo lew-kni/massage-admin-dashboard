@@ -1,0 +1,10 @@
+# Cloudflare Pages response headers.
+
+# Keep the admin out of search engines. Cloudflare's managed robots.txt fills the
+# gap when a site serves none of its own, and it advertises `Allow: /`, which is
+# how the sibling api subdomain ended up in Search Console. This header is what
+# actually removes a URL and keeps it out — robots.txt only governs crawling, and
+# a disallowed URL can still be indexed from a link elsewhere. The site must stay
+# crawlable for this to be read, so robots.txt deliberately carries no Disallow.
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet

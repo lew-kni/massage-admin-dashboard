@@ -1,0 +1,9 @@
+# Overrides Cloudflare's managed robots.txt, which serves `Allow: /` when a site
+# provides none of its own.
+#
+# Crawling is left permitted on purpose: de-indexing is done by the
+# `X-Robots-Tag: noindex` header in public/_headers, and a crawler has to fetch
+# the page to see it. Adding `Disallow: /` here would block that fetch and can
+# leave an already-indexed URL stuck in results with no description.
+User-agent: *
+Disallow:
