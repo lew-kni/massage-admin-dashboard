@@ -13,6 +13,7 @@ import AvailabilityView from '@/views/AvailabilityView.vue'
 import AccountingView from '@/views/AccountingView.vue'
 import AccountingExpensesView from '@/views/AccountingExpensesView.vue'
 import AccountingReceiptsView from '@/views/AccountingReceiptsView.vue'
+import SelfAssessmentView from '@/views/SelfAssessmentView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import ComingSoonView from '@/views/ComingSoonView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
@@ -83,6 +84,12 @@ const routes = [
     path: '/accounting/expenses',
     name: 'AccountingExpenses',
     component: AccountingExpensesView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/accounting/self-assessment',
+    name: 'AccountingSelfAssessment',
+    component: SelfAssessmentView,
     meta: { requiresAuth: true },
   },
 
