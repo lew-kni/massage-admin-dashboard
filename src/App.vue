@@ -70,7 +70,10 @@
                 {{ item.badge }}
               </span>
             </RouterLink>
+          </nav>
 
+          <!-- Bottom section -->
+          <div class="border-t border-gray-200 dark:border-gray-800 py-2">
             <!-- Accounting group -->
             <button
               @click="accountingOpen = !accountingOpen"
@@ -91,10 +94,7 @@
                 <span>{{ child.name }}</span>
               </RouterLink>
             </div>
-          </nav>
 
-          <!-- Bottom section -->
-          <div class="border-t border-gray-200 dark:border-gray-800 py-2">
             <!-- Settings group -->
             <button
               @click="settingsOpen = !settingsOpen"
