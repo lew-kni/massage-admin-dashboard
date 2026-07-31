@@ -17,7 +17,7 @@
         @click="activeTab = 'promotions'"
         :class="['px-4 py-3 font-medium border-b-2', activeTab === 'promotions' ? 'border-sage-600 text-sage-600 dark:text-sage-400' : 'border-transparent text-gray-600 dark:text-gray-400']"
       >
-        <i class="fas fa-tag mr-2"></i>Promotions
+        <i class="fas fa-tag mr-2"></i>Promotions &amp; Vouchers
       </button>
     </div>
 
@@ -91,10 +91,14 @@
 
     <!-- Promotions Tab -->
     <div v-if="activeTab === 'promotions'" class="space-y-4">
-      <div class="flex justify-end">
-        <button @click="newPromotion" class="btn-primary text-sm">
-          <i class="fas fa-plus"></i>
+      <div class="flex justify-end gap-2">
+        <button @click="newPromotion('PROMOTION')" class="btn-secondary text-sm">
+          <i class="fas fa-tag"></i>
           <span>New Promotion</span>
+        </button>
+        <button @click="newPromotion('VOUCHER')" class="btn-primary text-sm">
+          <i class="fas fa-ticket"></i>
+          <span>New Voucher</span>
         </button>
       </div>
 
@@ -105,11 +109,18 @@
       <div v-for="promo in paginatedPromotions" :key="promo.id" class="card" :class="{ 'opacity-60': !promo.active }">
         <div class="card-body flex justify-between items-start">
           <div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="badge" :class="promo.active ? 'badge-success' : 'bg-gray-100 text-gray-700'">
                 {{ promo.active ? 'Active' : 'Inactive' }}
               </span>
-              <span class="badge bg-orange-100 text-orange-800">{{ promo.discountPercentage }}% off</span>
+              <span class="badge" :class="promo.kind === 'VOUCHER' ? 'bg-purple-100 text-purple-800' : 'bg-sky-100 text-sky-800'">
+                <i class="fas mr-1" :class="promo.kind === 'VOUCHER' ? 'fa-ticket' : 'fa-tag'"></i>{{ promo.kind === 'VOUCHER' ? 'Voucher' : 'Promotion' }}
+              </span>
+              <span class="badge bg-orange-100 text-orange-800">{{ discountLabel(promo) }}</span>
+              <span v-if="promo.kind === 'VOUCHER' && promo.code" class="badge bg-gray-100 text-gray-700 font-mono">{{ promo.code }}</span>
+              <span v-if="promo.displayAsBanner" class="badge bg-emerald-100 text-emerald-800" title="Shown in the sitewide banner">
+                <i class="fas fa-bullhorn mr-1"></i>Banner
+              </span>
               <span v-if="promo.internal" class="badge bg-gray-200 text-gray-700" title="Never shown on the website">
                 <i class="fas fa-eye-slash mr-1"></i>Internal
               </span>
@@ -119,6 +130,11 @@
               Applies to:
               <span v-if="promo.applicableTo === 'all'">all services</span>
               <span v-else>{{ (promo.applicableTo as string[]).join(', ') }}</span>
+              <span v-if="promo.applicableDurations && promo.applicableDurations !== 'all'"> · {{ (promo.applicableDurations as number[]).join(', ') }} min</span>
+            </p>
+            <p v-if="promo.kind === 'VOUCHER'" class="text-sm text-gray-500 mt-1">
+              <span v-if="promo.expiresAt">Expires {{ formatBookingDate(promo.expiresAt) }} · </span>
+              Redeemed {{ promo.usageCount ?? 0 }}{{ promo.usageLimit ? ` of ${promo.usageLimit}` : '' }}
             </p>
             <button
               @click="toggleBookings(promo)"
@@ -177,6 +193,7 @@
     <PromotionFormModal
       v-if="showPromotionModal"
       :promotion="editingPromotion || undefined"
+      :initial-kind="newKind"
       @close="showPromotionModal = false"
       @saved="onSaved"
     />
@@ -187,7 +204,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
-import type { Service, Promotion, PromotionBookingSummary } from '@/types'
+import type { Service, Promotion, PromotionBookingSummary, PromotionKind } from '@/types'
+import { discountLabel } from '@/composables/usePromotionPricing'
 import ServiceFormModal from '@/components/ServiceFormModal.vue'
 import PromotionFormModal from '@/components/PromotionFormModal.vue'
 import Pagination from '@/components/Pagination.vue'
@@ -199,6 +217,7 @@ const showServiceModal = ref(false)
 const editingService = ref<Service | null>(null)
 const showPromotionModal = ref(false)
 const editingPromotion = ref<Promotion | null>(null)
+const newKind = ref<PromotionKind>('PROMOTION')
 
 const PAGE_SIZE = 10
 const servicesPage = ref(1)
@@ -230,8 +249,9 @@ async function confirmDeleteService(service: Service) {
   }
 }
 
-function newPromotion() {
+function newPromotion(kind: PromotionKind = 'PROMOTION') {
   editingPromotion.value = null
+  newKind.value = kind
   showPromotionModal.value = true
 }
 

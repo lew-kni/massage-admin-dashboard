@@ -336,18 +336,36 @@ export interface PromotionBookingSummary {
   client?: { id: string; firstName: string; lastName: string } | null
 }
 
+// Promotions (auto-applied, public) and vouchers (code-redeemed, private) share
+// one model, discriminated by `kind`. See the backend's src/utils/pricing.js.
+export type PromotionKind = 'PROMOTION' | 'VOUCHER'
+export type DiscountType = 'PERCENT' | 'FIXED'
+
 export interface Promotion {
   id: string
   active: boolean
+  kind: PromotionKind
   message: string
+  discountType: DiscountType
+  // PERCENT uses discountPercentage (0–100); FIXED uses discountAmount (whole £).
   discountPercentage: number
+  discountAmount?: number | null
   applicableTo: 'all' | string[]
+  // "all" or a list of duration lengths (minutes) the discount applies to.
+  applicableDurations: 'all' | number[]
   // Extended copy for the brochure's "more info" modal. null until an admin
   // fills it in — the brochure falls back to showing just `message` there.
   details?: string[] | null
+  // Promotions only: opt this one into the sitewide brochure banner.
+  displayAsBanner: boolean
   // Usable for pricing (bookings, duration pins) but hidden from the public
   // site — for one-off manual discounts, e.g. comping a friend's booking.
   internal: boolean
+  // Voucher-only fields (null/absent for promotions).
+  code?: string | null
+  expiresAt?: string | null
+  usageLimit?: number | null
+  usageCount?: number
   // Present depending on endpoint: count on the list, full rows on the detail.
   bookingCount?: number
   bookings?: PromotionBookingSummary[]

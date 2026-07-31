@@ -43,7 +43,7 @@
             <template v-if="selectedDiscountedPrice !== null && selectedDiscountedPrice !== selectedListPrice">
               <span class="text-gray-400 line-through">£{{ selectedListPrice }}</span>
               <span class="font-semibold text-gray-900">£{{ selectedDiscountedPrice }}</span>
-              <span class="badge bg-amber-100 text-amber-800">{{ currentPromotion?.discountPercentage }}% off</span>
+              <span v-if="currentPromotion" class="badge bg-amber-100 text-amber-800">{{ discountLabel(currentPromotion) }}</span>
             </template>
             <span v-else class="font-semibold text-gray-900">£{{ selectedListPrice }}</span>
           </div>
@@ -149,7 +149,7 @@ import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
 import { useServicesStore } from '@/stores/services'
-import { usePromotionPricing } from '@/composables/usePromotionPricing'
+import { usePromotionPricing, discountLabel } from '@/composables/usePromotionPricing'
 import { apiService } from '@/services/api'
 import { londonWallTimeToUtc, formatLondonTime } from '@/utils/formatLondon'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
