@@ -50,6 +50,21 @@
           <p v-if="currentPromotion" class="mt-1 text-xs text-amber-700">
             <i class="fas fa-tag mr-1"></i>{{ currentPromotion.message }}
           </p>
+
+          <!-- Extra charge (e.g. travel outside the usual area) -->
+          <div class="mt-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Extra charge (optional)</label>
+            <div class="flex items-center gap-2">
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">£</span>
+                <input v-model.number="form.extraCharge" type="number" min="0" step="1" placeholder="0" class="input-field pl-6 w-28" />
+              </div>
+              <input v-model="form.extraChargeReason" type="text" maxlength="200" placeholder="Reason (e.g. travel outside area)" class="input-field flex-1" />
+            </div>
+            <p v-if="Number(form.extraCharge) > 0 && selectedListPrice !== null" class="mt-1 text-xs text-gray-500">
+              Total: £{{ (selectedDiscountedPrice ?? selectedListPrice) + Number(form.extraCharge) }}
+            </p>
+          </div>
         </div>
 
         <!-- Date & Time -->
@@ -214,6 +229,8 @@ const form = reactive({
   time: '10:00',
   status: 'CONFIRMED' as 'CONFIRMED' | 'PENDING',
   notes: '',
+  extraCharge: null as number | null,
+  extraChargeReason: '',
 })
 
 const endTimeLabel = computed(() => {
@@ -298,6 +315,8 @@ async function submitForm() {
       durationMinutes: selectedMinutes.value,
       status: form.status,
       notes: form.notes || undefined,
+      extraCharge: Number(form.extraCharge) > 0 ? Math.round(Number(form.extraCharge)) : undefined,
+      extraChargeReason: Number(form.extraCharge) > 0 ? (form.extraChargeReason.trim() || undefined) : undefined,
       override: customTime.value,
     } as any)
     emit('saved', created)

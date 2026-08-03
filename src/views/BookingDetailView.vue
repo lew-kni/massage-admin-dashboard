@@ -145,6 +145,11 @@
                       </template>
                       <span v-else class="text-gray-400">Not set</span>
                     </p>
+                    <!-- Extra charge (e.g. travel) as a line + total when set -->
+                    <p v-if="!isEditing && booking.extraCharge" class="text-sm text-gray-700 mt-0.5">
+                      + £{{ booking.extraCharge }}<span v-if="booking.extraChargeReason" class="text-gray-500"> · {{ booking.extraChargeReason }}</span>
+                      <span class="ml-2 font-medium">Total £{{ bookingTotal(booking) }}</span>
+                    </p>
                     <!-- Applied promotion or manual discount + revoke (e.g. TOS abuse, or undoing a one-off) -->
                     <div v-if="hasActiveDiscount" class="mt-1 flex items-center flex-wrap gap-2">
                       <span class="text-xs text-amber-700">
@@ -213,6 +218,14 @@
                     <option>CANCELLED</option>
                     <option>COMPLETED</option>
                   </select>
+                </div>
+                <div v-if="isEditing">
+                  <label class="text-sm text-gray-500">Extra charge (£)</label>
+                  <div class="flex items-center gap-2 mt-1">
+                    <input v-model.number="editForm.extraCharge" type="number" min="0" step="1" placeholder="0" class="input-field w-24" />
+                    <input v-model="editForm.extraChargeReason" type="text" maxlength="200" placeholder="Reason (e.g. travel outside area)" class="input-field flex-1" />
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">Added on top of the price and shown to the client on their confirmation.</p>
                 </div>
                 <div>
                   <label class="text-sm text-gray-500">Notes</label>
@@ -499,6 +512,7 @@ import { apiService } from '@/services/api'
 import type { Booking, IntakeForm } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toLondonInputParts, londonWallTimeToUtc, toLondonFakeLocalDate } from '@/utils/formatLondon'
+import { bookingTotal } from '@/utils/bookingTotal'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
@@ -535,8 +549,10 @@ const hasActiveDiscount = computed(() => {
 const isFreeBooking = computed(() => {
   const b = booking.value
   if (!b) return false
-  const effective = b.discountedPrice ?? b.price
-  return effective === 0
+  // A discount (or £0 list price) that brings the booking to £0 — but an extra
+  // charge (e.g. travel) means there's still money to collect.
+  if (b.discountedPrice == null && b.price == null) return false
+  return bookingTotal(b) === 0
 })
 
 // Pre-visit intake form
@@ -713,6 +729,8 @@ const editForm = reactive({
   pressurePreference: '' as '' | 'gentle' | 'medium' | 'firm',
   firstTime: '' as '' | 'yes' | 'no',
   allergies: '',
+  extraCharge: null as number | null,
+  extraChargeReason: '',
 })
 
 function initEditForm() {
@@ -731,6 +749,8 @@ function initEditForm() {
   editForm.pressurePreference = (b.pressurePreference as any) || ''
   editForm.firstTime = b.firstTime === true ? 'yes' : b.firstTime === false ? 'no' : ''
   editForm.allergies = b.allergies || ''
+  editForm.extraCharge = b.extraCharge ?? null
+  editForm.extraChargeReason = b.extraChargeReason || ''
 }
 
 onMounted(async () => {
@@ -834,6 +854,8 @@ async function saveBooking() {
       pressurePreference: editForm.pressurePreference || null,
       firstTime: editForm.firstTime === 'yes' ? true : editForm.firstTime === 'no' ? false : null,
       allergies: editForm.allergies.trim() || null,
+      extraCharge: Number(editForm.extraCharge) > 0 ? Math.round(Number(editForm.extraCharge)) : null,
+      extraChargeReason: Number(editForm.extraCharge) > 0 ? (editForm.extraChargeReason.trim() || null) : null,
     })
     booking.value = updated
     isEditing.value = false

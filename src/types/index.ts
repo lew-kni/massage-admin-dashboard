@@ -75,6 +75,10 @@ export interface Booking {
   // promotion-adjusted price; null when no promotion applied.
   price?: number | null
   discountedPrice?: number | null
+  // Flat charge added on top of the (post-discount) price, e.g. a travel
+  // surcharge for a visit outside the usual area. Whole GBP.
+  extraCharge?: number | null
+  extraChargeReason?: string | null
   preFormToken?: string | null
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null

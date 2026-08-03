@@ -107,6 +107,7 @@ import { useClientsStore } from '@/stores/clients'
 import { useBookingsStore } from '@/stores/bookings'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
+import { bookingTotal } from '@/utils/bookingTotal'
 import StatCard from '@/components/StatCard.vue'
 
 const clientsStore = useClientsStore()
@@ -134,7 +135,7 @@ const monthlyRevenue = computed(() => {
     const inThisMonth =
       start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth()
     if (!inThisMonth || b.status === 'CANCELLED') return sum
-    const effective = b.discountedPrice ?? b.price ?? 0
+    const effective = bookingTotal(b)
     return sum + effective
   }, 0)
   return total.toFixed(2)

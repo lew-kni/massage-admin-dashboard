@@ -233,6 +233,7 @@ import { useExpensesStore } from '@/stores/expenses'
 import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
+import { bookingTotal } from '@/utils/bookingTotal'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 
 const bookingsStore = useBookingsStore()
@@ -241,7 +242,7 @@ const expensesStore = useExpensesStore()
 // --- helpers ---------------------------------------------------------------
 // The amount actually charged: promotion-adjusted price when one applied.
 function effectivePrice(b: Booking): number {
-  return (b.discountedPrice ?? b.price ?? 0) || 0
+  return bookingTotal(b)
 }
 function isPast(b: Booking): boolean {
   return new Date(b.startTime) <= new Date()

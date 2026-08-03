@@ -177,6 +177,7 @@ import {
   sa103sBoxForCategory,
 } from '@/constants/sa103s'
 import type { Booking } from '@/types'
+import { bookingTotal } from '@/utils/bookingTotal'
 
 const bookingsStore = useBookingsStore()
 const expensesStore = useExpensesStore()
@@ -206,7 +207,7 @@ function inRange(dateStr: string): boolean {
 
 // --- turnover (money actually collected — cash basis) ----------------------
 function effectivePrice(b: Booking): number {
-  return (b.discountedPrice ?? b.price ?? 0) || 0
+  return bookingTotal(b)
 }
 const paidInYear = computed(() =>
   bookingsStore.bookings.filter(
