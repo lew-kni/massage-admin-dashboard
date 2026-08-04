@@ -302,7 +302,7 @@
               <i class="fas fa-file-lines"></i>
               <span>Add Document</span>
             </button>
-            <button @click="confirmDelete" class="btn-danger w-full text-sm">
+            <button v-if="settingsStore.allowDeleteClients" @click="confirmDelete" class="btn-danger w-full text-sm">
               <i class="fas fa-trash-alt"></i>
               <span>Delete Client</span>
             </button>
@@ -397,6 +397,7 @@ import { ref, onMounted, computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useClientsStore } from '@/stores/clients'
 import { useLeadsStore } from '@/stores/leads'
+import { useSettingsStore } from '@/stores/settings'
 import { apiService } from '@/services/api'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
@@ -410,6 +411,7 @@ const route = useRoute()
 const router = useRouter()
 const clientsStore = useClientsStore()
 const leadsStore = useLeadsStore()
+const settingsStore = useSettingsStore()
 const editMode = ref(false)
 const showNewBooking = ref(false)
 const showSendEmail = ref(false)
@@ -613,6 +615,7 @@ async function deleteClient() {
 }
 
 onMounted(async () => {
+  settingsStore.fetchSettings()
   const clientId = route.params.id as string
   await clientsStore.fetchClient(clientId)
   await loadClientData()

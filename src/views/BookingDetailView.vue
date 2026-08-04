@@ -410,6 +410,10 @@
               <i class="fas fa-trash-alt"></i>
               <span>{{ cancelling ? 'Cancelling...' : 'Cancel Booking' }}</span>
             </button>
+            <button v-if="!isEditing && settingsStore.allowDeleteBookings" @click="onDeleteBooking" :disabled="deleting" class="btn-danger w-full text-sm">
+              <i class="fas fa-trash-alt"></i>
+              <span>{{ deleting ? 'Deleting...' : 'Delete Booking' }}</span>
+            </button>
             <button
               v-if="!isEditing && !booking.isPaid && booking.status !== 'CANCELLED'"
               @click="isFreeBooking ? onMarkComplimentary() : (showPaymentModal = true)"
@@ -505,8 +509,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
+import { useSettingsStore } from '@/stores/settings'
 import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
 import type { Booking, IntakeForm } from '@/types'
@@ -521,7 +526,9 @@ import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import AssessmentSection from '@/components/AssessmentSection.vue'
 
 const route = useRoute()
+const router = useRouter()
 const bookingsStore = useBookingsStore()
+const settingsStore = useSettingsStore()
 const servicesStore = useServicesStore()
 
 const booking = ref<Booking | null>(null)
@@ -530,6 +537,7 @@ const changeClientError = ref('')
 const showSendEmail = ref(false)
 const showPaymentModal = ref(false)
 const cancelling = ref(false)
+const deleting = ref(false)
 const removingDiscount = ref(false)
 const applyingPromotion = ref(false)
 const selectedPromotionId = ref('')
@@ -754,6 +762,7 @@ function initEditForm() {
 }
 
 onMounted(async () => {
+  settingsStore.fetchSettings()
   await bookingsStore.fetchBookings()
   const bookingId = route.params.id as string
   booking.value = bookingsStore.bookings.find(b => b.id === bookingId) || null
@@ -935,6 +944,22 @@ async function cancelBooking() {
     alert(err?.message || 'Failed to cancel booking')
   } finally {
     cancelling.value = false
+  }
+}
+
+// Permanent delete — gated behind the Danger Zone toggle. Distinct from Cancel:
+// this removes the record entirely rather than marking it CANCELLED.
+async function onDeleteBooking() {
+  if (!booking.value) return
+  if (!confirm('Permanently delete this booking? This cannot be undone. (Use Cancel instead to keep a record.)')) return
+  deleting.value = true
+  try {
+    await bookingsStore.deleteBooking(booking.value.id)
+    router.push('/bookings')
+  } catch (err: any) {
+    alert(err?.message || 'Failed to delete booking')
+  } finally {
+    deleting.value = false
   }
 }
 

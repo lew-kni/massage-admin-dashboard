@@ -238,6 +238,9 @@ export interface AppSettings {
   businessEmail: string | null
   businessPhone: string | null
   businessAddress: string | null
+  // DANGER ZONE: gate destructive delete actions in the admin UI.
+  allowDeleteClients: boolean
+  allowDeleteBookings: boolean
 }
 
 // Communication Types

@@ -15,8 +15,8 @@ import AccountingExpensesView from '@/views/AccountingExpensesView.vue'
 import AccountingReceiptsView from '@/views/AccountingReceiptsView.vue'
 import SelfAssessmentView from '@/views/SelfAssessmentView.vue'
 import SettingsView from '@/views/SettingsView.vue'
-import ComingSoonView from '@/views/ComingSoonView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
+import GeneralSettingsView from '@/views/GeneralSettingsView.vue'
 
 const routes = [
   {
@@ -104,8 +104,7 @@ const routes = [
   {
     path: '/settings/general',
     name: 'SettingsGeneral',
-    component: ComingSoonView,
-    props: { title: 'General', subtitle: 'Contact Information' },
+    component: GeneralSettingsView,
     meta: { requiresAuth: true },
   },
   {
