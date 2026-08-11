@@ -485,19 +485,9 @@
           </div>
         </div>
 
-        <!-- Documents -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="font-semibold"><i class="fas fa-file-lines mr-2"></i>Documents</h3>
-          </div>
-          <div class="card-body space-y-3">
-            <p class="text-sm text-gray-500 text-center py-4">No documents uploaded yet</p>
-            <button class="btn-secondary w-full text-sm">
-              <i class="fas fa-paperclip"></i>
-              <span>Upload Document</span>
-            </button>
-          </div>
-        </div>
+        <!-- Documents — referral letters etc. for this appointment. Tagged to
+             the booking and the client; also visible on the client profile. -->
+        <DocumentsPanel v-if="booking.clientId" :client-id="booking.clientId" :booking-id="booking.id" />
       </div>
     </div>
 
@@ -540,6 +530,7 @@ import SendEmailModal from '@/components/SendEmailModal.vue'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 import BodyDiagramView from '@/components/BodyDiagramView.vue'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
+import DocumentsPanel from '@/components/DocumentsPanel.vue'
 
 const route = useRoute()
 const router = useRouter()

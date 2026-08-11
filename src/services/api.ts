@@ -20,6 +20,8 @@ import type {
   Expense,
   Receipt,
   ReceiptDetail,
+  Document,
+  DocumentType,
 } from '@/types'
 
 class ApiService {
@@ -505,6 +507,34 @@ class ApiService {
 
   async deleteReceipt(id: string): Promise<void> {
     await this.client.delete(`/api/receipts/${id}`)
+  }
+
+  // Documents (referral letters, GP letters, consent forms). Attached to a
+  // client, optionally tagged to a booking. List by one or the other.
+  async getDocuments(params: { clientId?: string; bookingId?: string }): Promise<Document[]> {
+    const { data } = await this.client.get('/api/documents', { params })
+    return data
+  }
+
+  async getDocumentFileUrl(id: string): Promise<{ url: string }> {
+    const { data } = await this.client.get(`/api/documents/${id}/file`)
+    return data
+  }
+
+  async uploadDocument(payload: { file: File; clientId: string; bookingId?: string; docType: DocumentType }): Promise<Document> {
+    const form = new FormData()
+    form.append('file', payload.file)
+    form.append('clientId', payload.clientId)
+    if (payload.bookingId) form.append('bookingId', payload.bookingId)
+    form.append('docType', payload.docType)
+    const { data } = await this.client.post('/api/documents', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
+  }
+
+  async deleteDocument(id: string): Promise<void> {
+    await this.client.delete(`/api/documents/${id}`)
   }
 
   // Create a new expense "under" a receipt — same shape as createExpense, the

@@ -280,6 +280,10 @@
             </div>
           </div>
         </div>
+
+        <!-- Documents — all of the client's files (referral letters, GP letters,
+             etc.), including any uploaded against a specific booking. -->
+        <DocumentsPanel :client-id="clientsStore.currentClient.id" />
       </div>
 
       <!-- Sidebar -->
@@ -406,6 +410,7 @@ import ClientForm from '@/components/ClientForm.vue'
 import NewBookingModal from '@/components/NewBookingModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import Pagination from '@/components/Pagination.vue'
+import DocumentsPanel from '@/components/DocumentsPanel.vue'
 
 const route = useRoute()
 const router = useRouter()

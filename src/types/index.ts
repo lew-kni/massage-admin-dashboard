@@ -267,14 +267,20 @@ export interface Communication {
 }
 
 // Document Types
+export type DocumentType = 'REFERRAL' | 'GP_LETTER' | 'CONSENT' | 'MEDICAL' | 'OTHER'
+
 export interface Document {
   id: string
   clientId: string
+  // Set when the document was uploaded against a specific booking (e.g. a
+  // referral letter for one appointment); null for client-level documents.
+  bookingId: string | null
+  booking?: { id: string; bookingNumber: number; startTime: string } | null
   fileName: string
   fileType: string
   fileSize: number
   filePath: string
-  docType: 'PRE_APPOINTMENT' | 'POST_APPOINTMENT' | 'ASSESSMENT' | 'OTHER'
+  docType: DocumentType
   uploadedAt: string
 }
 
