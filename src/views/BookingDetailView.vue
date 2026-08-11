@@ -378,8 +378,25 @@
           </div>
         </div>
 
-        <!-- Therapist's own assessment for this session -->
-        <AssessmentSection :booking-id="booking.id" />
+        <!-- Therapist's own assessment for this session — full form lives on its
+             own focused page; this card is just a status + entry point. -->
+        <div class="card">
+          <div class="card-header flex justify-between items-center">
+            <h2 class="text-lg font-semibold"><i class="fas fa-notes-medical mr-2"></i>Pre-Massage Assessment</h2>
+            <span :class="['badge', assessmentBadgeClass]">{{ assessmentStatusLabel }}</span>
+          </div>
+          <div class="card-body flex flex-wrap items-center justify-between gap-4">
+            <p class="text-sm text-gray-500">
+              <span v-if="assessmentSummary?.signedAt">Signed off by the client {{ formatRelative(assessmentSummary.signedAt) }}.</span>
+              <span v-else-if="assessmentSummary">Saved{{ assessmentSummary.updatedAt ? ` ${formatRelative(assessmentSummary.updatedAt)}` : '' }} — not yet signed.</span>
+              <span v-else>Record your posture, movement and palpation findings and the treatment plan, then have the client sign.</span>
+            </p>
+            <RouterLink :to="`/bookings/${booking.id}/pre-massage-assessment`" class="btn-primary text-sm whitespace-nowrap">
+              <i class="fas fa-pen-to-square"></i>
+              <span>{{ assessmentSummary ? 'Open assessment' : 'Start assessment' }}</span>
+            </RouterLink>
+          </div>
+        </div>
       </div>
 
       <!-- Sidebar -->
@@ -514,7 +531,7 @@ import { useBookingsStore } from '@/stores/bookings'
 import { useSettingsStore } from '@/stores/settings'
 import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
-import type { Booking, IntakeForm } from '@/types'
+import type { Booking, IntakeForm, BookingAssessment } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toLondonInputParts, londonWallTimeToUtc, toLondonFakeLocalDate } from '@/utils/formatLondon'
 import { bookingTotal } from '@/utils/bookingTotal'
@@ -523,7 +540,6 @@ import SendEmailModal from '@/components/SendEmailModal.vue'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 import BodyDiagramView from '@/components/BodyDiagramView.vue'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
-import AssessmentSection from '@/components/AssessmentSection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -562,6 +578,29 @@ const isFreeBooking = computed(() => {
   if (b.discountedPrice == null && b.price == null) return false
   return bookingTotal(b) === 0
 })
+
+// Therapist's pre-massage assessment — summary only; the form lives on its own
+// page. Used here to show status and pick the right button label.
+const assessmentSummary = ref<BookingAssessment | null>(null)
+const assessmentStatusLabel = computed(() => {
+  if (assessmentSummary.value?.signedAt) return 'Signed'
+  if (assessmentSummary.value) return 'In progress'
+  return 'Not started'
+})
+const assessmentBadgeClass = computed(() => {
+  if (assessmentSummary.value?.signedAt) return 'badge-success'
+  if (assessmentSummary.value) return 'bg-yellow-100 text-yellow-800'
+  return 'bg-gray-100 text-gray-800'
+})
+
+async function loadAssessment() {
+  if (!booking.value) return
+  try {
+    assessmentSummary.value = await apiService.getAssessment(booking.value.id)
+  } catch {
+    assessmentSummary.value = null
+  }
+}
 
 // Pre-visit intake form
 const intake = ref<IntakeForm | null>(null)
@@ -620,8 +659,10 @@ async function onFillOnBehalf() {
   if (!booking.value) return
   preformError.value = ''
   try {
-    const { url } = await apiService.getPreFormLink(booking.value.id)
-    window.open(`${url}?by=therapist`, '_blank')
+    // therapistUrl carries the validated therapist token, which keeps the form
+    // open past the appointment start time (the plain client link locks then).
+    const { therapistUrl } = await apiService.getPreFormLink(booking.value.id)
+    window.open(therapistUrl, '_blank')
   } catch (err: any) {
     preformError.value = err?.response?.data?.error || 'Failed to open the form'
   }
@@ -769,6 +810,7 @@ onMounted(async () => {
   initEditForm()
   initPaymentForm()
   await loadIntake()
+  await loadAssessment()
   if (servicesStore.promotions.length === 0) servicesStore.fetchPromotions()
 })
 

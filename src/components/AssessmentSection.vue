@@ -196,6 +196,34 @@
           </div>
         </div>
 
+        <!-- Client agreement -->
+        <div class="border-t pt-6 space-y-4">
+          <h3 class="font-semibold text-gray-900 dark:text-gray-100">Client agreement</h3>
+
+          <label class="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" v-model="form.agreedToPlan" class="mt-1 h-4 w-4 rounded border-gray-300 text-sage-600 focus:ring-sage-500" />
+            <span class="text-sm text-gray-700 dark:text-gray-300">
+              I've discussed the findings and proposed plan above with my therapist, I understand what the session involves, and I'm happy to go ahead.
+            </span>
+          </label>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-gray-500">Client name</label>
+              <input v-model="form.signatureName" type="text" class="input-field mt-1" placeholder="Full name" />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-sm text-gray-500">Signature</label>
+            <SignaturePad v-model="form.signatureImage" class="mt-1" />
+          </div>
+
+          <p v-if="assessment?.signedAt && form.signatureImage" class="text-xs text-gray-400">
+            <i class="fas fa-circle-check mr-1 text-green-600"></i>Signed {{ formatRelative(assessment.signedAt) }}
+          </p>
+        </div>
+
         <div class="flex items-center gap-3">
           <button type="button" @click="save" :disabled="saving || !dirty" class="btn-primary text-sm">
             <i class="fas fa-floppy-disk"></i>
@@ -215,6 +243,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { apiService } from '@/services/api'
 import type { AssessmentFinding, BookingAssessment } from '@/types'
 import { BODY_PARTS, SIDE_OPTIONS, SOURCE_OPTIONS, bodyPartLabel, findBodyPart } from '@/constants/anatomy'
+import SignaturePad from '@/components/SignaturePad.vue'
 
 const props = defineProps<{ bookingId: string }>()
 
@@ -229,6 +258,9 @@ const form = reactive({
   clinicalFindings: '',
   proposedAction: '',
   generalNotes: '',
+  agreedToPlan: false,
+  signatureName: '',
+  signatureImage: null as string | null,
   findings: [] as AssessmentFinding[],
 })
 
@@ -244,6 +276,9 @@ function applyAssessment(a: BookingAssessment | null) {
   form.clinicalFindings = a?.clinicalFindings || ''
   form.proposedAction = a?.proposedAction || ''
   form.generalNotes = a?.generalNotes || ''
+  form.agreedToPlan = a?.agreedToPlan || false
+  form.signatureName = a?.signatureName || ''
+  form.signatureImage = a?.signatureImage || null
   form.findings = (a?.findings || []).map(f => ({
     bodyPart: f.bodyPart,
     side: f.side || 'N/A',
@@ -329,6 +364,9 @@ async function save() {
       clinicalFindings: form.clinicalFindings.trim() || null,
       proposedAction: form.proposedAction.trim() || null,
       generalNotes: form.generalNotes.trim() || null,
+      agreedToPlan: form.agreedToPlan,
+      signatureName: form.signatureName.trim() || null,
+      signatureImage: form.signatureImage || null,
       findings: form.findings.map((f, i) => ({ ...f, sortOrder: i })),
     })
     applyAssessment(assessment.value)

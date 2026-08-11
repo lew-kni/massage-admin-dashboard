@@ -8,6 +8,7 @@ import BookingsView from '@/views/BookingsView.vue'
 import LeadsView from '@/views/LeadsView.vue'
 import LeadDetailView from '@/views/LeadDetailView.vue'
 import BookingDetailView from '@/views/BookingDetailView.vue'
+import AssessmentView from '@/views/AssessmentView.vue'
 import ServicesView from '@/views/ServicesView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
 import AccountingView from '@/views/AccountingView.vue'
@@ -64,6 +65,12 @@ const routes = [
     path: '/bookings/:id',
     name: 'BookingDetail',
     component: BookingDetailView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/bookings/:id/pre-massage-assessment',
+    name: 'BookingAssessment',
+    component: AssessmentView,
     meta: { requiresAuth: true },
   },
   // Accounting section

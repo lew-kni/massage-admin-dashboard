@@ -155,6 +155,11 @@ export interface BookingAssessment {
   clinicalFindings?: string | null
   proposedAction?: string | null
   generalNotes?: string | null
+  // Client's in-person agreement to the treatment plan
+  agreedToPlan?: boolean
+  signatureName?: string | null
+  signatureImage?: string | null // PNG data URL
+  signedAt?: string | null // server-stamped when first signed
   findings: AssessmentFinding[]
   createdAt: string
   updatedAt: string
@@ -164,6 +169,9 @@ export interface BookingAssessmentInput {
   clinicalFindings?: string | null
   proposedAction?: string | null
   generalNotes?: string | null
+  agreedToPlan?: boolean
+  signatureName?: string | null
+  signatureImage?: string | null
   findings: AssessmentFinding[]
 }
 

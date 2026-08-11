@@ -165,7 +165,10 @@ class ApiService {
     const { data } = await this.client.post(`/api/bookings/${id}/send-preform`)
     return data
   }
-  async getPreFormLink(id: string): Promise<{ token: string; url: string }> {
+  // `url` is the client link; `therapistUrl` carries the therapist token that
+  // keeps the form usable after the appointment start time (for filling in on
+  // the client's behalf). Never share therapistUrl with the client.
+  async getPreFormLink(id: string): Promise<{ token: string; url: string; therapistUrl: string }> {
     const { data } = await this.client.post(`/api/bookings/${id}/preform-link`)
     return data
   }
