@@ -62,14 +62,14 @@
         <div class="flex gap-1 bg-gray-200 rounded p-1">
           <button
             @click="listDisplayMode = 'cards'"
-            :class="['px-3 py-1 rounded text-sm font-medium transition', listDisplayMode === 'cards' ? 'bg-white text-sage-600 shadow' : 'text-gray-600 hover:text-gray-700']"
+            :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium transition', listDisplayMode === 'cards' ? 'bg-white text-sage-600 shadow' : 'text-gray-600 hover:text-gray-700']"
           >
             <i class="fas fa-th"></i>
             <span>Cards</span>
           </button>
           <button
             @click="listDisplayMode = 'table'"
-            :class="['px-3 py-1 rounded text-sm font-medium transition', listDisplayMode === 'table' ? 'bg-white text-sage-600 shadow' : 'text-gray-600 hover:text-gray-700']"
+            :class="['inline-flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium transition', listDisplayMode === 'table' ? 'bg-white text-sage-600 shadow' : 'text-gray-600 hover:text-gray-700']"
           >
             <i class="fas fa-table"></i>
             <span>Table</span>
