@@ -119,9 +119,15 @@ const bookingsStore = useBookingsStore()
 const bookings = computed(() => bookingsStore.bookings)
 
 const clientsCount = computed(() => clientsStore.clients.length)
-const upcomingBookingsCount = computed(() =>
-  bookings.value.filter((b) => b.status === 'CONFIRMED').length
-)
+const upcomingBookingsCount = computed(() => {
+  // "Upcoming" = confirmed AND still in the future. Without the time check a
+  // confirmed booking that already took place kept counting here. Absolute
+  // instant comparison — a past appointment is past regardless of timezone.
+  const now = Date.now()
+  return bookings.value.filter(
+    (b) => b.status === 'CONFIRMED' && new Date(b.startTime).getTime() > now,
+  ).length
+})
 const pendingCount = computed(() =>
   bookings.value.filter((b) => b.status === 'PENDING').length
 )
