@@ -866,13 +866,26 @@ watch(filterStatus, () => {
   rejectedPage.value = 1
 })
 
-onMounted(() => {
-  bookingsStore.fetchBookings()
-  availabilityStore.fetchUnavailableBlocks()
+onMounted(async () => {
+  await Promise.all([
+    bookingsStore.fetchBookings(),
+    availabilityStore.fetchUnavailableBlocks(),
+  ])
 
   const statusParam = route.query.status
   if (statusParam === 'PENDING' || statusParam === 'ACTIVE' || statusParam === 'PAST' || statusParam === 'CANCELLED') {
+    // An explicit deep-link (e.g. from a dashboard stat card) always wins.
     filterStatus.value = statusParam
+  } else if (statusParam === 'CONFIRMED') {
+    // The dashboard "Upcoming Bookings" card links here — show the Active tab.
+    filterStatus.value = 'ACTIVE'
+  } else {
+    // Default landing tab: Pending when there's anything awaiting a decision,
+    // otherwise Active (the day-to-day upcoming list). Bookings are loaded above,
+    // so this reflects real data rather than an empty store.
+    filterStatus.value = bookingsStore.bookings.some((b) => b.status === 'PENDING')
+      ? 'PENDING'
+      : 'ACTIVE'
   }
 })
 </script>
