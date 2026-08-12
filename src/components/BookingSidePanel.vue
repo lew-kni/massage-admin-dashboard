@@ -136,10 +136,10 @@ function getPreFormStatusClass(status: string): string {
   return baseClass
 }
 
-async function cancelBooking(booking: Booking) {
-  if (confirm('Are you sure you want to cancel this booking?')) {
-    emit('cancel', booking)
-  }
+function cancelBooking(booking: Booking) {
+  // The parent opens the cancellation dialog (fee + waive + confirm), so no
+  // extra confirm() here — that would double-prompt.
+  emit('cancel', booking)
 }
 </script>
 

@@ -430,6 +430,15 @@
       @close="editingBooking = null"
       @saved="handleBookingSaved"
     />
+
+    <!-- Cancel Booking Modal (fee + waive) -->
+    <CancelBookingModal
+      v-if="cancellingBooking"
+      :booking="cancellingBooking"
+      :saving="cancelSaving"
+      @close="cancellingBooking = null"
+      @confirm="confirmCancel"
+    />
   </div>
 </template>
 
@@ -443,6 +452,7 @@ import BookingCard from '@/components/BookingCard.vue'
 import BookingTableView from '@/components/BookingTableView.vue'
 import BookingModal from '@/components/BookingModal.vue'
 import BookingSidePanel from '@/components/BookingSidePanel.vue'
+import CancelBookingModal from '@/components/CancelBookingModal.vue'
 import Pagination from '@/components/Pagination.vue'
 
 const router = useRouter()
@@ -455,6 +465,9 @@ const calendarViewMode = ref<'1d' | '7d' | '30d'>('1d')
 const filterStatus = ref<'PENDING' | 'ACTIVE' | 'PAST' | 'CANCELLED' | null>(null)
 const editingBooking = ref<Booking | null>(null)
 const selectedBooking = ref<Booking | null>(null)
+// Booking pending cancellation — drives the fee/waive dialog.
+const cancellingBooking = ref<Booking | null>(null)
+const cancelSaving = ref(false)
 const currentPage = ref(1)
 const itemsPerPage = 10
 const selectedCalendarDate = ref(new Date())
@@ -808,11 +821,27 @@ async function confirmBooking(booking: Booking) {
 }
 
 async function rejectBooking(booking: Booking) {
-  await bookingsStore.updateBooking(booking.id, { status: 'CANCELLED' })
+  if (!confirm('Reject this booking request? The client will be emailed to let them know it can’t be accommodated. No cancellation fee applies.')) return
+  await bookingsStore.rejectBooking(booking.id)
 }
 
-async function cancelBooking(booking: Booking) {
-  await bookingsStore.updateBooking(booking.id, { status: 'CANCELLED' })
+// Cancel opens the fee/waive dialog rather than cancelling outright, so the
+// therapist can confirm or waive the policy fee. confirmCancel does the work.
+function cancelBooking(booking: Booking) {
+  cancellingBooking.value = booking
+}
+
+async function confirmCancel(fee: number) {
+  if (!cancellingBooking.value) return
+  cancelSaving.value = true
+  try {
+    await bookingsStore.cancelBooking(cancellingBooking.value.id, fee)
+    cancellingBooking.value = null
+  } catch (err: any) {
+    alert(err?.message || 'Failed to cancel booking')
+  } finally {
+    cancelSaving.value = false
+  }
 }
 
 function editBooking(booking: Booking) {

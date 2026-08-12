@@ -134,8 +134,18 @@ class ApiService {
     return data
   }
 
-  async cancelBooking(id: string): Promise<Booking> {
-    const { data } = await this.client.post(`/api/bookings/${id}/cancel`)
+  // Cancel a booking. `cancellationFee` is the amount the therapist chose in the
+  // cancel dialog (0 waives it); omitted, the backend falls back to the policy
+  // suggestion.
+  async cancelBooking(id: string, cancellationFee?: number): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${id}/cancel`, { cancellationFee })
+    return data
+  }
+
+  // Reject a pending request: marks it cancelled and sends the "can't
+  // accommodate" email, with no cancellation fee.
+  async rejectBooking(id: string): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${id}/reject`)
     return data
   }
 

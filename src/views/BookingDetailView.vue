@@ -150,6 +150,13 @@
                       + £{{ booking.extraCharge }}<span v-if="booking.extraChargeReason" class="text-gray-500"> · {{ booking.extraChargeReason }}</span>
                       <span class="ml-2 font-medium">Total £{{ bookingTotal(booking) }}</span>
                     </p>
+                    <!-- Cancellation fee, when this booking was cancelled with a charge -->
+                    <p v-if="!isEditing && booking.status === 'CANCELLED' && booking.cancellationFee" class="text-sm text-red-700 mt-0.5">
+                      <i class="fas fa-ban mr-1"></i>Cancellation fee: £{{ booking.cancellationFee }}
+                    </p>
+                    <p v-else-if="!isEditing && booking.status === 'CANCELLED'" class="text-sm text-gray-500 mt-0.5">
+                      <i class="fas fa-ban mr-1"></i>Cancelled — no fee
+                    </p>
                     <!-- Applied promotion or manual discount + revoke (e.g. TOS abuse, or undoing a one-off) -->
                     <div v-if="hasActiveDiscount" class="mt-1 flex items-center flex-wrap gap-2">
                       <span class="text-xs text-amber-700">
@@ -511,6 +518,14 @@
       @close="showPaymentModal = false"
       @confirm="confirmPaymentMethod"
     />
+
+    <CancelBookingModal
+      v-if="showCancelModal && booking"
+      :booking="booking"
+      :saving="cancelling"
+      @close="showCancelModal = false"
+      @confirm="confirmCancel"
+    />
   </div>
 </template>
 
@@ -528,6 +543,7 @@ import { bookingTotal } from '@/utils/bookingTotal'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
+import CancelBookingModal from '@/components/CancelBookingModal.vue'
 import BodyDiagramView from '@/components/BodyDiagramView.vue'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import DocumentsPanel from '@/components/DocumentsPanel.vue'
@@ -544,6 +560,7 @@ const changeClientError = ref('')
 const showSendEmail = ref(false)
 const showPaymentModal = ref(false)
 const cancelling = ref(false)
+const showCancelModal = ref(false)
 const deleting = ref(false)
 const removingDiscount = ref(false)
 const applyingPromotion = ref(false)
@@ -967,12 +984,17 @@ async function confirmPaymentMethod(method: 'CASH' | 'BACS') {
   }
 }
 
-async function cancelBooking() {
+function cancelBooking() {
   if (!booking.value) return
-  if (!confirm('Cancel this booking? The client will be emailed a cancellation notice.')) return
+  showCancelModal.value = true
+}
+
+async function confirmCancel(fee: number) {
+  if (!booking.value) return
   cancelling.value = true
   try {
-    booking.value = await bookingsStore.cancelBooking(booking.value.id)
+    booking.value = await bookingsStore.cancelBooking(booking.value.id, fee)
+    showCancelModal.value = false
   } catch (err: any) {
     alert(err?.message || 'Failed to cancel booking')
   } finally {

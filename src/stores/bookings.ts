@@ -120,11 +120,11 @@ export const useBookingsStore = defineStore('bookings', () => {
     }
   }
 
-  async function cancelBooking(id: string) {
+  async function cancelBooking(id: string, cancellationFee?: number) {
     loading.value = true
     error.value = null
     try {
-      const updated = await apiService.cancelBooking(id)
+      const updated = await apiService.cancelBooking(id, cancellationFee)
       const index = bookings.value.findIndex(b => b.id === id)
       if (index !== -1) {
         bookings.value[index] = updated
@@ -132,6 +132,24 @@ export const useBookingsStore = defineStore('bookings', () => {
       return updated
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to cancel booking'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function rejectBooking(id: string) {
+    loading.value = true
+    error.value = null
+    try {
+      const updated = await apiService.rejectBooking(id)
+      const index = bookings.value.findIndex(b => b.id === id)
+      if (index !== -1) {
+        bookings.value[index] = updated
+      }
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to reject booking'
       throw err
     } finally {
       loading.value = false
@@ -164,6 +182,7 @@ export const useBookingsStore = defineStore('bookings', () => {
     applyPromotion,
     applyDiscount,
     cancelBooking,
+    rejectBooking,
     deleteBooking,
   }
 })

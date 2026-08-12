@@ -79,6 +79,10 @@ export interface Booking {
   // surcharge for a visit outside the usual area. Whole GBP.
   extraCharge?: number | null
   extraChargeReason?: string | null
+  // Fee charged when a confirmed booking is cancelled late, per the published
+  // cancellation policy. Null = no fee due (enough notice, or waived). Payment
+  // of the fee is tracked with isPaid / paymentMethod, like a normal booking.
+  cancellationFee?: number | null
   preFormToken?: string | null
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null
