@@ -25,7 +25,7 @@
         <!-- Vendor -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Vendor <span class="text-gray-400 font-normal">(optional)</span></label>
-          <input v-model="form.vendor" type="text" class="input-field" placeholder="e.g. Screwfix" />
+          <VendorSelect v-model="form.vendorId" placeholder="e.g. Screwfix" />
         </div>
 
         <!-- Date -->
@@ -66,7 +66,10 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useReceiptsStore } from '@/stores/receipts'
+import VendorSelect from '@/components/VendorSelect.vue'
 
+// initialVendorId pre-selects the vendor (e.g. when uploading from a vendor's page).
+const props = defineProps<{ initialVendorId?: string | null }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 
 const store = useReceiptsStore()
@@ -75,7 +78,7 @@ const error = ref('')
 const selectedFile = ref<File | null>(null)
 
 const form = reactive({
-  vendor: '',
+  vendorId: props.initialVendorId ?? null,
   date: new Date().toISOString().slice(0, 10),
   totalPounds: '',
   notes: '',
@@ -101,7 +104,7 @@ async function submitForm() {
   try {
     await store.createReceipt({
       file: selectedFile.value,
-      vendor: form.vendor.trim() || null,
+      vendorId: form.vendorId || null,
       date: form.date ? new Date(form.date).toISOString() : null,
       totalAmount: form.totalPounds ? Math.round(Number(form.totalPounds) * 100) : null,
       notes: form.notes.trim() || null,

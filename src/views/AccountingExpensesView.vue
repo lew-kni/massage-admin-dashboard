@@ -52,6 +52,54 @@
         </div>
       </div>
 
+      <!-- Recurring expenses + missing-month backfill -->
+      <div class="card mb-8">
+        <div class="card-header flex justify-between items-center">
+          <h2 class="text-lg font-semibold"><i class="fas fa-repeat mr-2"></i>Recurring monthly</h2>
+          <button @click="openCreateRecurring" class="btn-secondary text-sm"><i class="fas fa-plus mr-1"></i>Add recurring</button>
+        </div>
+        <div class="card-body">
+          <div v-if="recurringStore.recurring.length === 0" class="text-center text-gray-500 py-4">
+            <p>No recurring expenses yet. Add one (e.g. a phone bill) and log its months in one click.</p>
+          </div>
+          <ul v-else class="divide-y divide-gray-100 dark:divide-gray-800">
+            <li v-for="r in recurringStore.recurring" :key="r.id" class="py-3 flex flex-wrap items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="font-medium">
+                  {{ r.description }}
+                  <span v-if="!r.active" class="badge bg-gray-100 text-gray-500 ml-1">paused</span>
+                </p>
+                <p class="text-xs text-gray-500">
+                  {{ gbp(r.amount / 100) }} · day {{ r.dayOfMonth }}<template v-if="r.vendor"> · {{ r.vendor.name }}</template>
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span v-if="r.missingMonths.length === 0" class="text-sm text-emerald-600">
+                  <i class="fas fa-circle-check mr-1"></i>Up to date
+                </span>
+                <template v-else>
+                  <span class="text-sm text-amber-600" :title="r.missingMonths.map((m) => m.label).join(', ')">
+                    <i class="fas fa-triangle-exclamation mr-1"></i>{{ r.missingMonths.length }} to log:
+                    {{ r.missingMonths.slice(0, 3).map((m) => m.label).join(', ') }}<template v-if="r.missingMonths.length > 3">…</template>
+                  </span>
+                  <button
+                    @click="logMissing(r)"
+                    :disabled="generatingId === r.id"
+                    class="btn-primary text-xs py-1 px-2 whitespace-nowrap"
+                  >
+                    <span v-if="generatingId === r.id">Adding…</span>
+                    <template v-else><i class="fas fa-plus mr-1"></i>Log {{ r.missingMonths.length }}</template>
+                  </button>
+                </template>
+                <button @click="openEditRecurring(r)" class="text-gray-400 hover:text-sage-600"><i class="fas fa-pen"></i></button>
+                <button @click="confirmDeleteRecurring(r)" class="text-gray-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
+              </div>
+            </li>
+          </ul>
+          <p v-if="recurringStore.error" class="mt-3 text-sm text-red-700">{{ recurringStore.error }}</p>
+        </div>
+      </div>
+
       <!-- Breakdown by category -->
       <div class="card mb-8">
         <div class="card-header">
@@ -99,11 +147,15 @@
                   <td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ formatDate(e.date) }}</td>
                   <td class="px-3 py-2"><span class="badge bg-sage-100 text-sage-800">{{ categoryLabel(e.category) }}</span></td>
                   <td class="px-3 py-2">
+                    <i v-if="e.recurringExpenseId" class="fas fa-repeat text-gray-400 text-xs mr-1" title="From a recurring template"></i>
                     {{ e.description }}
                     <span v-if="e.category === 'MILEAGE' && e.miles" class="text-gray-400 text-xs">({{ e.miles }} mi)</span>
                     <i v-if="e.receiptCount" class="fas fa-paperclip text-gray-400 text-xs ml-1" :title="`${e.receiptCount} receipt${e.receiptCount === 1 ? '' : 's'} attached`"></i>
                   </td>
-                  <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ e.vendor || '—' }}</td>
+                  <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
+                    <RouterLink v-if="e.vendor" :to="`/accounting/vendors/${e.vendor.id}`" class="text-sage-600 hover:text-sage-700">{{ e.vendor.name }}</RouterLink>
+                    <span v-else>—</span>
+                  </td>
                   <td class="px-3 py-2 text-right font-medium">{{ gbp(e.amount / 100) }}</td>
                   <td class="px-3 py-2 text-right whitespace-nowrap">
                     <button @click="openEdit(e)" class="text-gray-400 hover:text-sage-600 mr-3"><i class="fas fa-pen"></i></button>
@@ -118,26 +170,53 @@
       </div>
     </template>
 
+    <!-- Create flow: one entry point, Single/Recurring tabs swap the form -->
+    <ExpenseFormModal
+      v-if="addMode === 'single'"
+      mode-tabs
+      @switch-mode="addMode = 'recurring'"
+      @close="addMode = null"
+      @saved="onAddSaved"
+    />
+    <RecurringExpenseFormModal
+      v-if="addMode === 'recurring'"
+      mode-tabs
+      @switch-mode="addMode = 'single'"
+      @close="addMode = null"
+      @saved="onAddSaved"
+    />
+
+    <!-- Edit flows (no tabs) -->
     <ExpenseFormModal
       v-if="showForm"
       :expense="editingExpense ?? undefined"
       @close="showForm = false"
       @saved="showForm = false"
     />
+    <RecurringExpenseFormModal
+      v-if="showRecurringForm"
+      :recurring="editingRecurring ?? undefined"
+      @close="showRecurringForm = false"
+      @saved="onRecurringSaved"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
 import { useExpensesStore } from '@/stores/expenses'
+import { useRecurringStore } from '@/stores/recurring'
 import { EXPENSE_CATEGORIES, categoryLabel } from '@/constants/expenseCategories'
 import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import type { Expense } from '@/types'
+import type { Expense, RecurringExpense } from '@/types'
 import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
+import RecurringExpenseFormModal from '@/components/RecurringExpenseFormModal.vue'
 
 const store = useExpensesStore()
+const recurringStore = useRecurringStore()
 
 // taxYear/lastTaxYear exist alongside the calendar-based options rather than
 // replacing them: at actual filing time (after 5 April) you want the tax year
@@ -227,18 +306,55 @@ const byCategoryMax = computed(() => Math.max(1, ...byCategory.value.map((r) => 
 // --- create / edit / delete -------------------------------------------------
 const showForm = ref(false)
 const editingExpense = ref<Expense | null>(null)
+// Create flow (Add expense / Add recurring) with a Single/Recurring tab switcher.
+// Editing an existing row still uses the dedicated showForm/showRecurringForm below.
+const addMode = ref<'single' | 'recurring' | null>(null)
 
 function openCreate() {
-  editingExpense.value = null
-  showForm.value = true
+  addMode.value = 'single'
 }
 function openEdit(e: Expense) {
   editingExpense.value = e
   showForm.value = true
 }
+function onAddSaved() {
+  addMode.value = null
+  store.fetchExpenses()
+  recurringStore.fetchRecurring()
+}
 async function confirmDelete(e: Expense) {
   if (!confirm(`Delete "${e.description}" (${gbp(e.amount / 100)})?`)) return
   await store.deleteExpense(e.id)
+}
+
+// --- recurring expenses ----------------------------------------------------
+const showRecurringForm = ref(false)
+const editingRecurring = ref<RecurringExpense | null>(null)
+const generatingId = ref<string | null>(null)
+
+function openCreateRecurring() {
+  addMode.value = 'recurring'
+}
+function openEditRecurring(r: RecurringExpense) {
+  editingRecurring.value = r
+  showRecurringForm.value = true
+}
+function onRecurringSaved() {
+  showRecurringForm.value = false
+  store.fetchExpenses()
+}
+async function logMissing(r: RecurringExpense) {
+  generatingId.value = r.id
+  try {
+    await recurringStore.generate(r.id, { all: true })
+    await store.fetchExpenses() // the new rows land in the table below
+  } finally {
+    generatingId.value = null
+  }
+}
+async function confirmDeleteRecurring(r: RecurringExpense) {
+  if (!confirm(`Delete recurring "${r.description}"? Expenses already logged from it are kept, just unlinked.`)) return
+  await recurringStore.deleteRecurring(r.id)
 }
 
 // --- CSV export ------------------------------------------------------------
@@ -248,7 +364,7 @@ function exportCsv() {
     new Date(e.date).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }),
     categoryLabel(e.category),
     e.description,
-    e.vendor || '',
+    e.vendor?.name || '',
     e.miles != null ? String(e.miles) : '',
     (e.amount / 100).toFixed(2),
     e.notes || '',
@@ -270,5 +386,6 @@ function formatDate(date: string): string {
 
 onMounted(() => {
   if (store.expenses.length === 0) store.fetchExpenses()
+  recurringStore.fetchRecurring()
 })
 </script>

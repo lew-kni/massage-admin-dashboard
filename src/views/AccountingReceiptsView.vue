@@ -27,7 +27,7 @@
         @click="openDetail(r.id)"
       >
         <div class="flex justify-between items-start mb-2">
-          <p class="font-medium">{{ r.vendor || 'Receipt' }}</p>
+          <p class="font-medium">{{ r.vendor?.name || 'Receipt' }}</p>
           <button @click.stop="confirmDelete(r)" class="text-gray-300 hover:text-red-600 text-sm"><i class="fas fa-trash"></i></button>
         </div>
         <p class="text-xs text-gray-500 mb-3">{{ r.date ? formatDate(r.date) : 'No date' }} · <i :class="fileIcon(r.fileType)"></i> {{ r.fileName }}</p>
@@ -92,7 +92,7 @@ function openDetail(id: string) {
 }
 
 async function confirmDelete(r: Receipt) {
-  if (!confirm(`Delete this receipt (${r.vendor || r.fileName})? Expenses logged against it are kept, just unlinked.`)) return
+  if (!confirm(`Delete this receipt (${r.vendor?.name || r.fileName})? Expenses logged against it are kept, just unlinked.`)) return
   await store.deleteReceipt(r.id)
 }
 

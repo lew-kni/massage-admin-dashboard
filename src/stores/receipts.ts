@@ -31,7 +31,7 @@ export const useReceiptsStore = defineStore('receipts', () => {
 
   async function createReceipt(payload: {
     file: File
-    vendor?: string | null
+    vendorId?: string | null
     date?: string | null
     totalAmount?: number | null
     notes?: string | null

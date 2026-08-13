@@ -20,7 +20,8 @@ vi.mock('@/services/api', () => ({
 
 const mockReceipt: Receipt = {
   id: 'r1',
-  vendor: 'Screwfix',
+  vendorId: 'v1',
+  vendor: { id: 'v1', name: 'Screwfix' },
   date: '2026-07-01T00:00:00.000Z',
   totalAmount: 3000,
   notes: null,
@@ -65,10 +66,10 @@ describe('receipts store', () => {
     const store = useReceiptsStore()
 
     const file = new File(['bytes'], 'receipt.jpg', { type: 'image/jpeg' })
-    await store.createReceipt({ file, vendor: 'Screwfix', date: null, totalAmount: 3000, notes: null })
+    await store.createReceipt({ file, vendorId: 'v1', date: null, totalAmount: 3000, notes: null })
 
     expect(apiService.createReceipt).toHaveBeenCalledWith({
-      file, vendor: 'Screwfix', date: null, totalAmount: 3000, notes: null,
+      file, vendorId: 'v1', date: null, totalAmount: 3000, notes: null,
     })
     expect(store.receipts).toEqual([mockReceipt])
   })
@@ -87,7 +88,7 @@ describe('receipts store', () => {
   it('creates an expense under a receipt and refreshes the receipt list', async () => {
     vi.mocked(apiService.createExpenseUnderReceipt).mockResolvedValue({
       id: 'e1', date: '2026-07-01T00:00:00.000Z', amount: 500, category: 'SUPPLIES',
-      description: 'Oils', vendor: null, notes: null, createdAt: '', updatedAt: '',
+      description: 'Oils', vendorId: null, vendor: null, notes: null, createdAt: '', updatedAt: '',
     })
     vi.mocked(apiService.getReceipts).mockResolvedValue([{ ...mockReceipt, expenseCount: 1, loggedTotal: 500 }])
     const store = useReceiptsStore()

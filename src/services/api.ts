@@ -20,6 +20,10 @@ import type {
   Expense,
   Receipt,
   ReceiptDetail,
+  Vendor,
+  VendorDetail,
+  RecurringExpense,
+  MonthRef,
   Document,
   DocumentType,
 } from '@/types'
@@ -493,14 +497,14 @@ class ApiService {
 
   async createReceipt(payload: {
     file: File
-    vendor?: string | null
+    vendorId?: string | null
     date?: string | null
     totalAmount?: number | null
     notes?: string | null
   }): Promise<Receipt> {
     const form = new FormData()
     form.append('file', payload.file)
-    if (payload.vendor) form.append('vendor', payload.vendor)
+    if (payload.vendorId) form.append('vendorId', payload.vendorId)
     if (payload.date) form.append('date', payload.date)
     if (payload.totalAmount != null) form.append('totalAmount', String(payload.totalAmount))
     if (payload.notes) form.append('notes', payload.notes)
@@ -564,6 +568,62 @@ class ApiService {
 
   async unlinkExpenseFromReceipt(receiptId: string, expenseId: string): Promise<void> {
     await this.client.delete(`/api/receipts/${receiptId}/link/${expenseId}`)
+  }
+
+  // Vendors — suppliers that own many expenses and many receipts.
+  async getVendors(): Promise<Vendor[]> {
+    const { data } = await this.client.get('/api/vendors')
+    return data
+  }
+
+  async getVendor(id: string): Promise<VendorDetail> {
+    const { data } = await this.client.get(`/api/vendors/${id}`)
+    return data
+  }
+
+  async createVendor(payload: { name: string; notes?: string | null; defaultCategory?: string | null }): Promise<Vendor> {
+    const { data } = await this.client.post('/api/vendors', payload)
+    return data
+  }
+
+  async updateVendor(id: string, payload: Partial<Pick<Vendor, 'name' | 'notes' | 'defaultCategory'>>): Promise<Vendor> {
+    const { data } = await this.client.patch(`/api/vendors/${id}`, payload)
+    return data
+  }
+
+  async deleteVendor(id: string): Promise<void> {
+    await this.client.delete(`/api/vendors/${id}`)
+  }
+
+  // Recurring expenses — monthly templates that generate real expenses on demand.
+  async getRecurringExpenses(): Promise<RecurringExpense[]> {
+    const { data } = await this.client.get('/api/recurring-expenses')
+    return data
+  }
+
+  async createRecurringExpense(
+    payload: Partial<RecurringExpense> & { description: string; category: string; amount: number; startDate: string }
+  ): Promise<RecurringExpense> {
+    const { data } = await this.client.post('/api/recurring-expenses', payload)
+    return data
+  }
+
+  async updateRecurringExpense(id: string, payload: Partial<RecurringExpense>): Promise<RecurringExpense> {
+    const { data } = await this.client.patch(`/api/recurring-expenses/${id}`, payload)
+    return data
+  }
+
+  async deleteRecurringExpense(id: string): Promise<void> {
+    await this.client.delete(`/api/recurring-expenses/${id}`)
+  }
+
+  // Backfill months for a template. Pass { all: true } or a list of months.
+  async generateRecurringExpenses(
+    id: string,
+    body: { all: true } | { months: Pick<MonthRef, 'year' | 'month'>[] }
+  ): Promise<{ created: Expense[] }> {
+    const { data } = await this.client.post(`/api/recurring-expenses/${id}/generate`, body)
+    return data
   }
 }
 

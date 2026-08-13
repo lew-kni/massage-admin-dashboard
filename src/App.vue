@@ -167,6 +167,7 @@ const accountingChildren = [
   { name: 'Dashboard', to: '/accounting/dashboard' },
   { name: 'Expenses', to: '/accounting/expenses' },
   { name: 'Receipts', to: '/accounting/receipts' },
+  { name: 'Vendors', to: '/accounting/vendors' },
   { name: 'Self Assessment', to: '/accounting/self-assessment' },
 ]
 

@@ -2,9 +2,11 @@
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
     <div class="bg-white rounded-lg shadow-lg max-w-md w-full">
       <div class="card-header flex justify-between items-center">
-        <h2 class="text-lg font-semibold">{{ expense ? 'Edit Expense' : 'New Expense' }}</h2>
+        <h2 class="text-lg font-semibold">{{ headerTitle }}</h2>
         <button @click="$emit('close')" class="text-gray-500 hover:text-gray-700"><i class="fas fa-xmark"></i></button>
       </div>
+
+      <ExpenseModeTabs v-if="showTabs" active="single" @select="onTabSelect" />
 
       <form @submit.prevent="submitForm" class="card-body space-y-4">
         <!-- Date -->
@@ -50,7 +52,7 @@
         <!-- Vendor -->
         <div v-if="!isMileage">
           <label class="block text-sm font-medium text-gray-700 mb-1">Who did you pay? <span class="text-gray-400 font-normal">(optional)</span></label>
-          <input v-model="form.vendor" type="text" class="input-field" placeholder="e.g. Tesco, Amazon" />
+          <VendorSelect v-model="form.vendorId" @vendor-selected="onVendorSelected" placeholder="e.g. Tesco, Amazon" />
         </div>
 
         <!-- Notes -->
@@ -66,7 +68,7 @@
             <li v-for="r in linkedReceipts" :key="r.id" class="flex items-center justify-between text-sm bg-gray-50 rounded px-3 py-2">
               <span>
                 <i class="fas fa-receipt text-gray-400 mr-1"></i>
-                {{ r.vendor || 'Receipt' }}
+                {{ r.vendor?.name || 'Receipt' }}
                 <span v-if="r.totalAmount != null" class="text-gray-500">— {{ gbp(r.totalAmount / 100) }}</span>
               </span>
               <button type="button" @click="unlinkReceipt(r.id)" class="text-gray-400 hover:text-red-600"><i class="fas fa-xmark"></i></button>
@@ -81,7 +83,7 @@
             <input v-model="receiptSearch" type="text" class="input-field text-sm" placeholder="Search receipts by vendor..." />
             <ul class="max-h-32 overflow-y-auto border rounded divide-y">
               <li v-for="r in attachableReceipts" :key="r.id" class="px-3 py-2 text-sm hover:bg-sage-50 cursor-pointer flex justify-between" @click="attachReceipt(r.id)">
-                <span>{{ r.vendor || 'Receipt' }} <span class="text-gray-400">{{ formatDate(r.date) }}</span></span>
+                <span>{{ r.vendor?.name || 'Receipt' }} <span class="text-gray-400">{{ formatDate(r.date) }}</span></span>
                 <span v-if="r.totalAmount != null" class="text-gray-500">{{ gbp(r.totalAmount / 100) }}</span>
               </li>
               <li v-if="attachableReceipts.length === 0" class="px-3 py-2 text-sm text-gray-400">No matching receipts.</li>
@@ -115,16 +117,29 @@ import { apiService } from '@/services/api'
 import { EXPENSE_CATEGORIES } from '@/constants/expenseCategories'
 import { calculateMileageAmountPence, taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import type { Expense, ExpenseCategory, ReceiptSummary } from '@/types'
+import type { Expense, ExpenseCategory, ReceiptSummary, Vendor } from '@/types'
+import VendorSelect from '@/components/VendorSelect.vue'
+import ExpenseModeTabs, { type ExpenseMode } from '@/components/ExpenseModeTabs.vue'
 
 const props = defineProps<{
   expense?: Expense
   // Set when creating a new expense from within a Receipt's "add expense" flow.
   receiptId?: string
-  initialVendor?: string | null
+  initialVendorId?: string | null
   initialDate?: string | null
+  // Show the Single/Recurring tab switcher (create flow from the Expenses page).
+  modeTabs?: boolean
 }>()
-const emit = defineEmits<{ close: []; saved: [] }>()
+const emit = defineEmits<{ close: []; saved: []; 'switch-mode': [] }>()
+
+// Tabs only make sense when creating a standalone expense (not editing, not the
+// "add expense under a receipt" flow).
+const showTabs = computed(() => props.modeTabs && !props.expense && !props.receiptId)
+const headerTitle = computed(() => (props.expense ? 'Edit Expense' : showTabs.value ? 'Add' : 'New Expense'))
+
+function onTabSelect(mode: ExpenseMode) {
+  if (mode === 'recurring') emit('switch-mode')
+}
 
 const store = useExpensesStore()
 const receiptsStore = useReceiptsStore()
@@ -137,9 +152,17 @@ const form = reactive({
   category: (props.expense?.category || 'SUPPLIES') as ExpenseCategory,
   miles: props.expense?.miles ? String(props.expense.miles) : '',
   description: props.expense?.description || '',
-  vendor: props.expense?.vendor || props.initialVendor || '',
+  vendorId: props.expense?.vendorId || props.initialVendorId || null,
   notes: props.expense?.notes || '',
 })
+
+// Picking a vendor with a default category pre-fills the category — but only
+// when creating (don't silently re-categorise an existing expense being edited).
+function onVendorSelected(vendor: Vendor | null) {
+  if (!props.expense && vendor?.defaultCategory) {
+    form.category = vendor.defaultCategory
+  }
+}
 
 // --- attached receipts (edit mode only) -------------------------------------
 const linkedReceipts = ref<ReceiptSummary[]>([])
@@ -162,7 +185,7 @@ const attachableReceipts = computed(() => {
   const search = receiptSearch.value.trim().toLowerCase()
   return receiptsStore.receipts
     .filter((r) => !linkedIds.has(r.id))
-    .filter((r) => !search || (r.vendor || '').toLowerCase().includes(search))
+    .filter((r) => !search || (r.vendor?.name || '').toLowerCase().includes(search))
     .slice(0, 20)
 })
 
@@ -246,7 +269,7 @@ async function submitForm() {
       amount: Math.round(pounds * 100),
       category: form.category,
       description: form.description.trim(),
-      vendor: form.vendor.trim() || null,
+      vendorId: form.vendorId || null,
       notes: form.notes.trim() || null,
     }
   }

@@ -11,6 +11,10 @@ vi.mock('@/services/api', () => ({
     createExpense: vi.fn(),
     updateExpense: vi.fn(),
     deleteExpense: vi.fn(),
+    getExpense: vi.fn().mockResolvedValue({ receipts: [] }),
+    // The vendor picker (rendered for non-mileage expenses) loads vendors on mount.
+    getVendors: vi.fn().mockResolvedValue([]),
+    createVendor: vi.fn(),
   },
 }))
 
@@ -50,6 +54,7 @@ describe('ExpenseFormModal — mileage flow', () => {
         amount: 9900 * 45,
         category: 'MILEAGE',
         description: 'Earlier trip',
+        vendorId: null,
         vendor: null,
         notes: null,
         miles: 9900,
@@ -76,6 +81,7 @@ describe('ExpenseFormModal — mileage flow', () => {
       amount: 1800,
       category: 'MILEAGE',
       description: 'Trip to client',
+      vendorId: null,
       vendor: null,
       notes: null,
       miles: 40,
@@ -97,6 +103,14 @@ describe('ExpenseFormModal — mileage flow', () => {
     )
     const payload = vi.mocked(apiService.createExpense).mock.calls[0][0] as Record<string, unknown>
     expect(payload.amount).toBeUndefined()
+  })
+
+  it('emits switch-mode when the Recurring tab is clicked with modeTabs on', async () => {
+    const wrapper = mount(ExpenseFormModal, { props: { modeTabs: true } })
+    const recurringTab = wrapper.findAll('button').find((b) => b.text().includes('Recurring'))
+    expect(recurringTab).toBeDefined()
+    await recurringTab!.trigger('click')
+    expect(wrapper.emitted('switch-mode')).toBeTruthy()
   })
 
   it('requires miles to be entered before submitting a mileage expense', async () => {

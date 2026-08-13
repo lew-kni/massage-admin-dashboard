@@ -20,7 +20,8 @@ vi.mock('@/services/api', () => ({
 
 const detail: ReceiptDetail = {
   id: 'r1',
-  vendor: 'B&Q',
+  vendorId: 'v1',
+  vendor: { id: 'v1', name: 'B&Q' },
   date: '2026-07-01T00:00:00.000Z',
   totalAmount: 3000,
   notes: null,

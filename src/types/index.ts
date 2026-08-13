@@ -408,16 +408,27 @@ export type ExpenseCategory =
   | 'CLOTHING_LAUNDRY'
   | 'OTHER'
 
+// The supplier an expense/receipt is paid to — a first-class entity now, not a
+// free-text label. Endpoints return the linked vendor's id + name nested under
+// `vendor`; `vendorId` is what the forms send.
+export interface VendorRef {
+  id: string
+  name: string
+}
+
 export interface Expense {
   id: string
   date: string
   amount: number // pence — server-computed for MILEAGE, see src/utils/mileage.ts
   category: ExpenseCategory
   description: string
-  vendor?: string | null
+  vendorId?: string | null
+  vendor?: VendorRef | null
   notes?: string | null
   // Only set when category is MILEAGE.
   miles?: number | null
+  // Set when this expense was generated from a monthly recurring template.
+  recurringExpenseId?: string | null
   createdAt: string
   updatedAt: string
   // Present on GET /api/expenses (list).
@@ -429,7 +440,8 @@ export interface Expense {
 // Receipt Types
 export interface ReceiptSummary {
   id: string
-  vendor?: string | null
+  vendorId?: string | null
+  vendor?: VendorRef | null
   date?: string | null
   totalAmount?: number | null // pence
   fileName: string
@@ -437,7 +449,8 @@ export interface ReceiptSummary {
 
 export interface Receipt {
   id: string
-  vendor?: string | null
+  vendorId?: string | null
+  vendor?: VendorRef | null
   date?: string | null
   totalAmount?: number | null // pence
   notes?: string | null
@@ -460,6 +473,53 @@ export interface ReceiptDetail extends Receipt {
     description: string
     amount: number
   }[]
+}
+
+// Vendor Types — a supplier that owns many expenses and many receipts.
+export interface Vendor {
+  id: string
+  name: string
+  notes?: string | null
+  // Pre-fills the expense category when logging against this vendor; one of the
+  // ExpenseCategory keys, or null.
+  defaultCategory?: ExpenseCategory | null
+  createdAt: string
+  updatedAt: string
+  // Present on GET /api/vendors (list) and /:id (detail).
+  expenseCount: number
+  receiptCount: number
+  totalSpent: number // pence, sum of linked expenses' amounts
+}
+
+export interface VendorDetail extends Vendor {
+  expenses: (Expense & { receiptCount?: number })[]
+  receipts: Receipt[]
+}
+
+// Recurring expense Types — a monthly template that generates real expenses.
+export interface MonthRef {
+  year: number
+  month: number // 1-12
+  label: string // e.g. "Aug 2026"
+  date: string // ISO date a generated expense would use
+}
+
+export interface RecurringExpense {
+  id: string
+  description: string
+  category: ExpenseCategory // never MILEAGE
+  amount: number // pence — the usual amount pre-filled into each generated month
+  dayOfMonth: number // 1-28
+  vendorId?: string | null
+  vendor?: VendorRef | null
+  notes?: string | null
+  active: boolean
+  startDate: string
+  endDate?: string | null
+  createdAt: string
+  updatedAt: string
+  // Months from startDate to now with no generated expense yet.
+  missingMonths: MonthRef[]
 }
 
 // API Response Types

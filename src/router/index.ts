@@ -14,6 +14,8 @@ import AvailabilityView from '@/views/AvailabilityView.vue'
 import AccountingView from '@/views/AccountingView.vue'
 import AccountingExpensesView from '@/views/AccountingExpensesView.vue'
 import AccountingReceiptsView from '@/views/AccountingReceiptsView.vue'
+import AccountingVendorsView from '@/views/AccountingVendorsView.vue'
+import VendorDetailView from '@/views/VendorDetailView.vue'
 import SelfAssessmentView from '@/views/SelfAssessmentView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
@@ -85,6 +87,18 @@ const routes = [
     path: '/accounting/receipts',
     name: 'AccountingReceipts',
     component: AccountingReceiptsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/accounting/vendors',
+    name: 'AccountingVendors',
+    component: AccountingVendorsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/accounting/vendors/:id',
+    name: 'VendorDetail',
+    component: VendorDetailView,
     meta: { requiresAuth: true },
   },
   {
