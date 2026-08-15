@@ -26,7 +26,7 @@
         <!-- Vendor -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Who do you pay? <span class="text-gray-400 font-normal">(optional)</span></label>
-          <VendorSelect v-model="form.vendorId" placeholder="e.g. EE, Vodafone" />
+          <VendorSelect v-model="form.vendorId" @vendor-selected="onVendorSelected" placeholder="e.g. EE, Vodafone" />
         </div>
 
         <!-- Usual amount -->
@@ -80,15 +80,18 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, ref } from 'vue'
+import { reactive, computed, ref, onMounted } from 'vue'
 import { useRecurringStore } from '@/stores/recurring'
+import { useVendorsStore } from '@/stores/vendors'
 import { EXPENSE_CATEGORIES } from '@/constants/expenseCategories'
-import type { RecurringExpense, ExpenseCategory } from '@/types'
+import type { RecurringExpense, ExpenseCategory, Vendor } from '@/types'
 import VendorSelect from '@/components/VendorSelect.vue'
 import ExpenseModeTabs, { type ExpenseMode } from '@/components/ExpenseModeTabs.vue'
 
 const props = defineProps<{
   recurring?: RecurringExpense
+  // Preselect a vendor (e.g. adding a recurring expense from the vendor's page).
+  initialVendorId?: string | null
   // Show the Single/Recurring tab switcher (create flow from the Expenses page).
   modeTabs?: boolean
 }>()
@@ -102,6 +105,7 @@ function onTabSelect(mode: ExpenseMode) {
 }
 
 const store = useRecurringStore()
+const vendorsStore = useVendorsStore()
 const loading = ref(false)
 const error = ref('')
 
@@ -112,13 +116,39 @@ const now = new Date()
 const form = reactive({
   description: props.recurring?.description || '',
   category: (props.recurring?.category || 'PHONE_ADMIN') as ExpenseCategory,
-  vendorId: props.recurring?.vendorId || null,
+  vendorId: props.recurring?.vendorId || props.initialVendorId || null,
   amountPounds: props.recurring ? (props.recurring.amount / 100).toFixed(2) : '',
   startMonth: props.recurring?.startDate?.slice(0, 7) || now.toISOString().slice(0, 7),
   dayOfMonth: String(props.recurring?.dayOfMonth ?? 1),
   notes: props.recurring?.notes || '',
   active: props.recurring?.active ?? true,
 })
+
+// Picking a vendor with a default category pre-fills it (create only). Mileage
+// is excluded from recurring templates, so never adopt it here.
+function onVendorSelected(vendor: Vendor | null) {
+  if (!props.recurring && vendor?.defaultCategory && vendor.defaultCategory !== 'MILEAGE') {
+    form.category = vendor.defaultCategory
+  }
+}
+
+// A preselected vendor doesn't fire VendorSelect's `vendor-selected`, so adopt
+// its default category on mount too (matches the one-off expense form).
+async function applyInitialVendorCategory() {
+  if (props.recurring || !props.initialVendorId) return
+  if (vendorsStore.vendors.length === 0) {
+    try {
+      await vendorsStore.fetchVendors()
+    } catch {
+      return
+    }
+  }
+  const vendor = vendorsStore.vendors.find((v) => v.id === props.initialVendorId)
+  if (vendor?.defaultCategory && vendor.defaultCategory !== 'MILEAGE') {
+    form.category = vendor.defaultCategory
+  }
+}
+onMounted(applyInitialVendorCategory)
 
 async function submitForm() {
   if (!form.description.trim()) {

@@ -33,6 +33,19 @@ describe('RecurringExpenseFormModal', () => {
     expect(wrapper.find('input[placeholder="e.g. EE, Vodafone"]').exists()).toBe(true)
   })
 
+  it("adopts a preselected vendor's default category when creating", async () => {
+    vi.mocked(apiService.getVendors).mockResolvedValue([
+      { id: 'v1', name: 'EE', defaultCategory: 'PHONE_ADMIN' },
+      { id: 'v2', name: 'Balens', defaultCategory: 'INSURANCE_MEMBERSHIP' },
+    ] as any)
+
+    const wrapper = mount(RecurringExpenseFormModal, { props: { initialVendorId: 'v2' } })
+    await flushPromises()
+
+    const select = wrapper.find('select').element as HTMLSelectElement
+    expect(select.value).toBe('INSURANCE_MEMBERSHIP')
+  })
+
   it('emits switch-mode when the Single tab is clicked with modeTabs on', async () => {
     const wrapper = mount(RecurringExpenseFormModal, { props: { modeTabs: true } })
     await flushPromises()

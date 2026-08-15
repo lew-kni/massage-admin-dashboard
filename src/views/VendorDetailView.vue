@@ -41,7 +41,10 @@
       <div class="card mb-8">
         <div class="card-header flex justify-between items-center">
           <h2 class="text-lg font-semibold"><i class="fas fa-money-bill-wave mr-2"></i>Expenses</h2>
-          <button @click="showExpenseForm = true" class="btn-secondary text-sm"><i class="fas fa-plus mr-1"></i>Add expense</button>
+          <div class="flex gap-2">
+            <button @click="showRecurringForm = true" class="btn-secondary text-sm"><i class="fas fa-repeat mr-1"></i>Add recurring</button>
+            <button @click="showExpenseForm = true" class="btn-secondary text-sm"><i class="fas fa-plus mr-1"></i>Add expense</button>
+          </div>
         </div>
         <div class="card-body">
           <div v-if="vendor.expenses.length === 0" class="text-center text-gray-500 py-6">No expenses logged against this vendor.</div>
@@ -106,6 +109,12 @@
       @close="showExpenseForm = false"
       @saved="onChildSaved"
     />
+    <RecurringExpenseFormModal
+      v-if="showRecurringForm && vendor"
+      :initial-vendor-id="vendor.id"
+      @close="showRecurringForm = false"
+      @saved="onChildSaved"
+    />
     <ReceiptUploadModal
       v-if="showReceiptUpload && vendor"
       :initial-vendor-id="vendor.id"
@@ -131,6 +140,7 @@ import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { VendorDetail } from '@/types'
 import VendorFormModal from '@/components/VendorFormModal.vue'
 import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
+import RecurringExpenseFormModal from '@/components/RecurringExpenseFormModal.vue'
 import ReceiptUploadModal from '@/components/ReceiptUploadModal.vue'
 import ReceiptDetailModal from '@/components/ReceiptDetailModal.vue'
 
@@ -142,6 +152,7 @@ const loading = ref(true)
 const error = ref('')
 const showEdit = ref(false)
 const showExpenseForm = ref(false)
+const showRecurringForm = ref(false)
 const showReceiptUpload = ref(false)
 const activeReceiptId = ref<string | null>(null)
 
@@ -170,10 +181,12 @@ function onVendorSaved() {
   load()
 }
 
-// A new expense/receipt was added against this vendor — close the form and
-// refresh so it shows up in the lists + totals below.
+// A new expense/recurring template/receipt was added against this vendor — close
+// the form and refresh so it shows up in the lists + totals below. (A recurring
+// template backfills real expenses, which then appear in the Expenses table.)
 function onChildSaved() {
   showExpenseForm.value = false
+  showRecurringForm.value = false
   showReceiptUpload.value = false
   load()
 }
