@@ -89,7 +89,9 @@ import VendorSelect from '@/components/VendorSelect.vue'
 import ExpenseModeTabs, { type ExpenseMode } from '@/components/ExpenseModeTabs.vue'
 
 const props = defineProps<{
-  recurring?: RecurringExpense
+  // missingMonths omitted so the vendor detail payload (which doesn't compute it)
+  // is accepted for editing; the form never reads that field anyway.
+  recurring?: Omit<RecurringExpense, 'missingMonths'>
   // Preselect a vendor (e.g. adding a recurring expense from the vendor's page).
   initialVendorId?: string | null
   // Show the Single/Recurring tab switcher (create flow from the Expenses page).

@@ -494,6 +494,9 @@ export interface Vendor {
 export interface VendorDetail extends Vendor {
   expenses: (Expense & { receiptCount?: number })[]
   receipts: Receipt[]
+  // Raw recurring templates for this vendor — the detail endpoint doesn't
+  // compute missingMonths (that's the Expenses dashboard's concern).
+  recurringExpenses: Omit<RecurringExpense, 'missingMonths'>[]
 }
 
 // Recurring expense Types — a monthly template that generates real expenses.

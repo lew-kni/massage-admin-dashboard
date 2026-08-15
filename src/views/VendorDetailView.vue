@@ -41,10 +41,7 @@
       <div class="card mb-8">
         <div class="card-header flex justify-between items-center">
           <h2 class="text-lg font-semibold"><i class="fas fa-money-bill-wave mr-2"></i>Expenses</h2>
-          <div class="flex gap-2">
-            <button @click="showRecurringForm = true" class="btn-secondary text-sm"><i class="fas fa-repeat mr-1"></i>Add recurring</button>
-            <button @click="showExpenseForm = true" class="btn-secondary text-sm"><i class="fas fa-plus mr-1"></i>Add expense</button>
-          </div>
+          <button @click="showExpenseForm = true" class="btn-secondary text-sm"><i class="fas fa-plus mr-1"></i>Add expense</button>
         </div>
         <div class="card-body">
           <div v-if="vendor.expenses.length === 0" class="text-center text-gray-500 py-6">No expenses logged against this vendor.</div>
@@ -67,6 +64,46 @@
                     <i v-if="e.receiptCount" class="fas fa-paperclip text-gray-400 text-xs ml-1"></i>
                   </td>
                   <td class="px-3 py-2 text-right font-medium">{{ gbp(e.amount / 100) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recurring templates -->
+      <div class="card mb-8">
+        <div class="card-header flex justify-between items-center">
+          <h2 class="text-lg font-semibold"><i class="fas fa-repeat mr-2"></i>Recurring</h2>
+          <button @click="showRecurringForm = true" class="btn-secondary text-sm"><i class="fas fa-plus mr-1"></i>Add recurring</button>
+        </div>
+        <div class="card-body">
+          <div v-if="(vendor.recurringExpenses ?? []).length === 0" class="text-center text-gray-500 py-6">No recurring expenses set up for this vendor.</div>
+          <div v-else class="overflow-x-auto">
+            <table class="w-full border-collapse">
+              <thead>
+                <tr class="border-b-2 border-gray-200 dark:border-gray-700 text-left text-sm text-gray-600 dark:text-gray-400">
+                  <th class="px-3 py-2 font-semibold">Category</th>
+                  <th class="px-3 py-2 font-semibold">Description</th>
+                  <th class="px-3 py-2 font-semibold">Each month</th>
+                  <th class="px-3 py-2 font-semibold text-right">Usual amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="r in vendor.recurringExpenses ?? []"
+                  :key="r.id"
+                  class="border-b border-gray-100 dark:border-gray-800 text-sm cursor-pointer hover:bg-sage-50 dark:hover:bg-gray-800"
+                  :class="{ 'opacity-60': !r.active }"
+                  @click="editingRecurring = r"
+                >
+                  <td class="px-3 py-2"><span class="badge bg-sage-100 text-sage-800">{{ categoryLabel(r.category) }}</span></td>
+                  <td class="px-3 py-2">
+                    {{ r.description }}
+                    <span v-if="!r.active" class="badge bg-gray-100 text-gray-500 ml-1">Paused</span>
+                  </td>
+                  <td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">Day {{ r.dayOfMonth }}</td>
+                  <td class="px-3 py-2 text-right font-medium">{{ gbp(r.amount / 100) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -115,6 +152,12 @@
       @close="showRecurringForm = false"
       @saved="onChildSaved"
     />
+    <RecurringExpenseFormModal
+      v-if="editingRecurring"
+      :recurring="editingRecurring"
+      @close="editingRecurring = null"
+      @saved="onChildSaved"
+    />
     <ReceiptUploadModal
       v-if="showReceiptUpload && vendor"
       :initial-vendor-id="vendor.id"
@@ -153,6 +196,7 @@ const error = ref('')
 const showEdit = ref(false)
 const showExpenseForm = ref(false)
 const showRecurringForm = ref(false)
+const editingRecurring = ref<VendorDetail['recurringExpenses'][number] | null>(null)
 const showReceiptUpload = ref(false)
 const activeReceiptId = ref<string | null>(null)
 
@@ -187,6 +231,7 @@ function onVendorSaved() {
 function onChildSaved() {
   showExpenseForm.value = false
   showRecurringForm.value = false
+  editingRecurring.value = null
   showReceiptUpload.value = false
   load()
 }
