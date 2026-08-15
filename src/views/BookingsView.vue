@@ -453,6 +453,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAvailabilityStore } from '@/stores/availability'
 import type { Booking, UnavailableBlock } from '@/types'
+import { toLondonInputParts } from '@/utils/formatLondon'
 import BookingCard from '@/components/BookingCard.vue'
 import BookingTableView from '@/components/BookingTableView.vue'
 import BookingModal from '@/components/BookingModal.vue'
@@ -788,13 +789,16 @@ function formatBlockClock(hhmm: string): string {
   return m === 0 ? `${hour12}${ampm}` : `${hour12}:${String(m).padStart(2, '0')}${ampm}`
 }
 
-// Chip label for a blocked day. Partial blocks show their window
-// ("Blocked 10am - 5pm"); full-day blocks (no startTime) stay a bare "Blocked".
+// Chip label for a blocked day. The block's window lives entirely in its
+// start/end DateTimes (BlockedTime has no separate HH:mm fields, and the store
+// nulls the string times on fetch), so read the London wall-clock times off
+// the instants. A full-day block runs London-midnight to London-midnight, so
+// both read "00:00" -- show a bare "Blocked"; otherwise show the window.
 function formatBlockLabel(block: UnavailableBlock): string {
-  if (block.startTime && block.endTime) {
-    return `Blocked ${formatBlockClock(block.startTime)} - ${formatBlockClock(block.endTime)}`
-  }
-  return 'Blocked'
+  const start = toLondonInputParts(block.startDate)
+  const end = toLondonInputParts(block.endDate)
+  if (start.time === '00:00' && end.time === '00:00') return 'Blocked'
+  return `Blocked ${formatBlockClock(start.time)} - ${formatBlockClock(end.time)}`
 }
 
 // Current time and navigation helpers
