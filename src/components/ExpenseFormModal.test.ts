@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import ExpenseFormModal from './ExpenseFormModal.vue'
 import { useExpensesStore } from '@/stores/expenses'
@@ -103,6 +103,19 @@ describe('ExpenseFormModal — mileage flow', () => {
     )
     const payload = vi.mocked(apiService.createExpense).mock.calls[0][0] as Record<string, unknown>
     expect(payload.amount).toBeUndefined()
+  })
+
+  it("adopts a preselected vendor's default category when creating", async () => {
+    vi.mocked(apiService.getVendors).mockResolvedValue([
+      { id: 'v1', name: 'Balens', defaultCategory: 'INSURANCE_MEMBERSHIP' },
+    ] as any)
+
+    const wrapper = mount(ExpenseFormModal, { props: { initialVendorId: 'v1' } })
+    // Let onMounted's fetchVendors resolve and the category update.
+    await flushPromises()
+
+    const select = wrapper.find('select').element as HTMLSelectElement
+    expect(select.value).toBe('INSURANCE_MEMBERSHIP')
   })
 
   it('emits switch-mode when the Recurring tab is clicked with modeTabs on', async () => {

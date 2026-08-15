@@ -113,6 +113,7 @@ import { reactive, computed, ref, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { useExpensesStore } from '@/stores/expenses'
 import { useReceiptsStore } from '@/stores/receipts'
+import { useVendorsStore } from '@/stores/vendors'
 import { apiService } from '@/services/api'
 import { EXPENSE_CATEGORIES } from '@/constants/expenseCategories'
 import { calculateMileageAmountPence, taxYearStart, taxYearEnd } from '@/utils/mileage'
@@ -143,6 +144,7 @@ function onTabSelect(mode: ExpenseMode) {
 
 const store = useExpensesStore()
 const receiptsStore = useReceiptsStore()
+const vendorsStore = useVendorsStore()
 const loading = ref(false)
 const error = ref('')
 
@@ -163,6 +165,25 @@ function onVendorSelected(vendor: Vendor | null) {
     form.category = vendor.defaultCategory
   }
 }
+
+// A preselected vendor (adding an expense from the vendor's page, or from a
+// receipt) never triggers VendorSelect's `vendor-selected`, so its default
+// category was being missed. Mirror onVendorSelected for that initial vendor.
+async function applyInitialVendorCategory() {
+  if (props.expense || !props.initialVendorId) return
+  if (vendorsStore.vendors.length === 0) {
+    try {
+      await vendorsStore.fetchVendors()
+    } catch {
+      // Vendor list is a convenience here — if it can't load, the category just
+      // stays at its default rather than blocking the form.
+      return
+    }
+  }
+  const vendor = vendorsStore.vendors.find((v) => v.id === props.initialVendorId)
+  if (vendor?.defaultCategory) form.category = vendor.defaultCategory
+}
+onMounted(applyInitialVendorCategory)
 
 // --- attached receipts (edit mode only) -------------------------------------
 const linkedReceipts = ref<ReceiptSummary[]>([])
