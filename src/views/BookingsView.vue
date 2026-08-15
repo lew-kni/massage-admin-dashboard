@@ -792,12 +792,15 @@ function formatBlockClock(hhmm: string): string {
 // Chip label for a blocked day. The block's window lives entirely in its
 // start/end DateTimes (BlockedTime has no separate HH:mm fields, and the store
 // nulls the string times on fetch), so read the London wall-clock times off
-// the instants. A full-day block runs London-midnight to London-midnight, so
-// both read "00:00" -- show a bare "Blocked"; otherwise show the window.
+// the instants. A full-day block spans an exact multiple of 24h, so its start
+// and end read the SAME wall-clock time -- show a bare "Blocked". (Checking for
+// equal times rather than "00:00" also catches blocks stored at UTC midnight,
+// which read as 01:00 under BST and would otherwise print "Blocked 1am - 1am".)
+// A real partial window never has equal times: the modal enforces start < end.
 function formatBlockLabel(block: UnavailableBlock): string {
   const start = toLondonInputParts(block.startDate)
   const end = toLondonInputParts(block.endDate)
-  if (start.time === '00:00' && end.time === '00:00') return 'Blocked'
+  if (start.time === end.time) return 'Blocked'
   return `Blocked ${formatBlockClock(start.time)} - ${formatBlockClock(end.time)}`
 }
 
