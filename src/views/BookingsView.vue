@@ -407,8 +407,13 @@
               </div>
 
               <!-- Unavailable indicators -->
-              <div v-if="hasUnavailableDay(day)" class="text-xs p-1 rounded bg-red-50 text-red-700 font-medium truncate">
-<i class="fas fa-lock mr-1"></i>Blocked
+              <div
+                v-for="block in getUnavailableBlocksForDay(day)"
+                :key="'block-' + block.id"
+                class="text-xs p-1 rounded bg-red-50 text-red-700 font-medium truncate"
+                :title="formatBlockLabel(block)"
+              >
+                <i class="fas fa-lock mr-1"></i>{{ formatBlockLabel(block) }}
               </div>
             </div>
           </div>
@@ -447,7 +452,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAvailabilityStore } from '@/stores/availability'
-import type { Booking } from '@/types'
+import type { Booking, UnavailableBlock } from '@/types'
 import BookingCard from '@/components/BookingCard.vue'
 import BookingTableView from '@/components/BookingTableView.vue'
 import BookingModal from '@/components/BookingModal.vue'
@@ -560,6 +565,7 @@ const todayBookings = computed(() => {
   const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
 
   return bookingsStore.bookings.filter(b => {
+    if (b.status === 'CANCELLED') return false
     const bookingStart = new Date(b.startTime)
     return bookingStart >= startOfDay && bookingStart < endOfDay
   }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
@@ -699,6 +705,7 @@ function getBookingsForDay(date: Date): Booking[] {
   const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
 
   return bookingsStore.bookings.filter(b => {
+    if (b.status === 'CANCELLED') return false
     const bookingStart = new Date(b.startTime)
     return bookingStart >= startOfDay && bookingStart < endOfDay
   }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
@@ -762,15 +769,32 @@ function getMonthYear(date: Date): string {
   return `${monthNames[date.getMonth()]} ${date.getFullYear()}`
 }
 
-function hasUnavailableDay(date: Date): boolean {
+function getUnavailableBlocksForDay(date: Date): UnavailableBlock[] {
   const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
 
-  return unavailableBlocks.value.some(b => {
+  return unavailableBlocks.value.filter(b => {
     const blockStart = new Date(b.startDate)
     const blockEnd = new Date(b.endDate)
     return blockStart < endOfDay && blockEnd > startOfDay
   })
+}
+
+// "10:00" -> "10am", "17:30" -> "5:30pm"
+function formatBlockClock(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const ampm = h >= 12 ? 'pm' : 'am'
+  const hour12 = h % 12 || 12
+  return m === 0 ? `${hour12}${ampm}` : `${hour12}:${String(m).padStart(2, '0')}${ampm}`
+}
+
+// Chip label for a blocked day. Partial blocks show their window
+// ("Blocked 10am - 5pm"); full-day blocks (no startTime) stay a bare "Blocked".
+function formatBlockLabel(block: UnavailableBlock): string {
+  if (block.startTime && block.endTime) {
+    return `Blocked ${formatBlockClock(block.startTime)} - ${formatBlockClock(block.endTime)}`
+  }
+  return 'Blocked'
 }
 
 // Current time and navigation helpers
