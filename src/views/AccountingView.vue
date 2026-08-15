@@ -192,7 +192,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="b in outstandingList" :key="b.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
+                  <tr v-for="b in pagedOutstanding" :key="b.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
                     <td class="px-3 py-2">
                       <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium">#{{ b.bookingNumber }}</RouterLink>
                     </td>
@@ -209,6 +209,7 @@
                 </tbody>
               </table>
             </div>
+            <Pagination v-model="outstandingPage" :total-pages="totalOutstandingPages" />
             <p v-if="paymentError" class="mt-3 text-sm text-red-700">{{ paymentError }}</p>
           </div>
         </div>
@@ -225,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
@@ -235,6 +236,7 @@ import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 import { bookingTotal } from '@/utils/bookingTotal'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const bookingsStore = useBookingsStore()
 const expensesStore = useExpensesStore()
@@ -416,6 +418,14 @@ const outstandingList = computed(() =>
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 )
 const totalOutstandingAll = computed(() => sum(outstandingList.value))
+
+const PAGE_SIZE = 10
+const outstandingPage = ref(1)
+const totalOutstandingPages = computed(() => Math.max(1, Math.ceil(outstandingList.value.length / PAGE_SIZE)))
+const pagedOutstanding = computed(() =>
+  outstandingList.value.slice((outstandingPage.value - 1) * PAGE_SIZE, outstandingPage.value * PAGE_SIZE)
+)
+watch(totalOutstandingPages, (tp) => { if (outstandingPage.value > tp) outstandingPage.value = tp })
 
 // --- mark as paid ----------------------------------------------------------
 const showPaymentModal = ref(false)

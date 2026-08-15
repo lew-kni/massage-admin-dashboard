@@ -21,7 +21,7 @@
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       <div
-        v-for="r in sortedReceipts"
+        v-for="r in pagedReceipts"
         :key="r.id"
         class="card p-4 cursor-pointer hover:ring-2 hover:ring-sage-500 transition-all"
         @click="openDetail(r.id)"
@@ -49,6 +49,8 @@
       </div>
     </div>
 
+    <Pagination v-if="store.receipts.length" v-model="receiptsPage" :total-pages="totalReceiptPages" />
+
     <p v-if="store.error" class="mt-4 text-sm text-red-700">{{ store.error }}</p>
 
     <ReceiptUploadModal v-if="showUpload" @close="showUpload = false" @saved="showUpload = false" />
@@ -62,13 +64,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { format } from 'date-fns'
 import { useReceiptsStore } from '@/stores/receipts'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Receipt } from '@/types'
 import ReceiptUploadModal from '@/components/ReceiptUploadModal.vue'
 import ReceiptDetailModal from '@/components/ReceiptDetailModal.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const store = useReceiptsStore()
 const showUpload = ref(false)
@@ -86,6 +89,14 @@ function fileIcon(fileType: string): string {
 const sortedReceipts = computed(() =>
   [...store.receipts].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 )
+
+const PAGE_SIZE = 10
+const receiptsPage = ref(1)
+const totalReceiptPages = computed(() => Math.max(1, Math.ceil(sortedReceipts.value.length / PAGE_SIZE)))
+const pagedReceipts = computed(() =>
+  sortedReceipts.value.slice((receiptsPage.value - 1) * PAGE_SIZE, receiptsPage.value * PAGE_SIZE)
+)
+watch(totalReceiptPages, (tp) => { if (receiptsPage.value > tp) receiptsPage.value = tp })
 
 function openDetail(id: string) {
   activeReceiptId.value = id

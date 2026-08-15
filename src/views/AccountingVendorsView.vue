@@ -35,7 +35,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="v in store.vendors" :key="v.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
+              <tr v-for="v in pagedVendors" :key="v.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
                 <td class="px-3 py-2">
                   <RouterLink :to="`/accounting/vendors/${v.id}`" class="text-sage-600 hover:text-sage-700 font-medium">{{ v.name }}</RouterLink>
                 </td>
@@ -54,6 +54,7 @@
             </tbody>
           </table>
         </div>
+        <Pagination v-model="vendorsPage" :total-pages="totalVendorPages" />
         <p v-if="store.error" class="mt-3 text-sm text-red-700">{{ store.error }}</p>
       </div>
     </div>
@@ -68,15 +69,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useVendorsStore } from '@/stores/vendors'
 import { categoryLabel } from '@/constants/expenseCategories'
 import type { Vendor } from '@/types'
 import VendorFormModal from '@/components/VendorFormModal.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const store = useVendorsStore()
 const gbp = (n: number) => '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const PAGE_SIZE = 10
+const vendorsPage = ref(1)
+const totalVendorPages = computed(() => Math.max(1, Math.ceil(store.vendors.length / PAGE_SIZE)))
+const pagedVendors = computed(() =>
+  store.vendors.slice((vendorsPage.value - 1) * PAGE_SIZE, vendorsPage.value * PAGE_SIZE)
+)
+watch(totalVendorPages, (tp) => { if (vendorsPage.value > tp) vendorsPage.value = tp })
 
 const showForm = ref(false)
 const editingVendor = ref<Vendor | null>(null)

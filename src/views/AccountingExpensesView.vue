@@ -143,7 +143,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="e in sortedPeriodExpenses" :key="e.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
+                <tr v-for="e in pagedExpenses" :key="e.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
                   <td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ formatDate(e.date) }}</td>
                   <td class="px-3 py-2"><span class="badge bg-sage-100 text-sage-800">{{ categoryLabel(e.category) }}</span></td>
                   <td class="px-3 py-2">
@@ -165,6 +165,7 @@
               </tbody>
             </table>
           </div>
+          <Pagination v-model="expensesPage" :total-pages="totalExpensePages" />
           <p v-if="store.error" class="mt-3 text-sm text-red-700">{{ store.error }}</p>
         </div>
       </div>
@@ -203,7 +204,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
 import { useExpensesStore } from '@/stores/expenses'
@@ -214,6 +215,9 @@ import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Expense, RecurringExpense } from '@/types'
 import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
 import RecurringExpenseFormModal from '@/components/RecurringExpenseFormModal.vue'
+import Pagination from '@/components/Pagination.vue'
+
+const PAGE_SIZE = 10
 
 const store = useExpensesStore()
 const recurringStore = useRecurringStore()
@@ -267,6 +271,16 @@ const periodExpenses = computed(() => store.expenses.filter(inPeriod))
 const sortedPeriodExpenses = computed(() =>
   [...periodExpenses.value].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 )
+
+// Paginate the table at 10/page (Pagination hides itself below that). Reset to
+// page 1 whenever the period filter changes, and clamp if the list shrinks.
+const expensesPage = ref(1)
+const totalExpensePages = computed(() => Math.max(1, Math.ceil(sortedPeriodExpenses.value.length / PAGE_SIZE)))
+const pagedExpenses = computed(() =>
+  sortedPeriodExpenses.value.slice((expensesPage.value - 1) * PAGE_SIZE, expensesPage.value * PAGE_SIZE)
+)
+watch(period, () => { expensesPage.value = 1 })
+watch(totalExpensePages, (tp) => { if (expensesPage.value > tp) expensesPage.value = tp })
 const periodTotal = computed(() => periodExpenses.value.reduce((s, e) => s + e.amount, 0) / 100)
 const allTimeTotal = computed(() => store.expenses.reduce((s, e) => s + e.amount, 0) / 100)
 

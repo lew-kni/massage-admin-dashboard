@@ -56,7 +56,7 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="e in vendor.expenses" :key="e.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
+                <tr v-for="e in pagedExpenses" :key="e.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
                   <td class="px-3 py-2 text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ formatDate(e.date) }}</td>
                   <td class="px-3 py-2"><span class="badge bg-sage-100 text-sage-800">{{ categoryLabel(e.category) }}</span></td>
                   <td class="px-3 py-2">
@@ -68,6 +68,7 @@
               </tbody>
             </table>
           </div>
+          <Pagination v-model="expensesPage" :total-pages="totalExpensePages" />
         </div>
       </div>
 
@@ -91,7 +92,7 @@
               </thead>
               <tbody>
                 <tr
-                  v-for="r in vendor.recurringExpenses ?? []"
+                  v-for="r in pagedRecurring"
                   :key="r.id"
                   class="border-b border-gray-100 dark:border-gray-800 text-sm cursor-pointer hover:bg-sage-50 dark:hover:bg-gray-800"
                   :class="{ 'opacity-60': !r.active }"
@@ -108,6 +109,7 @@
               </tbody>
             </table>
           </div>
+          <Pagination v-model="recurringPage" :total-pages="totalRecurringPages" />
         </div>
       </div>
 
@@ -119,17 +121,20 @@
         </div>
         <div class="card-body">
           <div v-if="vendor.receipts.length === 0" class="text-center text-gray-500 py-6">No receipts filed under this vendor.</div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <div
-              v-for="r in vendor.receipts"
-              :key="r.id"
-              class="card p-4 cursor-pointer hover:ring-2 hover:ring-sage-500 transition-all"
-              @click="activeReceiptId = r.id"
-            >
-              <p class="font-medium mb-1"><i :class="fileIcon(r.fileType)" class="text-gray-400 mr-1"></i>{{ r.fileName }}</p>
-              <p class="text-xs text-gray-500">{{ r.date ? formatDate(r.date) : 'No date' }}<template v-if="r.totalAmount != null"> · {{ gbp(r.totalAmount / 100) }}</template></p>
+          <template v-else>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div
+                v-for="r in pagedReceipts"
+                :key="r.id"
+                class="card p-4 cursor-pointer hover:ring-2 hover:ring-sage-500 transition-all"
+                @click="activeReceiptId = r.id"
+              >
+                <p class="font-medium mb-1"><i :class="fileIcon(r.fileType)" class="text-gray-400 mr-1"></i>{{ r.fileName }}</p>
+                <p class="text-xs text-gray-500">{{ r.date ? formatDate(r.date) : 'No date' }}<template v-if="r.totalAmount != null"> · {{ gbp(r.totalAmount / 100) }}</template></p>
+              </div>
             </div>
-          </div>
+            <Pagination v-model="receiptsPage" :total-pages="totalReceiptPages" />
+          </template>
         </div>
       </div>
     </template>
@@ -174,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { format } from 'date-fns'
 import { useVendorsStore } from '@/stores/vendors'
@@ -186,6 +191,7 @@ import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
 import RecurringExpenseFormModal from '@/components/RecurringExpenseFormModal.vue'
 import ReceiptUploadModal from '@/components/ReceiptUploadModal.vue'
 import ReceiptDetailModal from '@/components/ReceiptDetailModal.vue'
+import Pagination from '@/components/Pagination.vue'
 
 const route = useRoute()
 const store = useVendorsStore()
@@ -200,6 +206,26 @@ const editingRecurring = ref<VendorDetail['recurringExpenses'][number] | null>(n
 const showReceiptUpload = ref(false)
 const activeReceiptId = ref<string | null>(null)
 
+// Each of the three lists paginates independently at 10/page (Pagination hides
+// itself below that). Pages reset when a different vendor loads.
+const PAGE_SIZE = 10
+const expensesPage = ref(1)
+const recurringPage = ref(1)
+const receiptsPage = ref(1)
+
+const totalExpensePages = computed(() => Math.max(1, Math.ceil((vendor.value?.expenses.length ?? 0) / PAGE_SIZE)))
+const totalRecurringPages = computed(() => Math.max(1, Math.ceil((vendor.value?.recurringExpenses?.length ?? 0) / PAGE_SIZE)))
+const totalReceiptPages = computed(() => Math.max(1, Math.ceil((vendor.value?.receipts.length ?? 0) / PAGE_SIZE)))
+
+const pagedExpenses = computed(() => (vendor.value?.expenses ?? []).slice((expensesPage.value - 1) * PAGE_SIZE, expensesPage.value * PAGE_SIZE))
+const pagedRecurring = computed(() => (vendor.value?.recurringExpenses ?? []).slice((recurringPage.value - 1) * PAGE_SIZE, recurringPage.value * PAGE_SIZE))
+const pagedReceipts = computed(() => (vendor.value?.receipts ?? []).slice((receiptsPage.value - 1) * PAGE_SIZE, receiptsPage.value * PAGE_SIZE))
+
+// A refreshed list can shrink (e.g. after a delete) — keep the page in range.
+watch(totalExpensePages, (tp) => { if (expensesPage.value > tp) expensesPage.value = tp })
+watch(totalRecurringPages, (tp) => { if (recurringPage.value > tp) recurringPage.value = tp })
+watch(totalReceiptPages, (tp) => { if (receiptsPage.value > tp) receiptsPage.value = tp })
+
 const gbp = (n: number) => '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 function formatDate(date: string): string {
   return format(toLondonFakeLocalDate(date), 'dd MMM yyyy')
@@ -213,6 +239,9 @@ async function load() {
   error.value = ''
   try {
     vendor.value = await store.getVendor(route.params.id as string)
+    expensesPage.value = 1
+    recurringPage.value = 1
+    receiptsPage.value = 1
   } catch (err: any) {
     error.value = err?.response?.data?.error || err?.message || 'Failed to load vendor'
   } finally {
