@@ -401,9 +401,9 @@
                 class="text-xs p-1 rounded cursor-pointer hover:opacity-80 transition truncate"
                 :class="getBookingBg(booking.status)"
                 @click="editBooking(booking)"
-                :title="booking.client.firstName + ' - ' + booking.service"
+                :title="formatBookingClock(booking) + ' ' + booking.client.firstName + ' - ' + booking.service"
               >
-                {{ booking.client.firstName }}
+                <span class="font-medium">{{ formatBookingClock(booking) }}</span> {{ booking.client.firstName }}
               </div>
 
               <!-- Unavailable indicators -->
@@ -779,6 +779,13 @@ function getUnavailableBlocksForDay(date: Date): UnavailableBlock[] {
     const blockEnd = new Date(b.endDate)
     return blockStart < endOfDay && blockEnd > startOfDay
   })
+}
+
+// Compact London start time for a month-grid booking chip, e.g. "4pm" / "9:30am".
+// Reads the London wall-clock time off the stored instant so it's right whoever
+// (or wherever) is viewing, then formats it compactly for the narrow cell.
+function formatBookingClock(booking: Booking): string {
+  return formatBlockClock(toLondonInputParts(booking.startTime).time)
 }
 
 // "10:00" -> "10am", "17:30" -> "5:30pm"
