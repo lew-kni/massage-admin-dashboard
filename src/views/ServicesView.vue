@@ -108,7 +108,7 @@
 
       <div v-for="promo in paginatedPromotions" :key="promo.id" class="card" :class="{ 'opacity-60': !promo.active }">
         <div class="card-body flex justify-between items-start">
-          <div>
+          <div class="cursor-pointer -m-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" @click="editPromotion(promo)">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="badge" :class="promo.active ? 'badge-success' : 'bg-gray-100 text-gray-700'">
                 {{ promo.active ? 'Active' : 'Inactive' }}
@@ -138,22 +138,14 @@
               Redeemed {{ promo.usageCount ?? 0 }}{{ promo.usageLimit ? ` of ${promo.usageLimit}` : '' }}
             </p>
             <button
-              @click="toggleBookings(promo)"
+              @click.stop="toggleBookings(promo)"
               class="mt-2 text-sm text-sage-600 hover:text-sage-700 font-medium inline-flex items-center gap-1"
             >
               <i class="fas" :class="expandedPromoId === promo.id ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
               <span>{{ promo.bookingCount ?? 0 }} booking{{ (promo.bookingCount ?? 0) === 1 ? '' : 's' }}</span>
             </button>
           </div>
-          <div class="flex gap-2 shrink-0">
-            <button @click="editPromotion(promo)" class="btn-secondary text-sm">
-              <i class="fas fa-edit"></i>
-              <span>Edit</span>
-            </button>
-            <button @click="confirmDeletePromotion(promo)" class="btn-danger text-sm">
-              <i class="fas fa-trash-alt"></i>
-            </button>
-          </div>
+          <i class="fas fa-chevron-right text-gray-300 dark:text-gray-600 mt-1 shrink-0"></i>
         </div>
 
         <!-- Bookings that used this promotion -->
