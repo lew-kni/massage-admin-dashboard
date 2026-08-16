@@ -439,12 +439,12 @@
               <span>{{ deleting ? 'Deleting...' : 'Delete Booking' }}</span>
             </button>
             <button
-              v-if="!isEditing && !booking.isPaid && booking.status !== 'CANCELLED'"
-              @click="isFreeBooking ? onMarkComplimentary() : (showPaymentModal = true)"
+              v-if="!isEditing && paymentTotals.balance > 0"
+              @click="showPaymentModal = true"
               class="btn-primary w-full text-sm bg-emerald-600 hover:bg-emerald-700"
             >
               <i class="fas fa-check-circle"></i>
-              <span>{{ isFreeBooking ? 'Mark as Complimentary' : 'Mark as Paid' }}</span>
+              <span>Record payment</span>
             </button>
           </div>
         </div>
@@ -476,18 +476,55 @@
               <p class="font-medium">{{ formatDateTime(booking.createdAt) }}</p>
             </div>
             <div class="border-t pt-4">
-              <p class="text-gray-500 mb-3">Payment Status</p>
-              <div class="flex items-center justify-between">
-                <span class="font-medium">{{ booking.paymentMethod === 'COMPLIMENTARY' ? 'Complimentary' : booking.isPaid ? 'Paid' : 'Unpaid' }}</span>
-                <div v-if="!booking.isPaid && booking.status !== 'CANCELLED'" class="flex gap-2">
-                  <button @click="isFreeBooking ? onMarkComplimentary() : (showPaymentModal = true)" class="text-sage-600 hover:text-sage-700 text-sm font-medium">
-                    <i class="fas fa-plus-circle mr-1"></i>{{ isFreeBooking ? 'Mark Complimentary' : 'Mark Paid' }}
-                  </button>
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-gray-500">Payments</p>
+                <span :class="['badge', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">
+                  {{ paymentStatusLabel(paymentTotals.paymentStatus) }}
+                </span>
+              </div>
+
+              <!-- Charges + balance -->
+              <div class="text-sm space-y-1">
+                <div v-if="paymentTotals.grossTotal !== paymentTotals.total" class="flex items-center justify-between text-gray-500">
+                  <span>Gross</span><span class="line-through">£{{ paymentTotals.grossTotal }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">Total due</span><span class="font-medium">£{{ paymentTotals.total }}</span>
+                </div>
+                <div v-if="paymentTotals.amountPaid" class="flex items-center justify-between">
+                  <span class="text-gray-600">Paid</span><span class="font-medium">£{{ paymentTotals.amountPaid }}</span>
+                </div>
+                <div v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'" class="flex items-center justify-between">
+                  <span class="text-gray-600">Balance</span>
+                  <span class="font-medium" :class="paymentTotals.balance > 0 ? 'text-red-600' : 'text-green-600'">£{{ paymentTotals.balance }}</span>
                 </div>
               </div>
-              <div v-if="booking.isPaid && booking.paymentMethod && booking.paymentMethod !== 'COMPLIMENTARY'" class="text-sm mt-2">
-                <p class="text-gray-600">Method: <span class="font-medium">{{ booking.paymentMethod }}</span></p>
-              </div>
+
+              <!-- Payment lines -->
+              <ul v-if="booking.payments && booking.payments.length" class="mt-3 space-y-2 border-t pt-3">
+                <li v-for="p in booking.payments" :key="p.id" class="flex items-start justify-between text-sm gap-2">
+                  <span>
+                    <span class="font-medium">£{{ p.amount }}</span>
+                    · {{ paymentMethodLabel(p.method) }}
+                    · {{ formatDate(p.receivedAt) }}
+                    <span v-if="p.note" class="text-gray-500">— {{ p.note }}</span>
+                  </span>
+                  <button @click="removePayment(p.id)" :disabled="savingPayment" class="text-red-500 hover:text-red-700 text-xs shrink-0" title="Remove payment">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </li>
+              </ul>
+
+              <!-- Record -->
+              <button
+                v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'"
+                @click="showPaymentModal = true"
+                class="mt-3 text-sage-600 hover:text-sage-700 text-sm font-medium"
+              >
+                <i class="fas fa-plus-circle mr-1"></i>Record payment
+              </button>
+
+              <div v-if="paymentError" class="mt-2 text-sm text-red-600">{{ paymentError }}</div>
             </div>
           </div>
         </div>
@@ -512,11 +549,12 @@
       @close="showSendEmail = false"
     />
 
-    <PaymentMethodModal
+    <RecordPaymentModal
       v-if="showPaymentModal"
       :saving="savingPayment"
+      :suggested-amount="paymentTotals.balance"
       @close="showPaymentModal = false"
-      @confirm="confirmPaymentMethod"
+      @confirm="recordPayment"
     />
 
     <CancelBookingModal
@@ -536,13 +574,14 @@ import { useBookingsStore } from '@/stores/bookings'
 import { useSettingsStore } from '@/stores/settings'
 import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
-import type { Booking, IntakeForm, BookingAssessment } from '@/types'
+import type { Booking, IntakeForm, BookingAssessment, PaymentMethod } from '@/types'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toLondonInputParts, londonWallTimeToUtc, toLondonFakeLocalDate } from '@/utils/formatLondon'
 import { bookingTotal } from '@/utils/bookingTotal'
+import { computeBookingTotals, paymentMethodLabel, paymentStatusLabel } from '@/utils/bookingTotals'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
-import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
+import RecordPaymentModal from '@/components/RecordPaymentModal.vue'
 import CancelBookingModal from '@/components/CancelBookingModal.vue'
 import BodyDiagramView from '@/components/BodyDiagramView.vue'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
@@ -576,16 +615,6 @@ const hasActiveDiscount = computed(() => {
   return b.discountedPrice !== null && b.discountedPrice !== undefined && b.discountedPrice !== b.price
 })
 
-// A discount (or a £0 list price) that brings the booking to £0 — no money
-// to collect, so payment status skips the Cash/BACS choice entirely.
-const isFreeBooking = computed(() => {
-  const b = booking.value
-  if (!b) return false
-  // A discount (or £0 list price) that brings the booking to £0 — but an extra
-  // charge (e.g. travel) means there's still money to collect.
-  if (b.discountedPrice == null && b.price == null) return false
-  return bookingTotal(b) === 0
-})
 
 // Therapist's pre-massage assessment — summary only; the form lives on its own
 // page. Used here to show status and pick the right button label.
@@ -688,13 +717,18 @@ async function onCopyLink() {
     preformError.value = err?.response?.data?.error || 'Failed to copy the link'
   }
 }
-const editingPayment = ref(false)
 const savingPayment = ref(false)
 const paymentError = ref('')
-const editingPaymentForm = reactive({
-  isPaid: false,
-  paymentMethod: '' as 'CASH' | 'BACS' | '',
-})
+
+// Derived money view (gross/total/balance/status) for the Payments panel.
+const paymentTotals = computed(() => computeBookingTotals(booking.value ?? ({} as Booking)))
+
+function paymentStatusBadgeClass(status: string): string {
+  if (status === 'PAID') return 'bg-green-100 text-green-800'
+  if (status === 'PART_PAID') return 'bg-yellow-100 text-yellow-800'
+  if (status === 'COMPLIMENTARY') return 'bg-purple-100 text-purple-800'
+  return 'bg-red-100 text-red-800' // DUE
+}
 
 // Clears whatever pricing adjustment is on the booking -- a stored promotion
 // or a one-off manual discount both revert via the same endpoint.
@@ -816,7 +850,6 @@ onMounted(async () => {
   const bookingId = route.params.id as string
   booking.value = bookingsStore.bookings.find(b => b.id === bookingId) || null
   initEditForm()
-  initPaymentForm()
   await loadIntake()
   await loadAssessment()
   if (servicesStore.promotions.length === 0) servicesStore.fetchPromotions()
@@ -936,49 +969,29 @@ function isBookingPast(b: Booking | null): boolean {
   return new Date(b.startTime) <= new Date()
 }
 
-function initPaymentForm() {
-  if (!booking.value) return
-  editingPaymentForm.isPaid = booking.value.isPaid || false
-  editingPaymentForm.paymentMethod = (booking.value.paymentMethod as any) || ''
-}
-
-async function savePaymentStatus() {
+async function recordPayment(payload: { amount: number; method: PaymentMethod; receivedAt: string; feeAmount: number | null; note: string | null }) {
   if (!booking.value) return
   savingPayment.value = true
   paymentError.value = ''
   try {
-    const updated = await bookingsStore.updateBooking(booking.value.id, {
-      isPaid: editingPaymentForm.isPaid,
-      paymentMethod: editingPaymentForm.isPaid ? (editingPaymentForm.paymentMethod as 'CASH' | 'BACS') : null,
-    } as Partial<Booking>)
-    booking.value = updated
-    editingPayment.value = false
+    booking.value = await bookingsStore.addPayment(booking.value.id, payload)
+    showPaymentModal.value = false
   } catch (err: any) {
-    paymentError.value = err?.message || 'Failed to save payment status'
+    paymentError.value = err?.message || 'Failed to record payment'
   } finally {
     savingPayment.value = false
   }
 }
 
-function cancelPaymentEdit() {
-  editingPayment.value = false
-  initPaymentForm()
-  paymentError.value = ''
-}
-
-async function confirmPaymentMethod(method: 'CASH' | 'BACS') {
+async function removePayment(paymentId: string) {
   if (!booking.value) return
+  if (!confirm('Remove this payment?')) return
   savingPayment.value = true
   paymentError.value = ''
   try {
-    const updated = await bookingsStore.updateBooking(booking.value.id, {
-      isPaid: true,
-      paymentMethod: method,
-    } as Partial<Booking>)
-    booking.value = updated
-    showPaymentModal.value = false
+    booking.value = await bookingsStore.deletePayment(booking.value.id, paymentId)
   } catch (err: any) {
-    paymentError.value = err?.message || 'Failed to save payment status'
+    paymentError.value = err?.message || 'Failed to remove payment'
   } finally {
     savingPayment.value = false
   }
@@ -1018,22 +1031,4 @@ async function onDeleteBooking() {
   }
 }
 
-// £0 bookings skip the Cash/BACS modal entirely -- there's no payment to
-// reconcile a method for.
-async function onMarkComplimentary() {
-  if (!booking.value) return
-  savingPayment.value = true
-  paymentError.value = ''
-  try {
-    const updated = await bookingsStore.updateBooking(booking.value.id, {
-      isPaid: true,
-      paymentMethod: 'COMPLIMENTARY',
-    } as Partial<Booking>)
-    booking.value = updated
-  } catch (err: any) {
-    paymentError.value = err?.message || 'Failed to mark as complimentary'
-  } finally {
-    savingPayment.value = false
-  }
-}
 </script>

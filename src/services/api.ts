@@ -26,6 +26,7 @@ import type {
   MonthRef,
   Document,
   DocumentType,
+  PaymentMethod,
 } from '@/types'
 
 class ApiService {
@@ -155,6 +156,21 @@ class ApiService {
 
   async deleteBooking(id: string): Promise<void> {
     await this.client.delete(`/api/bookings/${id}`)
+  }
+
+  // Record a payment against a booking; returns the booking with recomputed
+  // payments + amountPaid/paymentStatus.
+  async addPayment(
+    bookingId: string,
+    payload: { amount: number; method: PaymentMethod; receivedAt: string; feeAmount?: number | null; note?: string | null },
+  ): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${bookingId}/payments`, payload)
+    return data
+  }
+
+  async deletePayment(bookingId: string, paymentId: string): Promise<Booking> {
+    const { data } = await this.client.delete(`/api/bookings/${bookingId}/payments/${paymentId}`)
+    return data
   }
 
   // Revoke the applied promotion from a booking (reverts to full list price)

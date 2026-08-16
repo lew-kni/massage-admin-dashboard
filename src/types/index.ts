@@ -87,12 +87,31 @@ export interface Booking {
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null
   preFormCompletedAt?: string | null
+  // DEPRECATED (payments redesign): superseded by payments[] + amountPaid/
+  // paymentStatus. Kept during the migration window.
   isPaid?: boolean | null
-  // COMPLIMENTARY: a fully-discounted (£0) booking marked settled with no
-  // payment method, since none was collected.
   paymentMethod?: 'CASH' | 'BACS' | 'COMPLIMENTARY' | null
+  // Payments received against this booking (first-class rows), plus the derived
+  // cache. Totals (gross/total/balance) are computed via utils/bookingTotals.
+  payments?: Payment[]
+  amountPaid?: number
+  paymentStatus?: PaymentStatus
   createdAt: string
   updatedAt: string
+}
+
+export type PaymentMethod = 'CASH' | 'BACS' | 'CARD' | 'VOUCHER' | 'OTHER'
+export type PaymentStatus = 'DUE' | 'PART_PAID' | 'PAID' | 'COMPLIMENTARY'
+
+export interface Payment {
+  id: string
+  bookingId: string
+  amount: number       // whole GBP; positive = received, negative = refund
+  method: PaymentMethod
+  receivedAt: string
+  feeAmount?: number | null  // card terminal fee (CARD only)
+  note?: string | null
+  createdAt: string
 }
 
 // Pre-visit intake form

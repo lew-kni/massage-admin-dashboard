@@ -156,6 +156,35 @@ export const useBookingsStore = defineStore('bookings', () => {
     }
   }
 
+  async function addPayment(
+    id: string,
+    payload: { amount: number; method: import('@/types').PaymentMethod; receivedAt: string; feeAmount?: number | null; note?: string | null },
+  ) {
+    error.value = null
+    try {
+      const updated = await apiService.addPayment(id, payload)
+      const index = bookings.value.findIndex(b => b.id === id)
+      if (index !== -1) bookings.value[index] = updated
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to record payment'
+      throw err
+    }
+  }
+
+  async function deletePayment(id: string, paymentId: string) {
+    error.value = null
+    try {
+      const updated = await apiService.deletePayment(id, paymentId)
+      const index = bookings.value.findIndex(b => b.id === id)
+      if (index !== -1) bookings.value[index] = updated
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to remove payment'
+      throw err
+    }
+  }
+
   async function deleteBooking(id: string) {
     loading.value = true
     error.value = null
@@ -183,6 +212,8 @@ export const useBookingsStore = defineStore('bookings', () => {
     applyDiscount,
     cancelBooking,
     rejectBooking,
+    addPayment,
+    deletePayment,
     deleteBooking,
   }
 })
