@@ -32,6 +32,8 @@ const iconMap: Record<string, string> = {
   Calendar: 'fas fa-calendar-days',
   TrendingUp: 'fas fa-chart-line',
   AlertCircle: 'fas fa-triangle-exclamation',
+  Cash: 'fas fa-hand-holding-dollar',
+  Rebook: 'fas fa-user-clock',
 }
 
 const displayIcon = computed(() => iconMap[props.icon] || 'fas fa-chart-simple')

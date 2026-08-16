@@ -6,11 +6,13 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+      <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" :to="`/bookings?status=PENDING`" />
+      <StatCard label="Owed to You" :value="`£${owedToYou}`" icon="Cash" to="/accounting" />
+      <StatCard label="Due to Rebook" :value="toContactCount" icon="Rebook" to="/rebooking" />
       <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" :to="`/bookings?status=CONFIRMED`" />
       <StatCard label="Collected This Month" :value="`£${monthlyRevenue}`" icon="TrendingUp" />
-      <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" :to="`/bookings?status=PENDING`" />
+      <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
     </div>
 
     <!-- Recent Activity -->
@@ -107,7 +109,8 @@ import { useClientsStore } from '@/stores/clients'
 import { useBookingsStore } from '@/stores/bookings'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import { sumPaymentsInRange } from '@/utils/bookingTotals'
+import { sumPaymentsInRange, outstandingBalance } from '@/utils/bookingTotals'
+import { computeRebooking } from '@/utils/rebooking'
 import StatCard from '@/components/StatCard.vue'
 
 const clientsStore = useClientsStore()
@@ -131,6 +134,15 @@ const upcomingBookingsCount = computed(() => {
 const pendingCount = computed(() =>
   bookings.value.filter((b) => b.status === 'PENDING').length
 )
+// Money owed from sessions already delivered (confirmed + past, balance > 0).
+const owedToYou = computed(() => {
+  const now = Date.now()
+  return bookings.value
+    .filter((b) => b.status === 'CONFIRMED' && new Date(b.startTime).getTime() <= now && outstandingBalance(b) > 0)
+    .reduce((s, b) => s + outstandingBalance(b), 0)
+})
+// Clients with no upcoming booking who are past their usual gap — to chase.
+const toContactCount = computed(() => computeRebooking(bookings.value).toContact.length)
 const monthlyRevenue = computed(() => {
   // Money actually received this month (cash basis), dated by when each payment
   // landed — matches the Accounting "Collected" figure. Compared as London

@@ -100,105 +100,20 @@ import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
+import { computeRebooking, overdueBy } from '@/utils/rebooking'
 import Pagination from '@/components/Pagination.vue'
 
 const bookingsStore = useBookingsStore()
 
-const DAY = 86400000
-// Fallback rebooking gap for clients with fewer than two visits (so a lone
-// first-timer who never rebooked still surfaces as "due" after ~4 weeks).
-const DEFAULT_INTERVAL = 28
-const now = Date.now()
-
-type RebookStatus = 'new' | 'booked' | 'recent' | 'due' | 'lapsed'
-interface ClientRebook {
-  clientId: string
-  name: string
-  email?: string | null
-  lastVisit: string | null
-  visitCount: number
-  intervalDays: number | null
-  daysSinceLast: number | null
-  status: RebookStatus
-}
-
-// Per-client retention picture, derived from non-cancelled bookings grouped by
-// client. A client is "due" once they're past their usual gap with nothing
-// booked, and "lapsed" past twice that gap.
-const clients = computed<ClientRebook[]>(() => {
-  const byClient = new Map<string, typeof bookingsStore.bookings>()
-  for (const b of bookingsStore.bookings) {
-    if (b.status === 'CANCELLED' || !b.clientId) continue
-    const arr = byClient.get(b.clientId) ?? []
-    arr.push(b)
-    byClient.set(b.clientId, arr)
-  }
-
-  const out: ClientRebook[] = []
-  for (const [clientId, bs] of byClient) {
-    const sorted = bs.slice().sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-    const past = sorted.filter((b) => new Date(b.startTime).getTime() <= now)
-    const hasUpcoming = sorted.some((b) => new Date(b.startTime).getTime() > now)
-    const client = sorted[sorted.length - 1].client
-    const lastVisit = past.length ? past[past.length - 1].startTime : null
-
-    let intervalDays: number | null = null
-    if (past.length >= 2) {
-      let totalGap = 0
-      for (let i = 1; i < past.length; i++) {
-        totalGap += (new Date(past[i].startTime).getTime() - new Date(past[i - 1].startTime).getTime()) / DAY
-      }
-      intervalDays = Math.round(totalGap / (past.length - 1))
-    }
-
-    const daysSinceLast = lastVisit ? Math.floor((now - new Date(lastVisit).getTime()) / DAY) : null
-    const effInterval = intervalDays ?? DEFAULT_INTERVAL
-
-    let status: RebookStatus
-    if (!lastVisit) status = 'new'
-    else if (hasUpcoming) status = 'booked'
-    else if (daysSinceLast! > 2 * effInterval) status = 'lapsed'
-    else if (daysSinceLast! >= effInterval) status = 'due'
-    else status = 'recent'
-
-    out.push({
-      clientId,
-      name: `${client?.firstName ?? ''} ${client?.lastName ?? ''}`.trim() || 'Unknown',
-      email: client?.email,
-      lastVisit,
-      visitCount: past.length,
-      intervalDays,
-      daysSinceLast,
-      status,
-    })
-  }
-  return out
-})
-
-function overdueBy(c: ClientRebook): number {
-  const eff = c.intervalDays ?? DEFAULT_INTERVAL
-  return Math.max(0, (c.daysSinceLast ?? 0) - eff)
-}
-
-// A client still "in the cycle" — anyone not lapsed (booked, recently seen, due,
-// or a new first booking). This is the number that climbs toward your capacity.
-const activeCount = computed(() => clients.value.filter((c) => c.status !== 'lapsed').length)
-const dueCount = computed(() => clients.value.filter((c) => c.status === 'due').length)
-const lapsedCount = computed(() => clients.value.filter((c) => c.status === 'lapsed').length)
-
-const avgIntervalWeeks = computed(() => {
-  const withInterval = clients.value.filter((c) => c.intervalDays != null)
-  if (!withInterval.length) return null
-  const avgDays = withInterval.reduce((s, c) => s + (c.intervalDays as number), 0) / withInterval.length
-  return avgDays / 7
-})
-
+// All retention maths lives in the shared util so this page and the Dashboard
+// tile stay in lockstep.
+const summary = computed(() => computeRebooking(bookingsStore.bookings))
+const activeCount = computed(() => summary.value.activeCount)
+const dueCount = computed(() => summary.value.dueCount)
+const lapsedCount = computed(() => summary.value.lapsedCount)
+const avgIntervalWeeks = computed(() => summary.value.avgIntervalWeeks)
 // Actionable list: due + lapsed, most overdue first.
-const dueList = computed(() =>
-  clients.value
-    .filter((c) => c.status === 'due' || c.status === 'lapsed')
-    .sort((a, b) => overdueBy(b) - overdueBy(a)),
-)
+const dueList = computed(() => summary.value.toContact)
 
 const PAGE_SIZE = 15
 const duePage = ref(1)
