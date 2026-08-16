@@ -30,9 +30,9 @@
               <button
                 @click="$emit('edit', booking)"
                 class="text-sage-600 hover:text-sage-700 font-semibold hover:underline cursor-pointer"
-                :title="`Click to view booking #${booking.bookingNumber}`"
+                :title="`Click to view booking NPM-${booking.bookingNumber}`"
               >
-                #{{ booking.bookingNumber }}
+                NPM-{{ booking.bookingNumber }}
               </button>
             </td>
             <td class="px-4 py-3 text-sm">

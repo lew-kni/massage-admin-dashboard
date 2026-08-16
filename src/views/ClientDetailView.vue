@@ -230,7 +230,7 @@
                 <div class="flex justify-between items-start">
                   <div>
                     <p class="font-medium group-hover:text-sage-600">
-                      #{{ booking.bookingNumber }} · {{ formatDateTime(booking.startTime) }}
+                      NPM-{{ booking.bookingNumber }} · {{ formatDateTime(booking.startTime) }}
                     </p>
                     <p class="text-sm text-gray-500">
                       Duration: {{ calculateDuration(booking.startTime, booking.endTime) }} minutes

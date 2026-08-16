@@ -25,7 +25,7 @@
           <p class="text-gray-500 mt-1">
             <span class="font-medium text-gray-700 dark:text-gray-300">{{ clientName }}</span>
             <span v-if="appointmentLabel"> · {{ appointmentLabel }}</span>
-            · Booking #{{ booking.bookingNumber }}
+            · NPM-{{ booking.bookingNumber }}
           </p>
         </div>
 

@@ -8,7 +8,7 @@
     <div class="absolute inset-y-0 right-0 w-full md:w-96 bg-white dark:bg-gray-900 shadow-lg overflow-y-auto animate-slideIn">
     <!-- Header -->
     <div class="sticky top-0 bg-gray-50 dark:bg-gray-800 border-b dark:border-gray-700 p-4 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-50">Booking #{{ booking.bookingNumber }}</h2>
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-50">NPM-{{ booking.bookingNumber }}</h2>
       <button @click="closePanel" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl">
         <i class="fas fa-xmark"></i>
       </button>

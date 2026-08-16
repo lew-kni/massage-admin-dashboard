@@ -50,7 +50,7 @@
             <p class="text-xs text-gray-500">
               <span class="badge bg-sage-100 text-sage-800 mr-1">{{ docTypeLabel(doc.docType) }}</span>
               {{ formatSize(doc.fileSize) }} · {{ formatDate(doc.uploadedAt) }}
-              <span v-if="showBookingTag && doc.booking"> · booking #{{ doc.booking.bookingNumber }}</span>
+              <span v-if="showBookingTag && doc.booking"> · booking NPM-{{ doc.booking.bookingNumber }}</span>
             </p>
           </div>
           <button @click="view(doc)" class="text-sage-600 hover:text-sage-700 text-sm" title="View / download">

@@ -162,7 +162,7 @@
           <ul v-else class="divide-y divide-gray-100 dark:divide-gray-800">
             <li v-for="b in promoBookings" :key="b.id" class="py-2 flex items-center justify-between text-sm">
               <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium">
-                #{{ b.bookingNumber }}
+                NPM-{{ b.bookingNumber }}
                 <span class="text-gray-500 font-normal">
                   · {{ b.client ? `${b.client.firstName} ${b.client.lastName}` : 'Unknown client' }}
                   · {{ formatBookingDate(b.startTime) }}
