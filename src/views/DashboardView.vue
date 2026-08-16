@@ -6,10 +6,11 @@
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
       <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" :to="`/bookings?status=PENDING`" />
-      <StatCard label="Owed to You" :value="`£${owedToYou}`" icon="Cash" to="/accounting" />
+      <StatCard label="Outstanding Payments" :value="`£${owedToYou}`" icon="Cash" to="/accounting" :value-color="owedToYou > 0 ? 'text-red-600' : 'text-green-600'" />
       <StatCard label="Due to Rebook" :value="toContactCount" icon="Rebook" to="/rebooking" />
+      <StatCard label="Forms Outstanding" :value="formsOutstanding" icon="Form" :to="`/bookings?status=CONFIRMED`" />
       <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" :to="`/bookings?status=CONFIRMED`" />
       <StatCard label="Collected This Month" :value="`£${monthlyRevenue}`" icon="TrendingUp" />
       <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
@@ -143,6 +144,13 @@ const owedToYou = computed(() => {
 })
 // Clients with no upcoming booking who are past their usual gap — to chase.
 const toContactCount = computed(() => computeRebooking(bookings.value).toContact.length)
+// Upcoming confirmed sessions whose pre-visit form isn't completed yet.
+const formsOutstanding = computed(() => {
+  const now = Date.now()
+  return bookings.value.filter(
+    (b) => b.status === 'CONFIRMED' && new Date(b.startTime).getTime() > now && b.preFormStatus !== 'COMPLETED',
+  ).length
+})
 const monthlyRevenue = computed(() => {
   // Money actually received this month (cash basis), dated by when each payment
   // landed — matches the Accounting "Collected" figure. Compared as London

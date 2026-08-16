@@ -8,7 +8,7 @@
     <div class="flex items-center justify-between">
       <div>
         <p class="text-gray-600 text-sm font-medium">{{ label }}</p>
-        <p class="text-3xl font-bold text-gray-900 mt-2">{{ value }}</p>
+        <p class="text-3xl font-bold mt-2" :class="valueColor || 'text-gray-900'">{{ value }}</p>
       </div>
       <div class="bg-sage-100 rounded-lg p-3 text-sage-600 text-2xl">
         <i :class="displayIcon"></i>
@@ -25,6 +25,7 @@ const props = defineProps<{
   value: string | number
   icon: string
   to?: string
+  valueColor?: string
 }>()
 
 const iconMap: Record<string, string> = {
@@ -34,6 +35,7 @@ const iconMap: Record<string, string> = {
   AlertCircle: 'fas fa-triangle-exclamation',
   Cash: 'fas fa-hand-holding-dollar',
   Rebook: 'fas fa-user-clock',
+  Form: 'fas fa-clipboard-list',
 }
 
 const displayIcon = computed(() => iconMap[props.icon] || 'fas fa-chart-simple')
