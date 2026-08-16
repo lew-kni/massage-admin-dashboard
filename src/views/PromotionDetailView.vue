@@ -4,134 +4,187 @@
       <RouterLink to="/settings/services?tab=promotions" class="text-sage-600 hover:text-sage-700 dark:text-sage-400">
         <i class="fas fa-arrow-left mr-1"></i>Back to Promotions
       </RouterLink>
-      <button v-if="id" @click="onDelete" :disabled="saving" class="btn-danger text-sm">
-        <i class="fas fa-trash-alt mr-1"></i>Delete
-      </button>
+      <div class="flex gap-2">
+        <template v-if="isEditing">
+          <button v-if="id" @click="cancelEdit" class="btn-secondary text-sm">Cancel</button>
+          <button @click="save" :disabled="saving" class="btn-primary text-sm">{{ saving ? 'Saving…' : (id ? 'Save changes' : 'Create') }}</button>
+        </template>
+        <template v-else>
+          <button @click="isEditing = true" class="btn-secondary text-sm"><i class="fas fa-edit mr-1"></i>Edit</button>
+          <button @click="onDelete" :disabled="saving" class="btn-danger text-sm"><i class="fas fa-trash-alt mr-1"></i>Delete</button>
+        </template>
+      </div>
     </div>
 
-    <h1 class="text-2xl font-bold mb-6">{{ title }}</h1>
+    <div class="flex items-center gap-3 mb-6">
+      <h1 class="text-2xl font-bold">{{ title }}</h1>
+      <span v-if="id" class="badge" :class="form.active ? 'badge-success' : 'bg-gray-100 text-gray-700'">{{ form.active ? 'Active' : 'Inactive' }}</span>
+    </div>
 
     <div v-if="loading" class="text-gray-500">Loading…</div>
 
-    <form v-else @submit.prevent="save" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 space-y-6">
-        <!-- Basics -->
-        <div class="card">
-          <div class="card-header"><h2 class="text-lg font-semibold">Details</h2></div>
-          <div class="card-body space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-              <div class="grid grid-cols-2 gap-2 max-w-sm">
-                <button v-for="opt in kindOptions" :key="opt.value" type="button" @click="form.kind = opt.value"
-                  :class="['px-3 py-2 rounded border text-sm font-medium', form.kind === opt.value ? 'border-sage-500 bg-sage-50 dark:bg-gray-800 text-sage-700 dark:text-sage-300' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400']">
-                  <i class="fas mr-1" :class="opt.icon"></i>{{ opt.label }}
-                </button>
-              </div>
-              <p class="text-xs text-gray-400 mt-1">{{ isVoucher ? 'Redeemed with a code the customer types in — never advertised.' : 'Applied automatically to matching bookings, and shown on the site.' }}</p>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ isVoucher ? 'Text shown once applied' : 'Message' }} <span class="text-red-600">*</span></label>
-              <input v-model="form.message" type="text" class="input-field" required :placeholder="isVoucher ? 'e.g. £10 off — welcome back!' : 'e.g. 50% off Sports Massage sessions!'" />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount <span class="text-red-600">*</span></label>
-              <div class="flex gap-2 max-w-sm">
-                <div class="inline-flex rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
-                  <button type="button" @click="form.discountType = 'PERCENT'" :class="['px-3 py-2 text-sm font-medium', form.discountType === 'PERCENT' ? 'bg-sage-500 text-white' : 'text-gray-600 dark:text-gray-400']">%</button>
-                  <button type="button" @click="form.discountType = 'FIXED'" :class="['px-3 py-2 text-sm font-medium', form.discountType === 'FIXED' ? 'bg-sage-500 text-white' : 'text-gray-600 dark:text-gray-400']">£</button>
+        <!-- ============ VIEW MODE ============ -->
+        <template v-if="!isEditing">
+          <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">Details</h2></div>
+            <div class="card-body">
+              <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div>
+                  <dt class="text-gray-500">Type</dt>
+                  <dd class="font-medium">{{ isVoucher ? 'Voucher' : 'Promotion' }}</dd>
                 </div>
-                <div class="relative flex-1">
-                  <span v-if="form.discountType === 'FIXED'" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">£</span>
-                  <input v-model.number="form.value" type="number" min="0" :max="form.discountType === 'PERCENT' ? 100 : undefined" class="input-field" :class="{ 'pl-7': form.discountType === 'FIXED' }" required />
-                  <span v-if="form.discountType === 'PERCENT'" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
+                <div>
+                  <dt class="text-gray-500">Discount</dt>
+                  <dd class="font-medium">{{ discountText }}</dd>
+                </div>
+                <div class="sm:col-span-2">
+                  <dt class="text-gray-500">{{ isVoucher ? 'Text shown once applied' : 'Message' }}</dt>
+                  <dd class="font-medium">{{ form.message }}</dd>
+                </div>
+                <div>
+                  <dt class="text-gray-500">First booking only</dt>
+                  <dd class="font-medium">{{ form.firstBookingOnly ? 'Yes' : 'No' }}</dd>
+                </div>
+                <div v-if="isVoucher && form.expiresAt">
+                  <dt class="text-gray-500">Expires</dt>
+                  <dd class="font-medium">{{ form.expiresAt }}</dd>
+                </div>
+                <div class="sm:col-span-2">
+                  <dt class="text-gray-500">Applies to</dt>
+                  <dd class="font-medium">{{ appliesToText }}</dd>
+                </div>
+                <div v-if="!isVoucher && form.displayAsBanner">
+                  <dt class="text-gray-500">Banner</dt>
+                  <dd class="font-medium">Shown sitewide</dd>
+                </div>
+                <div v-if="!isVoucher && form.internal">
+                  <dt class="text-gray-500">Visibility</dt>
+                  <dd class="font-medium">Internal only</dd>
+                </div>
+              </dl>
+              <div v-if="!isVoucher && detailsText.trim()" class="mt-4 pt-4 border-t dark:border-gray-700">
+                <p class="text-gray-500 text-sm mb-1">"More info" content</p>
+                <p class="text-sm whitespace-pre-wrap">{{ detailsText }}</p>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ============ EDIT MODE ============ -->
+        <template v-else>
+          <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">Details</h2></div>
+            <div class="card-body space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                <div class="grid grid-cols-2 gap-2 max-w-sm">
+                  <button v-for="opt in kindOptions" :key="opt.value" type="button" @click="form.kind = opt.value"
+                    :class="['px-3 py-2 rounded border text-sm font-medium', form.kind === opt.value ? 'border-sage-500 bg-sage-50 dark:bg-gray-800 text-sage-700 dark:text-sage-300' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400']">
+                    <i class="fas mr-1" :class="opt.icon"></i>{{ opt.label }}
+                  </button>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">{{ isVoucher ? 'Redeemed with a code the customer types in — never advertised.' : 'Applied automatically to matching bookings, and shown on the site.' }}</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ isVoucher ? 'Text shown once applied' : 'Message' }} <span class="text-red-600">*</span></label>
+                <input v-model="form.message" type="text" class="input-field" required :placeholder="isVoucher ? 'e.g. £10 off — welcome back!' : 'e.g. 50% off Sports Massage sessions!'" />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Discount <span class="text-red-600">*</span></label>
+                <div class="flex gap-2 max-w-sm">
+                  <div class="inline-flex rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <button type="button" @click="form.discountType = 'PERCENT'" :class="['px-3 py-2 text-sm font-medium', form.discountType === 'PERCENT' ? 'bg-sage-500 text-white' : 'text-gray-600 dark:text-gray-400']">%</button>
+                    <button type="button" @click="form.discountType = 'FIXED'" :class="['px-3 py-2 text-sm font-medium', form.discountType === 'FIXED' ? 'bg-sage-500 text-white' : 'text-gray-600 dark:text-gray-400']">£</button>
+                  </div>
+                  <div class="relative flex-1">
+                    <span v-if="form.discountType === 'FIXED'" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">£</span>
+                    <input v-model.number="form.value" type="number" min="0" :max="form.discountType === 'PERCENT' ? 100 : undefined" class="input-field" :class="{ 'pl-7': form.discountType === 'FIXED' }" required />
+                    <span v-if="form.discountType === 'PERCENT'" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
+                  </div>
+                </div>
+              </div>
+
+              <label class="flex items-start gap-2 text-sm pt-2 border-t dark:border-gray-700">
+                <input v-model="form.firstBookingOnly" type="checkbox" class="w-4 h-4 mt-0.5" />
+                <span>
+                  First booking only
+                  <span class="block text-xs text-gray-500 font-normal">Only applies to a client with no previous confirmed booking (matched by email or phone). Ideal for a "£10 off your first booking" flyer.</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">Applies to</h2></div>
+            <div class="card-body space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Services</label>
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2 text-sm"><input type="radio" value="all" v-model="scope" /> All services</label>
+                  <label class="flex items-center gap-2 text-sm"><input type="radio" value="specific" v-model="scope" /> Specific services</label>
+                </div>
+                <div v-if="scope === 'specific'" class="mt-2 pl-6 space-y-1">
+                  <label v-for="s in store.services" :key="s.id" class="flex items-center gap-2 text-sm"><input type="checkbox" :value="s.slug" v-model="selectedSlugs" /> {{ s.name }}</label>
+                  <p v-if="store.services.length === 0" class="text-xs text-gray-400">No services available</p>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Durations</label>
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2 text-sm"><input type="radio" value="all" v-model="durationScope" /> All durations</label>
+                  <label class="flex items-center gap-2 text-sm"><input type="radio" value="specific" v-model="durationScope" /> Specific durations</label>
+                </div>
+                <div v-if="durationScope === 'specific'" class="mt-2 pl-6 flex flex-wrap gap-3">
+                  <label v-for="m in allDurations" :key="m" class="flex items-center gap-2 text-sm"><input type="checkbox" :value="m" v-model="selectedMinutes" /> {{ m }} min</label>
                 </div>
               </div>
             </div>
-
-            <label class="flex items-start gap-2 text-sm pt-2 border-t dark:border-gray-700">
-              <input v-model="form.firstBookingOnly" type="checkbox" class="w-4 h-4 mt-0.5" />
-              <span>
-                First booking only
-                <span class="block text-xs text-gray-500 font-normal">Only applies to a client with no previous confirmed booking (matched by email or phone). Ideal for a "£10 off your first booking" flyer.</span>
-              </span>
-            </label>
           </div>
-        </div>
 
-        <!-- Scope -->
-        <div class="card">
-          <div class="card-header"><h2 class="text-lg font-semibold">Applies to</h2></div>
-          <div class="card-body space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Services</label>
-              <div class="space-y-2">
-                <label class="flex items-center gap-2 text-sm"><input type="radio" value="all" v-model="scope" /> All services</label>
-                <label class="flex items-center gap-2 text-sm"><input type="radio" value="specific" v-model="scope" /> Specific services</label>
+          <div v-if="!isVoucher" class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">Display</h2></div>
+            <div class="card-body space-y-4">
+              <label class="flex items-start gap-2 text-sm">
+                <input v-model="form.displayAsBanner" type="checkbox" class="w-4 h-4 mt-0.5" />
+                <span>Display as banner sitewide<span class="block text-xs text-gray-500 font-normal">Shows this promotion in the banner across the brochure. Needs "Active" too.</span></span>
+              </label>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"More info" modal content <span class="text-gray-400 font-normal">(optional)</span></label>
+                <textarea v-model="detailsText" rows="4" class="input-field" placeholder="Extra detail shown when a visitor clicks &quot;More info&quot;. Separate paragraphs with a blank line."></textarea>
               </div>
-              <div v-if="scope === 'specific'" class="mt-2 pl-6 space-y-1">
-                <label v-for="s in store.services" :key="s.id" class="flex items-center gap-2 text-sm"><input type="checkbox" :value="s.slug" v-model="selectedSlugs" /> {{ s.name }}</label>
-                <p v-if="store.services.length === 0" class="text-xs text-gray-400">No services available</p>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Durations</label>
-              <div class="space-y-2">
-                <label class="flex items-center gap-2 text-sm"><input type="radio" value="all" v-model="durationScope" /> All durations</label>
-                <label class="flex items-center gap-2 text-sm"><input type="radio" value="specific" v-model="durationScope" /> Specific durations</label>
-              </div>
-              <div v-if="durationScope === 'specific'" class="mt-2 pl-6 flex flex-wrap gap-3">
-                <label v-for="m in allDurations" :key="m" class="flex items-center gap-2 text-sm"><input type="checkbox" :value="m" v-model="selectedMinutes" /> {{ m }} min</label>
-              </div>
+              <label class="flex items-start gap-2 text-sm">
+                <input v-model="form.internal" type="checkbox" class="w-4 h-4 mt-0.5" />
+                <span>Internal only<span class="block text-xs text-gray-500 font-normal">Never shown on the website — for one-off discounts you apply yourself. Still needs "Active".</span></span>
+              </label>
             </div>
           </div>
-        </div>
 
-        <!-- Promotion-only: banner + more info -->
-        <div v-if="!isVoucher" class="card">
-          <div class="card-header"><h2 class="text-lg font-semibold">Display</h2></div>
-          <div class="card-body space-y-4">
-            <label class="flex items-start gap-2 text-sm">
-              <input v-model="form.displayAsBanner" type="checkbox" class="w-4 h-4 mt-0.5" />
-              <span>Display as banner sitewide<span class="block text-xs text-gray-500 font-normal">Shows this promotion in the banner across the brochure. Needs "Active" too.</span></span>
-            </label>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">"More info" modal content <span class="text-gray-400 font-normal">(optional)</span></label>
-              <textarea v-model="detailsText" rows="4" class="input-field" placeholder="Extra detail shown when a visitor clicks &quot;More info&quot;. Separate paragraphs with a blank line."></textarea>
+          <div class="card">
+            <div class="card-header"><h2 class="text-lg font-semibold">Status</h2></div>
+            <div class="card-body space-y-3">
+              <label class="flex items-center gap-2 text-sm"><input v-model="form.active" type="checkbox" class="w-4 h-4" /> Active (usable for pricing)</label>
+              <div v-if="isVoucher">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expires <span class="text-gray-400 font-normal">(optional)</span></label>
+                <input v-model="form.expiresAt" type="date" class="input-field max-w-xs" />
+              </div>
+              <div v-if="error" class="p-2 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded"><p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p></div>
             </div>
-            <label class="flex items-start gap-2 text-sm">
-              <input v-model="form.internal" type="checkbox" class="w-4 h-4 mt-0.5" />
-              <span>Internal only<span class="block text-xs text-gray-500 font-normal">Never shown on the website — for one-off discounts you apply yourself. Still needs "Active".</span></span>
-            </label>
           </div>
-        </div>
+        </template>
       </div>
 
-      <!-- Sidebar: status, voucher settings, codes -->
+      <!-- Sidebar: codes (always interactive for vouchers) -->
       <div class="space-y-6">
-        <div class="card">
-          <div class="card-header"><h2 class="text-lg font-semibold">Status</h2></div>
-          <div class="card-body space-y-3">
-            <label class="flex items-center gap-2 text-sm"><input v-model="form.active" type="checkbox" class="w-4 h-4" /> Active (usable for pricing)</label>
-            <template v-if="isVoucher">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expires <span class="text-gray-400 font-normal">(optional)</span></label>
-                <input v-model="form.expiresAt" type="date" class="input-field" />
-              </div>
-            </template>
-            <div v-if="error" class="p-2 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 rounded"><p class="text-sm text-red-700 dark:text-red-400">{{ error }}</p></div>
-            <button type="submit" :disabled="saving" class="btn-primary w-full text-sm">{{ saving ? 'Saving…' : (id ? 'Save changes' : 'Create') }}</button>
-          </div>
-        </div>
-
-        <!-- Codes (vouchers, once created) -->
         <div v-if="isVoucher" class="card">
           <div class="card-header"><h2 class="text-lg font-semibold"><i class="fas fa-ticket mr-2"></i>Codes</h2></div>
           <div class="card-body">
             <p v-if="!id" class="text-sm text-gray-500">Save the voucher first, then add its codes here.</p>
             <template v-else>
-              <p class="text-xs text-gray-500 mb-3">Add one code per area/flyer (e.g. <span class="font-medium">NPMNEWMILLS</span>). All share this voucher's offer; the usage count shows how many bookings quoted each — your flyer attribution.</p>
+              <p class="text-xs text-gray-500 mb-3">One code per area/flyer (e.g. <span class="font-medium">NPMNEWMILLS</span>). All share this voucher's offer; the usage count is your flyer attribution.</p>
               <div v-if="codes.length" class="space-y-2 mb-4">
                 <div v-for="c in codes" :key="c.id" class="flex items-center justify-between text-sm border-b border-gray-100 dark:border-gray-800 pb-2">
                   <div>
@@ -155,7 +208,7 @@
           </div>
         </div>
       </div>
-    </form>
+    </div>
   </div>
 </template>
 
@@ -174,6 +227,8 @@ const id = ref(route.params.id === 'new' ? '' : (route.params.id as string))
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
+// New promotions open straight into edit; existing ones open read-only.
+const isEditing = ref(!id.value)
 
 const kindOptions = [
   { value: 'PROMOTION' as const, label: 'Promotion', icon: 'fa-tag' },
@@ -212,7 +267,15 @@ const codeError = ref('')
 const isVoucher = computed(() => form.kind === 'VOUCHER')
 const title = computed(() => {
   const noun = isVoucher.value ? 'Voucher' : 'Promotion'
-  return id.value ? `Edit ${noun}` : `New ${noun}`
+  return id.value ? noun : `New ${noun}`
+})
+const discountText = computed(() =>
+  form.discountType === 'FIXED' ? `£${form.value} off` : `${form.value}% off`,
+)
+const appliesToText = computed(() => {
+  const svc = scope.value === 'all' ? 'All services' : (selectedSlugs.value.join(', ') || 'No services')
+  const dur = durationScope.value === 'all' ? 'all durations' : `${selectedMinutes.value.join(', ')} min`
+  return `${svc} · ${dur}`
 })
 
 function hydrate(p: Promotion) {
@@ -233,17 +296,29 @@ function hydrate(p: Promotion) {
   codes.value = p.promoCodes || []
 }
 
+async function load() {
+  hydrate(await apiService.getPromotion(id.value))
+}
+
 onMounted(async () => {
   if (store.services.length === 0) await store.fetchServices()
   if (id.value) {
     try {
-      hydrate(await apiService.getPromotion(id.value))
+      await load()
     } catch (err: any) {
       error.value = err?.message || 'Failed to load'
     }
   }
   loading.value = false
 })
+
+async function cancelEdit() {
+  error.value = ''
+  if (id.value) {
+    await load() // discard edits
+    isEditing.value = false
+  }
+}
 
 async function save() {
   if (!form.message.trim()) { error.value = 'Message is required'; return }
@@ -280,12 +355,13 @@ async function save() {
   try {
     if (id.value) {
       await store.updatePromotion(id.value, payload)
+      isEditing.value = false
     } else {
       const created = await store.createPromotion(payload)
-      // Move to the saved promotion's page so codes can be added.
       router.replace(`/settings/services/promotions/${created.id}`)
       id.value = created.id
       hydrate(created as Promotion)
+      isEditing.value = false
     }
   } catch (err: any) {
     error.value = err?.message || 'Failed to save'
@@ -304,7 +380,7 @@ async function addCode() {
       label: newCode.label.trim() || null,
       usageLimit: newCode.usageLimit || null,
     })
-    hydrate(await apiService.getPromotion(id.value))
+    await load()
     newCode.code = ''
     newCode.label = ''
     newCode.usageLimit = null
