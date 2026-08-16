@@ -10,8 +10,8 @@
       <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" :to="`/bookings?status=PENDING`" />
       <StatCard label="Outstanding Payments" :value="`£${owedToYou}`" icon="Cash" to="/accounting" :value-color="owedToYou > 0 ? 'text-red-600' : 'text-green-600'" />
       <StatCard label="Due to Rebook" :value="toContactCount" icon="Rebook" to="/rebooking" />
-      <StatCard label="Forms Outstanding" :value="formsOutstanding" icon="Form" :to="`/bookings?status=CONFIRMED`" />
-      <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" :to="`/bookings?status=CONFIRMED`" />
+      <StatCard label="Forms Outstanding" :value="formsOutstanding" icon="Form" to="/bookings?status=ACTIVE&form=outstanding" />
+      <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" to="/bookings?status=ACTIVE" />
       <StatCard label="Collected This Month" :value="`£${monthlyRevenue}`" icon="TrendingUp" />
       <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
     </div>

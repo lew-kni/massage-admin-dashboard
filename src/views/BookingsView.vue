@@ -56,6 +56,20 @@
           >
             All
           </button>
+
+          <select
+            v-if="viewMode === 'list'"
+            v-model="formFilter"
+            class="input-field text-sm py-1 w-auto"
+            title="Filter by pre-visit form status"
+          >
+            <option value="all">All forms</option>
+            <option value="outstanding">Forms outstanding</option>
+            <option value="not_sent">Not sent</option>
+            <option value="sent">Sent</option>
+            <option value="completed">Completed</option>
+            <option value="overdue">Overdue</option>
+          </select>
         </div>
 
         <!-- View Toggle -->
@@ -469,6 +483,8 @@ const viewMode = ref<'list' | 'calendar'>('list')
 const listDisplayMode = ref<'cards' | 'table'>('table')
 const calendarViewMode = ref<'1d' | '7d' | '30d'>('1d')
 const filterStatus = ref<'PENDING' | 'ACTIVE' | 'PAST' | 'CANCELLED' | null>(null)
+type FormFilter = 'all' | 'outstanding' | 'not_sent' | 'sent' | 'completed' | 'overdue'
+const formFilter = ref<FormFilter>('all')
 const editingBooking = ref<Booking | null>(null)
 const selectedBooking = ref<Booking | null>(null)
 // Booking pending cancellation — drives the fee/waive dialog.
@@ -479,13 +495,22 @@ const itemsPerPage = 10
 const selectedCalendarDate = ref(new Date())
 const timeSlots = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
 
+// Pre-visit form filter, applied to every list below via formFilteredBookings.
+function matchesForm(b: Booking): boolean {
+  if (formFilter.value === 'all') return true
+  const s = b.preFormStatus || 'NOT_SENT'
+  if (formFilter.value === 'outstanding') return s !== 'COMPLETED'
+  return s === formFilter.value.toUpperCase()
+}
+const formFilteredBookings = computed(() => bookingsStore.bookings.filter(matchesForm))
+
 const filteredBookings = computed(() => {
-  if (!filterStatus.value) return bookingsStore.bookings
-  
+  if (!filterStatus.value) return formFilteredBookings.value
+
   if (filterStatus.value === 'ACTIVE') return futureConfirmedBookings.value
   if (filterStatus.value === 'PAST') return pastConfirmedBookings.value
-  
-  return bookingsStore.bookings.filter(b => b.status === filterStatus.value)
+
+  return formFilteredBookings.value.filter(b => b.status === filterStatus.value)
 })
 
 const displayBookings = computed(() => {
@@ -501,7 +526,7 @@ const paginatedBookings = computed(() => {
 })
 
 const pendingBookings = computed(() => {
-  return bookingsStore.bookings
+  return formFilteredBookings.value
     .filter(b => b.status === 'PENDING')
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 })
@@ -514,20 +539,20 @@ const confirmedBookings = computed(() => {
 
 const futureConfirmedBookings = computed(() => {
   const now = new Date()
-  return bookingsStore.bookings
+  return formFilteredBookings.value
     .filter(b => b.status === 'CONFIRMED' && new Date(b.startTime) > now)
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 })
 
 const pastConfirmedBookings = computed(() => {
   const now = new Date()
-  return bookingsStore.bookings
+  return formFilteredBookings.value
     .filter(b => b.status === 'CONFIRMED' && new Date(b.startTime) <= now)
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 })
 
 const rejectedBookings = computed(() => {
-  return bookingsStore.bookings
+  return formFilteredBookings.value
     .filter(b => b.status === 'CANCELLED')
     .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
 })
@@ -896,7 +921,7 @@ function handleBookingSaved() {
   editingBooking.value = null
 }
 
-watch(filterStatus, () => {
+watch([filterStatus, formFilter], () => {
   currentPage.value = 1
   pendingPage.value = 1
   confirmedPage.value = 1
@@ -904,7 +929,39 @@ watch(filterStatus, () => {
   rejectedPage.value = 1
 })
 
+function toYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Mirror the view state into the URL query (replace, not push, so filter
+// changes don't spam history) — so opening a booking and hitting Back returns
+// to exactly the view/filter/date you were on, and links are shareable.
+watch([viewMode, filterStatus, listDisplayMode, calendarViewMode, formFilter, selectedCalendarDate], () => {
+  const query: Record<string, string> = {}
+  if (viewMode.value !== 'list') query.view = viewMode.value
+  if (filterStatus.value) query.status = filterStatus.value
+  if (listDisplayMode.value !== 'table') query.display = listDisplayMode.value
+  if (formFilter.value !== 'all') query.form = formFilter.value
+  if (viewMode.value === 'calendar') {
+    if (calendarViewMode.value !== '1d') query.cal = calendarViewMode.value
+    query.date = toYmd(selectedCalendarDate.value)
+  }
+  router.replace({ query })
+})
+
 onMounted(async () => {
+  // Hydrate view state from the URL first, so a deep-link / back-navigation
+  // restores the exact view.
+  const q = route.query
+  if (q.view === 'calendar' || q.view === 'list') viewMode.value = q.view
+  if (q.display === 'cards' || q.display === 'table') listDisplayMode.value = q.display
+  if (q.cal === '1d' || q.cal === '7d' || q.cal === '30d') calendarViewMode.value = q.cal
+  const forms: FormFilter[] = ['outstanding', 'not_sent', 'sent', 'completed', 'overdue']
+  if (typeof q.form === 'string' && forms.includes(q.form as FormFilter)) formFilter.value = q.form as FormFilter
+  if (typeof q.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(q.date)) {
+    selectedCalendarDate.value = new Date(`${q.date}T00:00:00`)
+  }
+
   await Promise.all([
     bookingsStore.fetchBookings(),
     availabilityStore.fetchUnavailableBlocks(),
