@@ -2,7 +2,7 @@
 // detail view can show Gross / Total / Balance without another round trip. The
 // backend remains the source of truth (it caches amountPaid/paymentStatus); this
 // just derives the display figures from fields the booking already carries.
-import type { Booking, PaymentStatus } from '@/types'
+import type { Booking, PaymentMethod, PaymentStatus } from '@/types'
 
 export function grossTotal(b: Booking): number {
   if (b.status === 'CANCELLED') return b.cancellationFee ?? 0
@@ -47,6 +47,53 @@ export function computeBookingTotals(b: Booking): BookingTotals {
     // Prefer the backend's cached status when present; fall back to deriving it.
     paymentStatus: b.paymentStatus ?? paymentStatusFor(total, paid),
   }
+}
+
+// --- payment aggregation (cash-basis accounting) ---------------------------
+// Income is money actually received, dated by Payment.receivedAt — so these
+// flatten every booking's payment rows and bucket by when the money arrived.
+
+export interface DatedPayment {
+  amount: number
+  method: PaymentMethod
+  receivedAt: string
+  booking: Booking
+}
+
+export function allPayments(bookings: Booking[]): DatedPayment[] {
+  return bookings.flatMap((b) =>
+    (b.payments ?? []).map((p) => ({ amount: p.amount, method: p.method, receivedAt: p.receivedAt, booking: b })),
+  )
+}
+
+// Payments received within [startMs, endMs) (by receivedAt). `atMs` maps a
+// receivedAt ISO string to the comparable ms — pass a London-local mapper for
+// calendar-month bucketing, or the default UTC-instant one.
+export function paymentsInRange(
+  bookings: Booking[],
+  startMs: number,
+  endMs: number,
+  atMs: (iso: string) => number = (iso) => new Date(iso).getTime(),
+): DatedPayment[] {
+  return allPayments(bookings).filter((p) => {
+    const t = atMs(p.receivedAt)
+    return t >= startMs && t < endMs
+  })
+}
+
+export function sumPaymentsInRange(
+  bookings: Booking[],
+  startMs: number,
+  endMs: number,
+  atMs?: (iso: string) => number,
+): number {
+  return paymentsInRange(bookings, startMs, endMs, atMs).reduce((s, p) => s + p.amount, 0)
+}
+
+// Unpaid balance for a booking, never negative (an overpaid/refunded booking
+// isn't "outstanding").
+export function outstandingBalance(b: Booking): number {
+  return Math.max(0, computeBookingTotals(b).balance)
 }
 
 const METHOD_LABELS: Record<string, string> = {

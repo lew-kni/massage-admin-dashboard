@@ -84,7 +84,7 @@
           <div class="card p-6">
             <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Collected</p>
             <p class="text-3xl font-bold text-emerald-600 mt-2">{{ gbp(collected) }}</p>
-            <p class="text-xs text-gray-500 mt-1">{{ paidCount }} paid session{{ paidCount === 1 ? '' : 's' }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ paymentsCount }} payment{{ paymentsCount === 1 ? '' : 's' }} received</p>
           </div>
           <div class="card p-6">
             <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Outstanding</p>
@@ -174,7 +174,7 @@
             <span v-if="outstandingList.length" class="badge bg-amber-100 text-amber-800">{{ gbp(totalOutstandingAll) }} across {{ outstandingList.length }}</span>
           </div>
           <div class="card-body">
-            <p class="text-xs text-gray-500 mb-4">Completed sessions (all time) that haven't been marked paid yet.</p>
+            <p class="text-xs text-gray-500 mb-4">Past sessions (all time) that still have a balance owing.</p>
             <div v-if="outstandingList.length === 0" class="text-center text-gray-500 py-6">
               <i class="fas fa-circle-check text-emerald-500 text-2xl mb-2"></i>
               <p>All caught up — nothing outstanding.</p>
@@ -199,7 +199,7 @@
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ formatDate(b.startTime) }}</td>
                     <td class="px-3 py-2">{{ b.client?.firstName }} {{ b.client?.lastName }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ b.service || '—' }}</td>
-                    <td class="px-3 py-2 text-right font-medium">{{ gbp(effectivePrice(b)) }}</td>
+                    <td class="px-3 py-2 text-right font-medium">{{ gbp(outstandingBalance(b)) }}</td>
                     <td class="px-3 py-2 text-right">
                       <button @click="openMarkPaid(b)" class="btn-primary text-xs py-1 px-2 bg-emerald-600 hover:bg-emerald-700 whitespace-nowrap">
                         <i class="fas fa-check-circle mr-1"></i>Mark Paid
@@ -235,6 +235,7 @@ import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 import { bookingTotal } from '@/utils/bookingTotal'
+import { computeBookingTotals, sumPaymentsInRange, paymentsInRange, outstandingBalance, paymentMethodLabel } from '@/utils/bookingTotals'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 import Pagination from '@/components/Pagination.vue'
 
@@ -281,18 +282,17 @@ const taxYearLabel = computed(() => {
   const startYear = taxYearStart(taxYearRefDate.value).getUTCFullYear()
   return `${startYear}/${String((startYear + 1) % 100).padStart(2, '0')}`
 })
-function inTaxYear(b: Booking): boolean {
-  const t = new Date(b.startTime).getTime()
-  return t >= taxYearRange.value.start.getTime() && t < taxYearRange.value.end.getTime()
-}
 function dateInTaxYear(dateStr: string): boolean {
   const t = new Date(dateStr).getTime()
   return t >= taxYearRange.value.start.getTime() && t < taxYearRange.value.end.getTime()
 }
 
-// "Income" deliberately means money actually collected, not billed/invoiced —
-// the right basis for a cash-basis sole trader's Self Assessment.
-const taxYearIncome = computed(() => sum(accountable.value.filter((b) => inTaxYear(b) && b.isPaid)))
+// "Income" = money actually received (cash basis), dated by when each payment
+// landed (Payment.receivedAt) — the correct basis for a sole trader's Self
+// Assessment, and what counts a late BACS in the tax year it was paid.
+const taxYearIncome = computed(() =>
+  sumPaymentsInRange(bookingsStore.bookings, taxYearRange.value.start.getTime(), taxYearRange.value.end.getTime())
+)
 const taxYearExpensesTotal = computed(() =>
   expensesStore.expenses
     .filter((e) => dateInTaxYear(e.date))
@@ -341,14 +341,24 @@ function inGeneralPeriod(b: Booking): boolean {
 const generalPeriodBookings = computed(() => accountable.value.filter(inGeneralPeriod))
 
 // --- summary metrics ---------------------------------------------------------
-const paidBookings = computed(() => generalPeriodBookings.value.filter((b) => b.isPaid))
-const collected = computed(() => sum(paidBookings.value))
-const paidCount = computed(() => paidBookings.value.length)
+// Collected = money received in the period (by receivedAt). Outstanding/upcoming
+// use each booking's remaining balance, so a part-paid session shows only what's
+// still owed rather than its whole total.
+const collected = computed(() =>
+  sumPaymentsInRange(bookingsStore.bookings, generalRange.value.start.getTime(), generalRange.value.end.getTime())
+)
+const paymentsCount = computed(() =>
+  paymentsInRange(bookingsStore.bookings, generalRange.value.start.getTime(), generalRange.value.end.getTime()).length
+)
 const outstanding = computed(() =>
-  sum(generalPeriodBookings.value.filter((b) => !b.isPaid && b.status === 'CONFIRMED' && isPast(b)))
+  generalPeriodBookings.value
+    .filter((b) => b.status === 'CONFIRMED' && isPast(b))
+    .reduce((s, b) => s + outstandingBalance(b), 0)
 )
 const upcoming = computed(() =>
-  sum(generalPeriodBookings.value.filter((b) => !b.isPaid && b.status === 'CONFIRMED' && !isPast(b)))
+  generalPeriodBookings.value
+    .filter((b) => b.status === 'CONFIRMED' && !isPast(b))
+    .reduce((s, b) => s + outstandingBalance(b), 0)
 )
 const sessionsCount = computed(() => generalPeriodBookings.value.length)
 const avgValue = computed(() => (sessionsCount.value ? sum(generalPeriodBookings.value) / sessionsCount.value : 0))
@@ -367,11 +377,9 @@ const monthlyRevenue = computed(() => {
     const d = new Date(n.getFullYear(), n.getMonth() - i, 1)
     const start = d.getTime()
     const end = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime()
-    const value = sum(
-      accountable.value.filter((b) => {
-        const t = toLondonFakeLocalDate(b.startTime).getTime()
-        return b.isPaid && t >= start && t < end
-      })
+    const value = sumPaymentsInRange(
+      bookingsStore.bookings, start, end,
+      (iso) => toLondonFakeLocalDate(iso).getTime(),
     )
     months.push({ key: `${d.getFullYear()}-${d.getMonth()}`, label: d.toLocaleDateString('en-GB', { month: 'short' }), year: d.getFullYear(), value })
   }
@@ -379,21 +387,21 @@ const monthlyRevenue = computed(() => {
 })
 const maxMonthly = computed(() => Math.max(0, ...monthlyRevenue.value.map((m) => m.value)))
 
-// --- payment method split (collected in period) ---------------------------
-const byMethod = computed(() => {
-  const paid = paidBookings.value
-  const cash = sum(paid.filter((b) => b.paymentMethod === 'CASH'))
-  const bacs = sum(paid.filter((b) => b.paymentMethod === 'BACS'))
-  const unknown = sum(paid.filter((b) => !b.paymentMethod))
-  return { cash, bacs, unknown, total: cash + bacs + unknown }
+// --- payment method split (received in period) ----------------------------
+// Aggregated across payment ROWS, so a split (part cash / part card) counts
+// correctly under each method.
+const methodRows = computed(() => {
+  const ps = paymentsInRange(bookingsStore.bookings, generalRange.value.start.getTime(), generalRange.value.end.getTime())
+  const totals: Record<string, number> = {}
+  ps.forEach((p) => { totals[p.method] = (totals[p.method] || 0) + p.amount })
+  const colors: Record<string, string> = {
+    CASH: 'bg-emerald-500', BACS: 'bg-sky-500', CARD: 'bg-violet-500', VOUCHER: 'bg-amber-500', OTHER: 'bg-gray-400',
+  }
+  return (['CASH', 'BACS', 'CARD', 'VOUCHER', 'OTHER'] as const)
+    .map((m) => ({ label: paymentMethodLabel(m), value: totals[m] || 0, color: colors[m] }))
+    .filter((r) => r.value > 0)
 })
-const methodRows = computed(() =>
-  [
-    { label: 'Cash', value: byMethod.value.cash, color: 'bg-emerald-500' },
-    { label: 'BACS', value: byMethod.value.bacs, color: 'bg-sky-500' },
-    { label: 'Unspecified', value: byMethod.value.unknown, color: 'bg-gray-400' },
-  ].filter((r) => r.value > 0)
-)
+const byMethod = computed(() => ({ total: methodRows.value.reduce((s, r) => s + r.value, 0) }))
 
 // --- revenue by service (charged in period) -------------------------------
 const byService = computed(() => {
@@ -414,10 +422,10 @@ const byServiceMax = computed(() => Math.max(1, ...byService.value.map((s) => s.
 // --- outstanding payments (actionable, all time) --------------------------
 const outstandingList = computed(() =>
   accountable.value
-    .filter((b) => !b.isPaid && b.status === 'CONFIRMED' && isPast(b))
+    .filter((b) => b.status === 'CONFIRMED' && isPast(b) && outstandingBalance(b) > 0)
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
 )
-const totalOutstandingAll = computed(() => sum(outstandingList.value))
+const totalOutstandingAll = computed(() => outstandingList.value.reduce((s, b) => s + outstandingBalance(b), 0))
 
 const PAGE_SIZE = 10
 const outstandingPage = ref(1)
@@ -438,16 +446,21 @@ function openMarkPaid(b: Booking) {
   paymentError.value = ''
   showPaymentModal.value = true
 }
+// Records a payment for the whole outstanding balance, settling the booking.
 async function confirmPaid(method: 'CASH' | 'BACS') {
   if (!selectedBooking.value) return
   savingPayment.value = true
   paymentError.value = ''
   try {
-    await bookingsStore.updateBooking(selectedBooking.value.id, { isPaid: true, paymentMethod: method } as Partial<Booking>)
+    await bookingsStore.addPayment(selectedBooking.value.id, {
+      amount: outstandingBalance(selectedBooking.value),
+      method,
+      receivedAt: new Date().toISOString(),
+    })
     showPaymentModal.value = false
     selectedBooking.value = null
   } catch (err: any) {
-    paymentError.value = err?.message || 'Failed to mark as paid'
+    paymentError.value = err?.message || 'Failed to record payment'
   } finally {
     savingPayment.value = false
   }
@@ -455,22 +468,27 @@ async function confirmPaid(method: 'CASH' | 'BACS') {
 
 // --- CSV export (General Accounting's booking-level data) ------------------
 function exportCsv() {
-  const header = ['Booking', 'Date', 'Client', 'Service', 'List', 'Discounted', 'Charged', 'Paid', 'Method', 'Status']
+  const header = ['Booking', 'Date', 'Client', 'Service', 'List', 'Discounted', 'Charged', 'Paid', 'Balance', 'Methods', 'Payment status', 'Booking status']
   const rows = generalPeriodBookings.value
     .slice()
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-    .map((b) => [
-      '#' + b.bookingNumber,
-      new Date(b.startTime).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }),
-      `${b.client?.firstName ?? ''} ${b.client?.lastName ?? ''}`.trim(),
-      b.service || '',
-      b.price != null ? String(b.price) : '',
-      b.discountedPrice != null ? String(b.discountedPrice) : '',
-      String(effectivePrice(b)),
-      b.isPaid ? 'Yes' : 'No',
-      b.paymentMethod || '',
-      b.status,
-    ])
+    .map((b) => {
+      const t = computeBookingTotals(b)
+      return [
+        '#' + b.bookingNumber,
+        new Date(b.startTime).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }),
+        `${b.client?.firstName ?? ''} ${b.client?.lastName ?? ''}`.trim(),
+        b.service || '',
+        b.price != null ? String(b.price) : '',
+        b.discountedPrice != null ? String(b.discountedPrice) : '',
+        String(effectivePrice(b)),
+        String(t.amountPaid),
+        String(outstandingBalance(b)),
+        [...new Set((b.payments ?? []).map((p) => p.method))].join(';'),
+        t.paymentStatus,
+        b.status,
+      ]
+    })
   const escape = (cell: string | number) => {
     const s = String(cell)
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s

@@ -9,7 +9,7 @@
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
       <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
       <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" :to="`/bookings?status=CONFIRMED`" />
-      <StatCard label="This Month" :value="`£${monthlyRevenue}`" icon="TrendingUp" />
+      <StatCard label="Collected This Month" :value="`£${monthlyRevenue}`" icon="TrendingUp" />
       <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" :to="`/bookings?status=PENDING`" />
     </div>
 
@@ -107,7 +107,7 @@ import { useClientsStore } from '@/stores/clients'
 import { useBookingsStore } from '@/stores/bookings'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import { bookingTotal } from '@/utils/bookingTotal'
+import { sumPaymentsInRange } from '@/utils/bookingTotals'
 import StatCard from '@/components/StatCard.vue'
 
 const clientsStore = useClientsStore()
@@ -132,18 +132,13 @@ const pendingCount = computed(() =>
   bookings.value.filter((b) => b.status === 'PENDING').length
 )
 const monthlyRevenue = computed(() => {
-  // Sum the as-booked price (promotion-adjusted where one applied) for this
-  // month's non-cancelled bookings. Bookings without a captured price count as 0.
-  // Compared as London calendar months, not the viewing browser's own timezone.
+  // Money actually received this month (cash basis), dated by when each payment
+  // landed — matches the Accounting "Collected" figure. Compared as London
+  // calendar months, not the viewing browser's own timezone.
   const now = toLondonFakeLocalDate(new Date())
-  const total = bookings.value.reduce((sum, b) => {
-    const start = toLondonFakeLocalDate(b.startTime)
-    const inThisMonth =
-      start.getFullYear() === now.getFullYear() && start.getMonth() === now.getMonth()
-    if (!inThisMonth || b.status === 'CANCELLED') return sum
-    const effective = bookingTotal(b)
-    return sum + effective
-  }, 0)
+  const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime()
+  const total = sumPaymentsInRange(bookings.value, start, end, (iso) => toLondonFakeLocalDate(iso).getTime())
   return total.toFixed(2)
 })
 
