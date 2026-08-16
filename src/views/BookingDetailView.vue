@@ -157,8 +157,8 @@
         <!-- Money Card -->
         <div class="card">
           <div class="card-header flex justify-between items-center">
-            <h2 class="text-lg font-semibold"><i class="fas fa-sterling-sign mr-2"></i>Money</h2>
-            <span :class="['badge', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">{{ paymentStatusLabel(paymentTotals.paymentStatus) }}</span>
+            <h2 class="text-lg font-semibold"><i class="fas fa-sterling-sign mr-2"></i>Payments</h2>
+            <span :class="['badge uppercase', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">{{ paymentStatusLabel(paymentTotals.paymentStatus) }}</span>
           </div>
           <div class="card-body space-y-4">
             <!-- Charges -->
@@ -275,19 +275,26 @@
                   <span class="font-medium" :class="paymentTotals.balance > 0 ? 'text-red-600' : 'text-green-600'">£{{ paymentTotals.balance }}</span>
                 </div>
               </div>
-              <ul v-if="booking.payments && booking.payments.length" class="mt-3 space-y-2 border-t pt-3">
-                <li v-for="p in booking.payments" :key="p.id" class="flex items-start justify-between text-sm gap-2">
-                  <span>
-                    <span class="font-medium">£{{ p.amount }}</span>
-                    · {{ paymentMethodLabel(p.method) }}
-                    · {{ formatDate(p.receivedAt) }}
-                    <span v-if="p.note" class="text-gray-500">— {{ p.note }}</span>
-                  </span>
-                  <button @click="removePayment(p.id)" :disabled="savingPayment" class="text-red-500 hover:text-red-700 text-xs shrink-0" title="Remove payment">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </li>
-              </ul>
+              <div v-if="booking.payments && booking.payments.length" class="mt-4 grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-4 text-sm">
+                <!-- Header row -->
+                <div class="pb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Amount</div>
+                <div class="pb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Method</div>
+                <div class="pb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Date</div>
+                <div class="pb-2"></div>
+
+                <!-- One row per payment (+ a full-width note line when present) -->
+                <template v-for="p in booking.payments" :key="p.id">
+                  <div class="border-t border-gray-100 dark:border-gray-800 py-2 font-medium tabular-nums">£{{ p.amount }}</div>
+                  <div class="border-t border-gray-100 dark:border-gray-800 py-2">{{ paymentMethodLabel(p.method) }}</div>
+                  <div class="border-t border-gray-100 dark:border-gray-800 py-2 whitespace-nowrap text-gray-600 dark:text-gray-400">{{ formatDate(p.receivedAt) }}</div>
+                  <div class="border-t border-gray-100 dark:border-gray-800 py-2 text-right">
+                    <button @click="removePayment(p.id)" :disabled="savingPayment" class="text-red-500 hover:text-red-700 disabled:opacity-50" title="Remove payment">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </div>
+                  <div v-if="p.note" class="col-span-4 -mt-1 pb-2 text-xs text-gray-500 dark:text-gray-400">{{ p.note }}</div>
+                </template>
+              </div>
               <button
                 v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'"
                 @click="showPaymentModal = true"
@@ -521,15 +528,15 @@
               <p class="font-medium">{{ formatDateTime(booking.createdAt) }}</p>
             </div>
             <div class="border-t pt-4">
-              <div class="flex items-center justify-between">
-                <p class="text-gray-500">Payment</p>
-                <span :class="['badge', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">
+              <p class="text-gray-500">Payment Status</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span :class="['badge uppercase', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">
                   {{ paymentStatusLabel(paymentTotals.paymentStatus) }}
                 </span>
+                <span v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY' && paymentTotals.balance > 0" class="text-sm text-red-600">
+                  £{{ paymentTotals.balance }} outstanding
+                </span>
               </div>
-              <p v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY' && paymentTotals.balance > 0" class="text-sm text-red-600 mt-1">
-                £{{ paymentTotals.balance }} outstanding
-              </p>
             </div>
           </div>
         </div>
@@ -729,11 +736,13 @@ const paymentError = ref('')
 // Derived money view (gross/total/balance/status) for the Payments panel.
 const paymentTotals = computed(() => computeBookingTotals(booking.value ?? ({} as Booking)))
 
+// Use the same semantic badge classes as getStatusClass so the Payment Status
+// pill matches the Status pill exactly (shape, colours, dark mode).
 function paymentStatusBadgeClass(status: string): string {
-  if (status === 'PAID') return 'bg-green-100 text-green-800'
-  if (status === 'PART_PAID') return 'bg-yellow-100 text-yellow-800'
+  if (status === 'PAID') return 'badge-success'
+  if (status === 'PART_PAID') return 'badge-warning'
   if (status === 'COMPLIMENTARY') return 'bg-purple-100 text-purple-800'
-  return 'bg-red-100 text-red-800' // DUE
+  return 'badge-danger' // DUE
 }
 
 // Status banner: label + colour keyed off status, with CANCELLED split into
