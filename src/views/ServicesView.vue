@@ -187,7 +187,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
@@ -280,6 +280,12 @@ function formatBookingDate(iso: string): string {
 function onSaved() {
   // Stores refetch internally; nothing else needed here
 }
+
+// Mirror the active tab into the URL (replace, not push) so opening a promotion
+// and hitting Back returns to the tab you were on. Hydrated from ?tab= above.
+watch(activeTab, (tab) => {
+  router.replace({ query: tab === 'promotions' ? { tab } : {} })
+})
 
 onMounted(() => {
   store.fetchServices()
