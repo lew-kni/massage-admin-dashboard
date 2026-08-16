@@ -107,8 +107,8 @@
       </div>
 
       <div v-for="promo in paginatedPromotions" :key="promo.id" class="card" :class="{ 'opacity-60': !promo.active }">
-        <div class="card-body flex justify-between items-start">
-          <div class="cursor-pointer -m-2 p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" @click="editPromotion(promo)">
+        <div class="card-body flex justify-between items-start gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" @click="editPromotion(promo)">
+          <div>
             <div class="flex items-center gap-2 flex-wrap">
               <span class="badge" :class="promo.active ? 'badge-success' : 'bg-gray-100 text-gray-700'">
                 {{ promo.active ? 'Active' : 'Inactive' }}
