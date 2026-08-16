@@ -28,7 +28,7 @@
       <div :class="['rounded-lg px-5 py-4 flex items-center justify-between', bannerClass]">
         <div>
           <p class="text-lg font-semibold">{{ bannerLabel }}</p>
-          <p class="text-sm opacity-80">Booking #{{ booking.bookingNumber }} · Created {{ formatRelative(booking.createdAt) }}</p>
+          <p class="text-sm opacity-80">{{ bookingRef(booking) }} · Created {{ formatRelative(booking.createdAt) }}</p>
         </div>
         <i :class="['fas text-2xl opacity-70', bannerIcon]"></i>
       </div>
@@ -508,8 +508,8 @@
           </div>
           <div class="card-body space-y-4 text-sm">
             <div>
-              <p class="text-gray-500">Booking Number</p>
-              <p class="font-medium">#{{ booking.bookingNumber }}</p>
+              <p class="text-gray-500">Reference</p>
+              <p class="font-medium">{{ bookingRef(booking) }}</p>
             </div>
             <div>
               <p class="text-gray-500">Status</p>
@@ -591,7 +591,7 @@ import type { Booking, IntakeForm, BookingAssessment, PaymentMethod } from '@/ty
 import { format, formatDistanceToNow } from 'date-fns'
 import { toLondonInputParts, londonWallTimeToUtc, toLondonFakeLocalDate } from '@/utils/formatLondon'
 import { bookingTotal } from '@/utils/bookingTotal'
-import { computeBookingTotals, paymentMethodLabel, paymentStatusLabel } from '@/utils/bookingTotals'
+import { computeBookingTotals, paymentMethodLabel, paymentStatusLabel, bookingRef } from '@/utils/bookingTotals'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import RecordPaymentModal from '@/components/RecordPaymentModal.vue'

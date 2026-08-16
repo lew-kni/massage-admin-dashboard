@@ -272,6 +272,10 @@ export interface AppSettings {
   businessEmail: string | null
   businessPhone: string | null
   businessAddress: string | null
+  // Bank details for the confirmation email's "How to pay" (BACS) block.
+  bankAccountName: string | null
+  bankSortCode: string | null
+  bankAccountNumber: string | null
   // DANGER ZONE: gate destructive delete actions in the admin UI.
   allowDeleteClients: boolean
   allowDeleteBookings: boolean

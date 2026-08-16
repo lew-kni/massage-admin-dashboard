@@ -5,6 +5,43 @@
       <p class="text-gray-600 dark:text-gray-400 mt-2">Admin controls</p>
     </div>
 
+    <!-- Payment / bank details -->
+    <div class="card max-w-3xl mb-6">
+      <div class="card-header flex items-center justify-between">
+        <h2 class="text-lg font-semibold"><i class="fas fa-building-columns mr-2"></i>Bank details (client payments)</h2>
+        <span v-if="bankMessage" class="text-sm text-green-600"><i class="fas fa-check mr-1"></i>{{ bankMessage }}</span>
+        <span v-else-if="bankError" class="text-sm text-red-600"><i class="fas fa-circle-exclamation mr-1"></i>{{ bankError }}</span>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">
+          Shown in the "How to pay" section of the booking confirmation email so clients can pay by bank transfer
+          (with their booking reference). Leave blank to omit that section. All three are needed for it to appear.
+        </p>
+        <div v-if="loading" class="text-sm text-gray-500">Loading…</div>
+        <form v-else class="space-y-4" @submit.prevent="saveBank">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account name</label>
+            <input v-model="bank.bankAccountName" type="text" maxlength="200" class="input-field" placeholder="e.g. North Peak Massage" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort code</label>
+              <input v-model="bank.bankSortCode" type="text" maxlength="20" class="input-field" placeholder="00-00-00" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account number</label>
+              <input v-model="bank.bankAccountNumber" type="text" maxlength="40" class="input-field" placeholder="12345678" />
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" :disabled="savingBank" class="btn-primary text-sm">
+              {{ savingBank ? 'Saving…' : 'Save bank details' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Danger Zone -->
     <div class="card max-w-3xl border-red-300 dark:border-red-800">
       <div class="card-header flex items-center justify-between">
@@ -75,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -85,6 +122,38 @@ const { loading, allowDeleteClients, allowDeleteBookings } = storeToRefs(setting
 const saving = ref(false)
 const saveMessage = ref('')
 const saveError = ref('')
+
+// --- bank details ----------------------------------------------------------
+const bank = reactive({ bankAccountName: '', bankSortCode: '', bankAccountNumber: '' })
+const savingBank = ref(false)
+const bankMessage = ref('')
+const bankError = ref('')
+
+function syncBankForm() {
+  const s = settingsStore.settings
+  bank.bankAccountName = s?.bankAccountName ?? ''
+  bank.bankSortCode = s?.bankSortCode ?? ''
+  bank.bankAccountNumber = s?.bankAccountNumber ?? ''
+}
+
+async function saveBank() {
+  savingBank.value = true
+  bankMessage.value = ''
+  bankError.value = ''
+  try {
+    await settingsStore.updateSettings({
+      bankAccountName: bank.bankAccountName.trim(),
+      bankSortCode: bank.bankSortCode.trim(),
+      bankAccountNumber: bank.bankAccountNumber.trim(),
+    })
+    bankMessage.value = 'Saved'
+    setTimeout(() => (bankMessage.value = ''), 2000)
+  } catch (err) {
+    bankError.value = err instanceof Error ? err.message : 'Failed to save'
+  } finally {
+    savingBank.value = false
+  }
+}
 
 type ToggleKey = 'allowDeleteClients' | 'allowDeleteBookings'
 
@@ -103,7 +172,8 @@ async function onToggle(key: ToggleKey, value: boolean) {
   }
 }
 
-onMounted(() => {
-  settingsStore.fetchSettings()
+onMounted(async () => {
+  await settingsStore.fetchSettings()
+  syncBankForm()
 })
 </script>

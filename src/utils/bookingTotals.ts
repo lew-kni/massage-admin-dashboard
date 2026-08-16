@@ -4,6 +4,12 @@
 // just derives the display figures from fields the booking already carries.
 import type { Booking, PaymentMethod, PaymentStatus } from '@/types'
 
+// Client-facing booking reference (matches the backend's bookingRef used in
+// emails / BACS references). Display format over the stored integer.
+export function bookingRef(b: { bookingNumber: number }): string {
+  return `NPM-${b.bookingNumber}`
+}
+
 export function grossTotal(b: Booking): number {
   if (b.status === 'CANCELLED') return b.cancellationFee ?? 0
   return (b.price ?? 0) + (Number(b.extraCharge) || 0)

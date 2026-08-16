@@ -183,7 +183,7 @@
               <table class="w-full border-collapse">
                 <thead>
                   <tr class="border-b-2 border-gray-200 dark:border-gray-700 text-left text-sm text-gray-600 dark:text-gray-400">
-                    <th class="px-3 py-2 font-semibold">#</th>
+                    <th class="px-3 py-2 font-semibold">Ref</th>
                     <th class="px-3 py-2 font-semibold">Date</th>
                     <th class="px-3 py-2 font-semibold">Client</th>
                     <th class="px-3 py-2 font-semibold">Service</th>
@@ -194,7 +194,7 @@
                 <tbody>
                   <tr v-for="b in pagedOutstanding" :key="b.id" class="border-b border-gray-100 dark:border-gray-800 text-sm">
                     <td class="px-3 py-2">
-                      <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium">#{{ b.bookingNumber }}</RouterLink>
+                      <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium">{{ bookingRef(b) }}</RouterLink>
                     </td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ formatDate(b.startTime) }}</td>
                     <td class="px-3 py-2">{{ b.client?.firstName }} {{ b.client?.lastName }}</td>
@@ -235,7 +235,7 @@ import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 import { bookingTotal } from '@/utils/bookingTotal'
-import { computeBookingTotals, sumPaymentsInRange, paymentsInRange, outstandingBalance, paymentMethodLabel } from '@/utils/bookingTotals'
+import { computeBookingTotals, sumPaymentsInRange, paymentsInRange, outstandingBalance, paymentMethodLabel, bookingRef } from '@/utils/bookingTotals'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 import Pagination from '@/components/Pagination.vue'
 
@@ -475,7 +475,7 @@ function exportCsv() {
     .map((b) => {
       const t = computeBookingTotals(b)
       return [
-        '#' + b.bookingNumber,
+        bookingRef(b),
         new Date(b.startTime).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }),
         `${b.client?.firstName ?? ''} ${b.client?.lastName ?? ''}`.trim(),
         b.service || '',
