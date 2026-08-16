@@ -23,8 +23,7 @@
 
     <div v-if="loading" class="text-gray-500">Loading…</div>
 
-    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div class="lg:col-span-2 space-y-6">
+    <div v-else class="space-y-6 max-w-4xl">
         <!-- ============ VIEW MODE ============ -->
         <template v-if="!isEditing">
           <div class="card">
@@ -175,37 +174,60 @@
             </div>
           </div>
         </template>
-      </div>
 
-      <!-- Sidebar: codes (always interactive for vouchers) -->
-      <div class="space-y-6">
-        <div v-if="isVoucher" class="card">
-          <div class="card-header"><h2 class="text-lg font-semibold"><i class="fas fa-ticket mr-2"></i>Codes</h2></div>
-          <div class="card-body">
-            <p v-if="!id" class="text-sm text-gray-500">Save the voucher first, then add its codes here.</p>
-            <template v-else>
-              <p class="text-xs text-gray-500 mb-3">One code per area/flyer (e.g. <span class="font-medium">NPMNEWMILLS</span>). All share this voucher's offer; the usage count is your flyer attribution.</p>
-              <div v-if="codes.length" class="space-y-2 mb-4">
-                <div v-for="c in codes" :key="c.id" class="flex items-center justify-between text-sm border-b border-gray-100 dark:border-gray-800 pb-2">
-                  <div>
-                    <span class="font-medium uppercase">{{ c.code }}</span>
-                    <span v-if="c.label" class="text-gray-500"> · {{ c.label }}</span>
-                    <span class="block text-xs text-gray-400">used {{ c.usageCount }}{{ c.usageLimit ? ` / ${c.usageLimit}` : '' }}</span>
+      <!-- Codes (full-width, always interactive for vouchers) -->
+      <div v-if="isVoucher" class="card">
+        <div class="card-header flex justify-between items-center">
+          <h2 class="text-lg font-semibold"><i class="fas fa-ticket mr-2"></i>Codes</h2>
+          <button v-if="id && !adding" type="button" @click="startAdd" class="btn-secondary text-sm"><i class="fas fa-plus mr-1"></i>Add new code</button>
+        </div>
+        <div class="card-body">
+          <p v-if="!id" class="text-sm text-gray-500">Save the voucher first, then add its codes here.</p>
+          <template v-else>
+            <p class="text-xs text-gray-500 mb-4">One code per area/flyer (e.g. <span class="font-medium">NPMNEWMILLS</span>). All share this voucher's offer; the usage count is your flyer attribution. Click a code to see its bookings.</p>
+
+            <!-- Add-new inline row -->
+            <div v-if="adding" class="flex flex-wrap items-center gap-2 mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded">
+              <input v-model="newCode.code" type="text" class="input-field uppercase text-sm w-44" placeholder="NPMBUXTON" />
+              <input v-model="newCode.label" type="text" class="input-field text-sm flex-1 min-w-40" placeholder="Label (optional)" />
+              <input v-model.number="newCode.usageLimit" type="number" min="1" class="input-field text-sm w-32" placeholder="Cap (optional)" />
+              <button type="button" @click="addCode" :disabled="codeSaving || !newCode.code.trim()" class="btn-primary text-sm">Add</button>
+              <button type="button" @click="cancelAdd" class="btn-secondary text-sm">Cancel</button>
+              <p v-if="codeError" class="w-full text-sm text-red-600">{{ codeError }}</p>
+            </div>
+
+            <div v-if="codes.length" class="text-sm">
+              <!-- header -->
+              <div class="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-x-4 pb-2 border-b-2 border-gray-200 dark:border-gray-700 text-xs font-medium uppercase tracking-wide text-gray-500">
+                <div>Code</div><div>Label</div><div class="text-right">Used</div><div></div><div></div>
+              </div>
+              <!-- rows -->
+              <div v-for="c in codes" :key="c.id" class="border-b border-gray-100 dark:border-gray-800">
+                <div class="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-x-4 items-center py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" @click="toggleCode(c.id)">
+                  <div class="font-medium uppercase">{{ c.code }}</div>
+                  <div class="text-gray-600 dark:text-gray-400 truncate">{{ c.label || '—' }}</div>
+                  <div class="text-right tabular-nums">{{ c.usageCount }}{{ c.usageLimit ? ` / ${c.usageLimit}` : '' }}</div>
+                  <button type="button" @click.stop="removeCode(c)" :disabled="codeSaving" class="text-red-500 hover:text-red-700" title="Delete code"><i class="fas fa-trash"></i></button>
+                  <i class="fas text-gray-400" :class="expandedCode === c.id ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                </div>
+                <!-- expanded: bookings from this code -->
+                <div v-if="expandedCode === c.id" class="pb-3 pl-2">
+                  <div v-if="c.bookings && c.bookings.length" class="grid grid-cols-[auto_1fr_auto] gap-x-4">
+                    <div class="text-xs uppercase tracking-wide text-gray-400 pb-1">Ref</div>
+                    <div class="text-xs uppercase tracking-wide text-gray-400 pb-1">Client</div>
+                    <div class="text-xs uppercase tracking-wide text-gray-400 pb-1 text-right">Date</div>
+                    <template v-for="b in c.bookings" :key="b.id">
+                      <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium py-1">NPM-{{ b.bookingNumber }}</RouterLink>
+                      <div class="py-1">{{ b.client ? `${b.client.firstName} ${b.client.lastName}` : 'Unknown' }}</div>
+                      <div class="py-1 text-right text-gray-500 whitespace-nowrap">{{ formatDate(b.startTime) }}</div>
+                    </template>
                   </div>
-                  <button @click="removeCode(c)" :disabled="codeSaving" class="text-red-500 hover:text-red-700 text-xs" title="Delete code"><i class="fas fa-trash"></i></button>
+                  <p v-else class="text-sm text-gray-400">No bookings from this code yet.</p>
                 </div>
               </div>
-              <p v-else class="text-sm text-gray-400 mb-4">No codes yet.</p>
-
-              <div class="space-y-2 border-t dark:border-gray-700 pt-3">
-                <input v-model="newCode.code" type="text" class="input-field uppercase text-sm" placeholder="Code e.g. NPMBUXTON" />
-                <input v-model="newCode.label" type="text" class="input-field text-sm" placeholder="Label (optional) e.g. Buxton flyer" />
-                <input v-model.number="newCode.usageLimit" type="number" min="1" class="input-field text-sm" placeholder="Usage cap (optional)" />
-                <button @click="addCode" :disabled="codeSaving || !newCode.code.trim()" class="btn-secondary w-full text-sm">Add code</button>
-                <p v-if="codeError" class="text-sm text-red-600">{{ codeError }}</p>
-              </div>
-            </template>
-          </div>
+            </div>
+            <p v-else-if="!adding" class="text-sm text-gray-400">No codes yet. Click "Add new code" to create one.</p>
+          </template>
         </div>
       </div>
     </div>
@@ -263,6 +285,26 @@ const codes = ref<PromoCode[]>([])
 const newCode = reactive({ code: '', label: '', usageLimit: null as number | null })
 const codeSaving = ref(false)
 const codeError = ref('')
+const adding = ref(false)
+const expandedCode = ref<string | null>(null)
+
+function toggleCode(codeId: string) {
+  expandedCode.value = expandedCode.value === codeId ? null : codeId
+}
+function startAdd() {
+  adding.value = true
+  codeError.value = ''
+}
+function cancelAdd() {
+  adding.value = false
+  newCode.code = ''
+  newCode.label = ''
+  newCode.usageLimit = null
+  codeError.value = ''
+}
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: '2-digit', month: 'short', year: 'numeric' })
+}
 
 const isVoucher = computed(() => form.kind === 'VOUCHER')
 const title = computed(() => {
@@ -384,6 +426,7 @@ async function addCode() {
     newCode.code = ''
     newCode.label = ''
     newCode.usageLimit = null
+    adding.value = false
   } catch (err: any) {
     codeError.value = err?.response?.data?.error || err?.message || 'Failed to add code'
   } finally {

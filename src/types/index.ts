@@ -433,6 +433,8 @@ export interface PromoCode {
   usageLimit?: number | null
   usageCount: number
   active: boolean
+  // Bookings that used this code (present on the promotion detail endpoint).
+  bookings?: PromotionBookingSummary[]
 }
 
 // Expense Types
