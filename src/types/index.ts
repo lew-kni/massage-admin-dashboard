@@ -83,6 +83,9 @@ export interface Booking {
   // cancellation policy. Null = no fee due (enough notice, or waived). Payment
   // of the fee is tracked with isPaid / paymentMethod, like a normal booking.
   cancellationFee?: number | null
+  // How a CANCELLED booking got there: 'REJECTED' (declined request) vs
+  // 'CANCELLED' (cancelled confirmed booking). Null on non-cancelled + legacy.
+  cancellationType?: 'REJECTED' | 'CANCELLED' | null
   preFormToken?: string | null
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null

@@ -23,226 +23,279 @@
     </div>
 
     <!-- Booking Details -->
-    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div v-else class="space-y-6">
+      <!-- Status banner -->
+      <div :class="['rounded-lg px-5 py-4 flex items-center justify-between', bannerClass]">
+        <div>
+          <p class="text-lg font-semibold">{{ bannerLabel }}</p>
+          <p class="text-sm opacity-80">Booking #{{ booking.bookingNumber }} · Created {{ formatRelative(booking.createdAt) }}</p>
+        </div>
+        <i :class="['fas text-2xl opacity-70', bannerIcon]"></i>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Main Content -->
       <div class="lg:col-span-2 space-y-6">
-        <!-- Booking Information Card -->
+        <!-- Appointment Details Card -->
         <div class="card">
-          <div class="card-header flex justify-between items-start">
-            <div>
-              <h2 class="text-2xl font-semibold">Booking #{{ booking.bookingNumber }}</h2>
-              <p class="text-gray-500 text-sm mt-1">Created {{ formatRelative(booking.createdAt) }}</p>
-            </div>
-            <span :class="['badge', getStatusClass(booking.status)]">
-              {{ booking.status }}
-            </span>
+          <div class="card-header">
+            <h2 class="text-lg font-semibold"><i class="fas fa-calendar-day mr-2"></i>Appointment Details</h2>
           </div>
-          <div class="card-body space-y-6">
-            <!-- Client Information -->
-            <div>
-              <div class="flex justify-between items-center mb-3">
-                <h3 class="font-semibold text-gray-900">Client Information</h3>
-                <div class="flex items-center gap-3">
-                  <button
-                    @click="showChangeClient = true"
-                    class="text-sage-600 hover:text-sage-700 text-sm font-medium inline-flex items-center gap-1"
-                  >
-                    <i class="fas fa-arrows-rotate"></i>
-                    <span>Change Client</span>
-                  </button>
-                  <RouterLink
-                    v-if="booking.clientId"
-                    :to="`/clients/${booking.clientId}`"
-                    class="text-sage-600 hover:text-sage-700 text-sm font-medium"
-                  >
-                    View Profile<i class="fas fa-arrow-right ml-1"></i>
-                  </RouterLink>
-                </div>
-              </div>
-              <div v-if="changeClientError" class="mb-3 p-2 bg-red-50 border border-red-200 rounded">
-                <p class="text-xs text-red-700">{{ changeClientError }}</p>
-              </div>
+          <div class="card-body">
+            <div class="space-y-4">
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <p class="text-sm text-gray-500">Name</p>
-                  <p class="font-medium">{{ booking.client?.firstName }} {{ booking.client?.lastName }}</p>
+                  <label class="text-sm text-gray-500">Date</label>
+                  <p v-if="!isEditing" class="font-medium">{{ formatDate(booking.startTime) }}</p>
+                  <AvailabilityDatePicker
+                    v-else
+                    v-model="editForm.startDate"
+                    :duration="Number(editForm.duration) || null"
+                    :exclude-booking-id="booking.id"
+                    class="mt-1"
+                  />
                 </div>
                 <div>
-                  <p class="text-sm text-gray-500">Email</p>
-                  <p class="font-medium">
-                    <a v-if="booking.client?.email" :href="`mailto:${booking.client.email}`" class="text-sage-600 hover:underline break-all">
-                      {{ booking.client.email }}
-                    </a>
-                    <span v-else class="text-gray-400">Not provided</span>
-                  </p>
+                  <label class="text-sm text-gray-500">Start Time</label>
+                  <p v-if="!isEditing" class="font-medium">{{ formatTime(booking.startTime) }}</p>
+                  <input v-else v-model="editForm.startTime" type="time" class="input-field mt-1" />
                 </div>
                 <div>
-                  <p class="text-sm text-gray-500">Phone</p>
-                  <p class="font-medium">
-                    <a v-if="booking.client?.phone" :href="`tel:${booking.client.phone}`" class="text-sage-600 hover:underline">
-                      {{ booking.client.phone }}
-                    </a>
+                  <label class="text-sm text-gray-500">Duration</label>
+                  <p v-if="!isEditing" class="font-medium">{{ calculateDuration(booking.startTime, booking.endTime) }} minutes</p>
+                  <input v-else v-model="editForm.duration" type="number" class="input-field mt-1" />
+                </div>
+                <div>
+                  <label class="text-sm text-gray-500">Service</label>
+                  <p v-if="!isEditing" class="font-medium">
+                    <span v-if="booking.service">{{ booking.service }}</span>
                     <span v-else class="text-gray-400">Not provided</span>
                   </p>
+                  <input v-else v-model="editForm.service" type="text" class="input-field mt-1" />
                 </div>
-                <div class="col-span-2">
-                  <p class="text-sm text-gray-500">Address</p>
-                  <p class="font-medium whitespace-pre-line">
-                    <span v-if="clientAddress">{{ clientAddress }}</span>
-                    <span v-else class="text-gray-400">Not provided</span>
-                  </p>
-                </div>
+              </div>
+              <div v-if="isEditing">
+                <label class="text-sm text-gray-500">Status</label>
+                <select v-model="editForm.status" class="input-field mt-1">
+                  <option>PENDING</option>
+                  <option>CONFIRMED</option>
+                  <option>CANCELLED</option>
+                  <option>COMPLETED</option>
+                </select>
+              </div>
+              <div>
+                <label class="text-sm text-gray-500">Notes</label>
+                <p v-if="!isEditing" class="font-medium whitespace-pre-wrap">
+                  <span v-if="booking.notes">{{ booking.notes }}</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+                <textarea v-else v-model="editForm.notes" class="input-field mt-1" rows="3"></textarea>
               </div>
             </div>
+          </div>
+        </div>
 
-            <!-- Appointment Details -->
-            <div class="border-t pt-6">
-              <h3 class="font-semibold text-gray-900 mb-3">Appointment Details</h3>
-              <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="text-sm text-gray-500">Date</label>
-                    <p v-if="!isEditing" class="font-medium">{{ formatDate(booking.startTime) }}</p>
-                    <AvailabilityDatePicker
-                      v-else
-                      v-model="editForm.startDate"
-                      :duration="Number(editForm.duration) || null"
-                      :exclude-booking-id="booking.id"
-                      class="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <label class="text-sm text-gray-500">Start Time</label>
-                    <p v-if="!isEditing" class="font-medium">{{ formatTime(booking.startTime) }}</p>
-                    <input v-else v-model="editForm.startTime" type="time" class="input-field mt-1" />
-                  </div>
-                  <div>
-                    <label class="text-sm text-gray-500">Duration</label>
-                    <p v-if="!isEditing" class="font-medium">{{ calculateDuration(booking.startTime, booking.endTime) }} minutes</p>
-                    <input v-else v-model="editForm.duration" type="number" class="input-field mt-1" />
-                  </div>
-                  <div>
-                    <label class="text-sm text-gray-500">Service</label>
-                    <p v-if="!isEditing" class="font-medium">
-                      <span v-if="booking.service">{{ booking.service }}</span>
-                      <span v-else class="text-gray-400">Not provided</span>
-                    </p>
-                    <input v-else v-model="editForm.service" type="text" class="input-field mt-1" />
-                  </div>
-                  <div>
-                    <label class="text-sm text-gray-500">Price</label>
-                    <p class="font-medium">
-                      <template v-if="booking.price !== null && booking.price !== undefined">
-                        <span
-                          v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
-                          class="text-gray-400 line-through mr-1"
-                        >£{{ booking.price }}</span>
-                        <span>£{{ booking.discountedPrice ?? booking.price }}</span>
-                        <span
-                          v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
-                          class="ml-2 badge bg-amber-100 text-amber-800"
-                        >{{ booking.promotion ? 'Promotion' : 'Discount' }}</span>
-                      </template>
-                      <span v-else class="text-gray-400">Not set</span>
-                    </p>
-                    <!-- Extra charge (e.g. travel) as a line + total when set -->
-                    <p v-if="!isEditing && booking.extraCharge" class="text-sm text-gray-700 mt-0.5">
-                      + £{{ booking.extraCharge }}<span v-if="booking.extraChargeReason" class="text-gray-500"> · {{ booking.extraChargeReason }}</span>
-                      <span class="ml-2 font-medium">Total £{{ bookingTotal(booking) }}</span>
-                    </p>
-                    <!-- Cancellation fee, when this booking was cancelled with a charge -->
-                    <p v-if="!isEditing && booking.status === 'CANCELLED' && booking.cancellationFee" class="text-sm text-red-700 mt-0.5">
-                      <i class="fas fa-ban mr-1"></i>Cancellation fee: £{{ booking.cancellationFee }}
-                    </p>
-                    <p v-else-if="!isEditing && booking.status === 'CANCELLED'" class="text-sm text-gray-500 mt-0.5">
-                      <i class="fas fa-ban mr-1"></i>Cancelled — no fee
-                    </p>
-                    <!-- Applied promotion or manual discount + revoke (e.g. TOS abuse, or undoing a one-off) -->
-                    <div v-if="hasActiveDiscount" class="mt-1 flex items-center flex-wrap gap-2">
-                      <span class="text-xs text-amber-700">
-                        <i class="fas fa-tag mr-1"></i>{{ booking.promotion ? booking.promotion.message : 'Manual discount' }}
-                      </span>
-                      <button
-                        @click="onRemoveDiscount"
-                        :disabled="removingDiscount"
-                        class="text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
-                      >
-                        {{ removingDiscount ? 'Removing…' : 'Remove' }}
-                      </button>
-                    </div>
-                    <!-- Nothing applied yet: apply a stored promotion after the
-                         fact (e.g. comping a friend), or a one-off manual
-                         discount that doesn't need a Promotion record at all. -->
-                    <div v-else class="mt-1 space-y-1.5">
-                      <div class="flex items-center flex-wrap gap-2">
-                        <select v-model="selectedPromotionId" class="input-field text-xs py-1 w-48">
-                          <option value="">Apply a promotion…</option>
-                          <option v-for="p in servicesStore.promotions.filter((p) => p.active)" :key="p.id" :value="p.id">
-                            {{ p.message }}{{ p.internal ? ' (internal)' : '' }}
-                          </option>
-                        </select>
-                        <button
-                          v-if="selectedPromotionId"
-                          @click="onApplyPromotion"
-                          :disabled="applyingPromotion"
-                          class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
-                        >
-                          {{ applyingPromotion ? 'Applying…' : 'Apply' }}
-                        </button>
-                      </div>
-                      <div v-if="booking.price != null" class="flex items-center flex-wrap gap-2">
-                        <select v-model="discountMode" class="input-field text-xs py-1 w-16">
-                          <option value="percent">%</option>
-                          <option value="amount">£</option>
-                        </select>
-                        <input
-                          v-model.number="discountValue"
-                          type="number"
-                          min="0"
-                          :max="discountMode === 'percent' ? 100 : undefined"
-                          step="1"
-                          placeholder="One-off discount"
-                          class="input-field text-xs py-1 w-32"
-                        />
-                        <button
-                          v-if="discountValue"
-                          @click="onApplyDiscount"
-                          :disabled="applyingDiscount"
-                          class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
-                        >
-                          {{ applyingDiscount ? 'Applying…' : 'Apply' }}
-                        </button>
-                      </div>
-                    </div>
-                    <p v-if="discountError" class="mt-1 text-xs text-red-700">{{ discountError }}</p>
-                  </div>
-                </div>
-                <div v-if="isEditing">
-                  <label class="text-sm text-gray-500">Status</label>
-                  <select v-model="editForm.status" class="input-field mt-1">
-                    <option>PENDING</option>
-                    <option>CONFIRMED</option>
-                    <option>CANCELLED</option>
-                    <option>COMPLETED</option>
+        <!-- Client Information Card -->
+        <div class="card">
+          <div class="card-header flex justify-between items-center">
+            <h2 class="text-lg font-semibold"><i class="fas fa-user mr-2"></i>Client Information</h2>
+            <div class="flex items-center gap-3">
+              <button
+                @click="showChangeClient = true"
+                class="text-sage-600 hover:text-sage-700 text-sm font-medium inline-flex items-center gap-1"
+              >
+                <i class="fas fa-arrows-rotate"></i>
+                <span>Change Client</span>
+              </button>
+              <RouterLink
+                v-if="booking.clientId"
+                :to="`/clients/${booking.clientId}`"
+                class="text-sage-600 hover:text-sage-700 text-sm font-medium"
+              >
+                View Profile<i class="fas fa-arrow-right ml-1"></i>
+              </RouterLink>
+            </div>
+          </div>
+          <div class="card-body">
+            <div v-if="changeClientError" class="mb-3 p-2 bg-red-50 border border-red-200 rounded">
+              <p class="text-xs text-red-700">{{ changeClientError }}</p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-sm text-gray-500">Name</p>
+                <p class="font-medium">{{ booking.client?.firstName }} {{ booking.client?.lastName }}</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Email</p>
+                <p class="font-medium">
+                  <a v-if="booking.client?.email" :href="`mailto:${booking.client.email}`" class="text-sage-600 hover:underline break-all">
+                    {{ booking.client.email }}
+                  </a>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-500">Phone</p>
+                <p class="font-medium">
+                  <a v-if="booking.client?.phone" :href="`tel:${booking.client.phone}`" class="text-sage-600 hover:underline">
+                    {{ booking.client.phone }}
+                  </a>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+              </div>
+              <div class="col-span-2">
+                <p class="text-sm text-gray-500">Address</p>
+                <p class="font-medium whitespace-pre-line">
+                  <span v-if="clientAddress">{{ clientAddress }}</span>
+                  <span v-else class="text-gray-400">Not provided</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Money Card -->
+        <div class="card">
+          <div class="card-header flex justify-between items-center">
+            <h2 class="text-lg font-semibold"><i class="fas fa-sterling-sign mr-2"></i>Money</h2>
+            <span :class="['badge', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">{{ paymentStatusLabel(paymentTotals.paymentStatus) }}</span>
+          </div>
+          <div class="card-body space-y-4">
+            <!-- Charges -->
+            <div>
+              <label class="text-sm text-gray-500">Price</label>
+              <p class="font-medium">
+                <template v-if="booking.price !== null && booking.price !== undefined">
+                  <span
+                    v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
+                    class="text-gray-400 line-through mr-1"
+                  >£{{ booking.price }}</span>
+                  <span>£{{ booking.discountedPrice ?? booking.price }}</span>
+                  <span
+                    v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
+                    class="ml-2 badge bg-amber-100 text-amber-800"
+                  >{{ booking.promotion ? 'Promotion' : 'Discount' }}</span>
+                </template>
+                <span v-else class="text-gray-400">Not set</span>
+              </p>
+              <!-- Extra charge (e.g. travel) as a line + total when set -->
+              <p v-if="!isEditing && booking.extraCharge" class="text-sm text-gray-700 mt-0.5">
+                + £{{ booking.extraCharge }}<span v-if="booking.extraChargeReason" class="text-gray-500"> · {{ booking.extraChargeReason }}</span>
+                <span class="ml-2 font-medium">Total £{{ bookingTotal(booking) }}</span>
+              </p>
+              <!-- Cancellation fee, when this booking was cancelled with a charge -->
+              <p v-if="!isEditing && booking.status === 'CANCELLED' && booking.cancellationFee" class="text-sm text-red-700 mt-0.5">
+                <i class="fas fa-ban mr-1"></i>Cancellation fee: £{{ booking.cancellationFee }}
+              </p>
+              <p v-else-if="!isEditing && booking.status === 'CANCELLED'" class="text-sm text-gray-500 mt-0.5">
+                <i class="fas fa-ban mr-1"></i>Cancelled — no fee
+              </p>
+              <!-- Applied promotion or manual discount + revoke -->
+              <div v-if="hasActiveDiscount" class="mt-1 flex items-center flex-wrap gap-2">
+                <span class="text-xs text-amber-700">
+                  <i class="fas fa-tag mr-1"></i>{{ booking.promotion ? booking.promotion.message : 'Manual discount' }}
+                </span>
+                <button
+                  @click="onRemoveDiscount"
+                  :disabled="removingDiscount"
+                  class="text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                >
+                  {{ removingDiscount ? 'Removing…' : 'Remove' }}
+                </button>
+              </div>
+              <!-- Nothing applied yet: apply a stored promotion or a one-off manual discount -->
+              <div v-else class="mt-1 space-y-1.5">
+                <div class="flex items-center flex-wrap gap-2">
+                  <select v-model="selectedPromotionId" class="input-field text-xs py-1 w-48">
+                    <option value="">Apply a promotion…</option>
+                    <option v-for="p in servicesStore.promotions.filter((p) => p.active)" :key="p.id" :value="p.id">
+                      {{ p.message }}{{ p.internal ? ' (internal)' : '' }}
+                    </option>
                   </select>
+                  <button
+                    v-if="selectedPromotionId"
+                    @click="onApplyPromotion"
+                    :disabled="applyingPromotion"
+                    class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
+                  >
+                    {{ applyingPromotion ? 'Applying…' : 'Apply' }}
+                  </button>
                 </div>
-                <div v-if="isEditing">
-                  <label class="text-sm text-gray-500">Extra charge (£)</label>
-                  <div class="flex items-center gap-2 mt-1">
-                    <input v-model.number="editForm.extraCharge" type="number" min="0" step="1" placeholder="0" class="input-field w-24" />
-                    <input v-model="editForm.extraChargeReason" type="text" maxlength="200" placeholder="Reason (e.g. travel outside area)" class="input-field flex-1" />
-                  </div>
-                  <p class="text-xs text-gray-400 mt-1">Added on top of the price and shown to the client on their confirmation.</p>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-500">Notes</label>
-                  <p v-if="!isEditing" class="font-medium whitespace-pre-wrap">
-                    <span v-if="booking.notes">{{ booking.notes }}</span>
-                    <span v-else class="text-gray-400">Not provided</span>
-                  </p>
-                  <textarea v-else v-model="editForm.notes" class="input-field mt-1" rows="3"></textarea>
+                <div v-if="booking.price != null" class="flex items-center flex-wrap gap-2">
+                  <select v-model="discountMode" class="input-field text-xs py-1 w-16">
+                    <option value="percent">%</option>
+                    <option value="amount">£</option>
+                  </select>
+                  <input
+                    v-model.number="discountValue"
+                    type="number"
+                    min="0"
+                    :max="discountMode === 'percent' ? 100 : undefined"
+                    step="1"
+                    placeholder="One-off discount"
+                    class="input-field text-xs py-1 w-32"
+                  />
+                  <button
+                    v-if="discountValue"
+                    @click="onApplyDiscount"
+                    :disabled="applyingDiscount"
+                    class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
+                  >
+                    {{ applyingDiscount ? 'Applying…' : 'Apply' }}
+                  </button>
                 </div>
               </div>
+              <p v-if="discountError" class="mt-1 text-xs text-red-700">{{ discountError }}</p>
+            </div>
+
+            <!-- Extra charge edit -->
+            <div v-if="isEditing">
+              <label class="text-sm text-gray-500">Extra charge (£)</label>
+              <div class="flex items-center gap-2 mt-1">
+                <input v-model.number="editForm.extraCharge" type="number" min="0" step="1" placeholder="0" class="input-field w-24" />
+                <input v-model="editForm.extraChargeReason" type="text" maxlength="200" placeholder="Reason (e.g. travel outside area)" class="input-field flex-1" />
+              </div>
+              <p class="text-xs text-gray-400 mt-1">Added on top of the price and shown to the client on their confirmation.</p>
+            </div>
+
+            <!-- Payments -->
+            <div class="border-t pt-4">
+              <div class="text-sm space-y-1">
+                <div v-if="paymentTotals.grossTotal !== paymentTotals.total" class="flex items-center justify-between text-gray-500">
+                  <span>Gross</span><span class="line-through">£{{ paymentTotals.grossTotal }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-600">Total due</span><span class="font-medium">£{{ paymentTotals.total }}</span>
+                </div>
+                <div v-if="paymentTotals.amountPaid" class="flex items-center justify-between">
+                  <span class="text-gray-600">Paid</span><span class="font-medium">£{{ paymentTotals.amountPaid }}</span>
+                </div>
+                <div v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'" class="flex items-center justify-between">
+                  <span class="text-gray-600">Balance</span>
+                  <span class="font-medium" :class="paymentTotals.balance > 0 ? 'text-red-600' : 'text-green-600'">£{{ paymentTotals.balance }}</span>
+                </div>
+              </div>
+              <ul v-if="booking.payments && booking.payments.length" class="mt-3 space-y-2 border-t pt-3">
+                <li v-for="p in booking.payments" :key="p.id" class="flex items-start justify-between text-sm gap-2">
+                  <span>
+                    <span class="font-medium">£{{ p.amount }}</span>
+                    · {{ paymentMethodLabel(p.method) }}
+                    · {{ formatDate(p.receivedAt) }}
+                    <span v-if="p.note" class="text-gray-500">— {{ p.note }}</span>
+                  </span>
+                  <button @click="removePayment(p.id)" :disabled="savingPayment" class="text-red-500 hover:text-red-700 text-xs shrink-0" title="Remove payment">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </li>
+              </ul>
+              <button
+                v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'"
+                @click="showPaymentModal = true"
+                class="mt-3 text-sage-600 hover:text-sage-700 text-sm font-medium"
+              >
+                <i class="fas fa-plus-circle mr-1"></i>Record payment
+              </button>
+              <div v-if="paymentError" class="mt-2 text-sm text-red-600">{{ paymentError }}</div>
             </div>
           </div>
         </div>
@@ -414,13 +467,13 @@
             <h3 class="font-semibold">Quick Actions</h3>
           </div>
           <div class="card-body space-y-3">
-            <button v-if="!isEditing" @click="showSendEmail = true" class="btn-primary w-full text-sm">
-              <i class="fas fa-envelope"></i>
-              <span>Send Email</span>
-            </button>
             <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary w-full text-sm">
               <i class="fas fa-edit"></i>
               <span>Edit</span>
+            </button>
+            <button v-if="!isEditing" @click="showSendEmail = true" class="btn-primary w-full text-sm">
+              <i class="fas fa-envelope"></i>
+              <span>Send Email</span>
             </button>
             <template v-else>
               <button @click="saveBooking" :disabled="saving" class="btn-primary w-full text-sm">
@@ -437,14 +490,6 @@
             <button v-if="!isEditing && settingsStore.allowDeleteBookings" @click="onDeleteBooking" :disabled="deleting" class="btn-danger w-full text-sm">
               <i class="fas fa-trash-alt"></i>
               <span>{{ deleting ? 'Deleting...' : 'Delete Booking' }}</span>
-            </button>
-            <button
-              v-if="!isEditing && paymentTotals.balance > 0"
-              @click="showPaymentModal = true"
-              class="btn-primary w-full text-sm bg-emerald-600 hover:bg-emerald-700"
-            >
-              <i class="fas fa-check-circle"></i>
-              <span>Record payment</span>
             </button>
           </div>
         </div>
@@ -476,55 +521,15 @@
               <p class="font-medium">{{ formatDateTime(booking.createdAt) }}</p>
             </div>
             <div class="border-t pt-4">
-              <div class="flex items-center justify-between mb-3">
-                <p class="text-gray-500">Payments</p>
+              <div class="flex items-center justify-between">
+                <p class="text-gray-500">Payment</p>
                 <span :class="['badge', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">
                   {{ paymentStatusLabel(paymentTotals.paymentStatus) }}
                 </span>
               </div>
-
-              <!-- Charges + balance -->
-              <div class="text-sm space-y-1">
-                <div v-if="paymentTotals.grossTotal !== paymentTotals.total" class="flex items-center justify-between text-gray-500">
-                  <span>Gross</span><span class="line-through">£{{ paymentTotals.grossTotal }}</span>
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-gray-600">Total due</span><span class="font-medium">£{{ paymentTotals.total }}</span>
-                </div>
-                <div v-if="paymentTotals.amountPaid" class="flex items-center justify-between">
-                  <span class="text-gray-600">Paid</span><span class="font-medium">£{{ paymentTotals.amountPaid }}</span>
-                </div>
-                <div v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'" class="flex items-center justify-between">
-                  <span class="text-gray-600">Balance</span>
-                  <span class="font-medium" :class="paymentTotals.balance > 0 ? 'text-red-600' : 'text-green-600'">£{{ paymentTotals.balance }}</span>
-                </div>
-              </div>
-
-              <!-- Payment lines -->
-              <ul v-if="booking.payments && booking.payments.length" class="mt-3 space-y-2 border-t pt-3">
-                <li v-for="p in booking.payments" :key="p.id" class="flex items-start justify-between text-sm gap-2">
-                  <span>
-                    <span class="font-medium">£{{ p.amount }}</span>
-                    · {{ paymentMethodLabel(p.method) }}
-                    · {{ formatDate(p.receivedAt) }}
-                    <span v-if="p.note" class="text-gray-500">— {{ p.note }}</span>
-                  </span>
-                  <button @click="removePayment(p.id)" :disabled="savingPayment" class="text-red-500 hover:text-red-700 text-xs shrink-0" title="Remove payment">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </li>
-              </ul>
-
-              <!-- Record -->
-              <button
-                v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'"
-                @click="showPaymentModal = true"
-                class="mt-3 text-sage-600 hover:text-sage-700 text-sm font-medium"
-              >
-                <i class="fas fa-plus-circle mr-1"></i>Record payment
-              </button>
-
-              <div v-if="paymentError" class="mt-2 text-sm text-red-600">{{ paymentError }}</div>
+              <p v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY' && paymentTotals.balance > 0" class="text-sm text-red-600 mt-1">
+                £{{ paymentTotals.balance }} outstanding
+              </p>
             </div>
           </div>
         </div>
@@ -532,6 +537,7 @@
         <!-- Documents — referral letters etc. for this appointment. Tagged to
              the booking and the client; also visible on the client profile. -->
         <DocumentsPanel v-if="booking.clientId" :client-id="booking.clientId" :booking-id="booking.id" />
+      </div>
       </div>
     </div>
 
@@ -729,6 +735,31 @@ function paymentStatusBadgeClass(status: string): string {
   if (status === 'COMPLIMENTARY') return 'bg-purple-100 text-purple-800'
   return 'bg-red-100 text-red-800' // DUE
 }
+
+// Status banner: label + colour keyed off status, with CANCELLED split into
+// Rejected (a declined request) vs Cancelled via cancellationType.
+type BannerKind = 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'REJECTED' | 'CANCELLED'
+const bannerKind = computed<BannerKind>(() => {
+  const b = booking.value
+  if (!b) return 'PENDING'
+  if (b.status === 'CANCELLED') return b.cancellationType === 'REJECTED' ? 'REJECTED' : 'CANCELLED'
+  return b.status as BannerKind
+})
+const bannerLabel = computed(() => ({
+  PENDING: 'Pending review', CONFIRMED: 'Confirmed', COMPLETED: 'Completed',
+  REJECTED: 'Rejected', CANCELLED: 'Cancelled',
+}[bannerKind.value]))
+const bannerClass = computed(() => ({
+  PENDING: 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200',
+  CONFIRMED: 'bg-green-100 text-green-900 dark:bg-green-950/50 dark:text-green-200',
+  COMPLETED: 'bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-200',
+  REJECTED: 'bg-red-100 text-red-900 dark:bg-red-950/50 dark:text-red-200',
+  CANCELLED: 'bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
+}[bannerKind.value]))
+const bannerIcon = computed(() => ({
+  PENDING: 'fa-hourglass-half', CONFIRMED: 'fa-circle-check', COMPLETED: 'fa-flag-checkered',
+  REJECTED: 'fa-ban', CANCELLED: 'fa-ban',
+}[bannerKind.value]))
 
 // Clears whatever pricing adjustment is on the booking -- a stored promotion
 // or a one-off manual discount both revert via the same endpoint.
