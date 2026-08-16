@@ -5,6 +5,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import ClientsView from '@/views/ClientsView.vue'
 import ClientDetailView from '@/views/ClientDetailView.vue'
 import BookingsView from '@/views/BookingsView.vue'
+import RebookingView from '@/views/RebookingView.vue'
 import LeadsView from '@/views/LeadsView.vue'
 import LeadDetailView from '@/views/LeadDetailView.vue'
 import BookingDetailView from '@/views/BookingDetailView.vue'
@@ -61,6 +62,12 @@ const routes = [
     path: '/bookings',
     name: 'Bookings',
     component: BookingsView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/rebooking',
+    name: 'Rebooking',
+    component: RebookingView,
     meta: { requiresAuth: true },
   },
   {

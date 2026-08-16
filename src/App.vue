@@ -161,6 +161,7 @@ const navigation = computed(() => [
   { name: 'Leads', to: '/leads', icon: 'fas fa-inbox', badge: leadsStore.unreadCount },
   { name: 'Clients', to: '/clients', icon: 'fas fa-users' },
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
+  { name: 'Rebooking', to: '/rebooking', icon: 'fas fa-user-clock' },
 ])
 
 const accountingChildren = [
