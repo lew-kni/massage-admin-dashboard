@@ -197,14 +197,18 @@ async function submitForm() {
       endDateTime = londonWallTimeToUtc(form.endDate, form.endTime).toISOString()
     }
 
-    // Call the API directly through the availability store
-    const blocked = await availabilityStore.createUnavailableBlock({
+    // Editing an existing block updates it in place; otherwise create a new one.
+    // (Previously this always created, so editing left a duplicate behind.)
+    const payload = {
       startDate: startDateTime,
       endDate: endDateTime,
       startTime: blockType.value === 'partial' ? form.startTime : null,
       endTime: blockType.value === 'partial' ? form.endTime : null,
       reason: form.reason || null,
-    })
+    }
+    const blocked = props.block
+      ? await availabilityStore.updateUnavailableBlock(props.block.id, payload)
+      : await availabilityStore.createUnavailableBlock(payload)
 
     emit('saved', blocked)
     emit('close')

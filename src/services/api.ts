@@ -290,6 +290,11 @@ class ApiService {
     return data
   }
 
+  async updateBlockedTime(id: string, blockedTime: { startTime: string; endTime: string; reason?: string }): Promise<BlockedTime> {
+    const { data } = await this.client.put(`/api/availability/block-time/${id}`, blockedTime)
+    return data
+  }
+
   async getBlockedTimes(): Promise<BlockedTime[]> {
     const { data } = await this.client.get('/api/availability/blocked-times')
     return data

@@ -62,6 +62,37 @@ export const useAvailabilityStore = defineStore('availability', () => {
     }
   }
 
+  async function updateUnavailableBlock(id: string, block: Omit<UnavailableBlock, 'id' | 'createdAt' | 'updatedAt'>) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await apiService.updateBlockedTime(id, {
+        startTime: block.startDate,
+        endTime: block.endDate,
+        reason: block.reason || undefined,
+      })
+      const formattedBlock: UnavailableBlock = {
+        id: response.id,
+        startDate: response.startTime,
+        endDate: response.endTime,
+        startTime: block.startTime,
+        endTime: block.endTime,
+        reason: response.reason,
+        createdAt: response.createdAt || new Date().toISOString(),
+        updatedAt: response.updatedAt || new Date().toISOString(),
+      }
+      const idx = unavailableBlocks.value.findIndex((b) => b.id === id)
+      if (idx !== -1) unavailableBlocks.value[idx] = formattedBlock
+      else unavailableBlocks.value.push(formattedBlock)
+      return formattedBlock
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to update unavailable block'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function deleteUnavailableBlock(id: string) {
     loading.value = true
     error.value = null
@@ -82,6 +113,7 @@ export const useAvailabilityStore = defineStore('availability', () => {
     error,
     fetchUnavailableBlocks,
     createUnavailableBlock,
+    updateUnavailableBlock,
     deleteUnavailableBlock,
   }
 })
