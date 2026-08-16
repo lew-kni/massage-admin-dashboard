@@ -126,7 +126,8 @@
                 <i class="fas fa-eye-slash mr-1"></i>Internal
               </span>
             </div>
-            <p class="font-medium mt-2">{{ promo.message }}</p>
+            <p class="font-medium mt-2">{{ promo.name || promo.message }}</p>
+            <p v-if="promo.name" class="text-sm text-gray-500">{{ promo.message }}</p>
             <p class="text-sm text-gray-500 mt-1">
               Applies to:
               <span v-if="promo.applicableTo === 'all'">all services</span>

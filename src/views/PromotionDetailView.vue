@@ -30,6 +30,10 @@
             <div class="card-header"><h2 class="text-lg font-semibold">Details</h2></div>
             <div class="card-body">
               <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                <div v-if="form.name" class="sm:col-span-2">
+                  <dt class="text-gray-500">Campaign name</dt>
+                  <dd class="font-medium">{{ form.name }}</dd>
+                </div>
                 <div>
                   <dt class="text-gray-500">Type</dt>
                   <dd class="font-medium">{{ isVoucher ? 'Voucher' : 'Promotion' }}</dd>
@@ -85,6 +89,12 @@
                   </button>
                 </div>
                 <p class="text-xs text-gray-400 mt-1">{{ isVoucher ? 'Redeemed with a code the customer types in — never advertised.' : 'Applied automatically to matching bookings, and shown on the site.' }}</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Campaign name <span class="text-gray-400 font-normal">(internal, optional)</span></label>
+                <input v-model="form.name" type="text" class="input-field" placeholder="e.g. New Mills Spring Flyer" />
+                <p class="text-xs text-gray-400 mt-1">Only you see this — for identifying the campaign. Not shown to clients.</p>
               </div>
 
               <div>
@@ -271,6 +281,7 @@ const allDurations = computed(() => {
 
 const form = reactive({
   kind: ((route.query.kind as PromotionKind) || 'PROMOTION') as PromotionKind,
+  name: '',
   message: '',
   discountType: 'PERCENT' as 'PERCENT' | 'FIXED',
   value: 0,
@@ -322,6 +333,7 @@ const appliesToText = computed(() => {
 
 function hydrate(p: Promotion) {
   form.kind = p.kind
+  form.name = p.name || ''
   form.message = p.message
   form.discountType = p.discountType
   form.value = p.discountType === 'FIXED' ? (p.discountAmount ?? 0) : p.discountPercentage
@@ -370,6 +382,7 @@ async function save() {
 
   const payload: Partial<Promotion> = {
     kind: form.kind,
+    name: form.name.trim() || null,
     message: form.message.trim(),
     discountType: form.discountType,
     discountPercentage: form.discountType === 'PERCENT' ? form.value : 0,

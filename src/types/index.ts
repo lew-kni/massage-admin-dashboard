@@ -396,6 +396,8 @@ export interface Promotion {
   id: string
   active: boolean
   kind: PromotionKind
+  // Internal campaign name (admin-only), distinct from the client-facing message.
+  name?: string | null
   message: string
   discountType: DiscountType
   // PERCENT uses discountPercentage (0–100); FIXED uses discountAmount (whole £).
