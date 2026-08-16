@@ -21,6 +21,14 @@
       </button>
     </div>
 
+    <!-- Active promo-code filter (from a campaign's "view all in Bookings") -->
+    <div v-if="promoCodeFilter" class="mb-4 flex items-center justify-between gap-3 p-3 bg-sage-50 dark:bg-gray-800 border border-sage-200 dark:border-gray-700 rounded">
+      <p class="text-sm text-sage-800 dark:text-sage-300">
+        <i class="fas fa-filter mr-1"></i>Showing bookings for code <span class="font-semibold uppercase">{{ promoCodeName || 'selected code' }}</span>
+      </p>
+      <button @click="clearCodeFilter" class="text-sm font-medium text-sage-700 dark:text-sage-300 hover:underline">Clear filter</button>
+    </div>
+
     <!-- List View -->
     <div v-if="viewMode === 'list'">
       <!-- Status Filters -->
@@ -485,6 +493,10 @@ const calendarViewMode = ref<'1d' | '7d' | '30d'>('1d')
 const filterStatus = ref<'PENDING' | 'ACTIVE' | 'PAST' | 'CANCELLED' | null>(null)
 type FormFilter = 'all' | 'outstanding' | 'not_sent' | 'sent' | 'completed' | 'overdue'
 const formFilter = ref<FormFilter>('all')
+// Promo-code filter (from a campaign's "view all in Bookings" link). Holds the
+// PromoCode id; promoCodeName is the human code shown in the filter banner.
+const promoCodeFilter = ref('')
+const promoCodeName = ref('')
 const editingBooking = ref<Booking | null>(null)
 const selectedBooking = ref<Booking | null>(null)
 // Booking pending cancellation — drives the fee/waive dialog.
@@ -502,7 +514,10 @@ function matchesForm(b: Booking): boolean {
   if (formFilter.value === 'outstanding') return s !== 'COMPLETED'
   return s === formFilter.value.toUpperCase()
 }
-const formFilteredBookings = computed(() => bookingsStore.bookings.filter(matchesForm))
+function matchesCode(b: Booking): boolean {
+  return !promoCodeFilter.value || b.promoCodeId === promoCodeFilter.value
+}
+const formFilteredBookings = computed(() => bookingsStore.bookings.filter((b) => matchesForm(b) && matchesCode(b)))
 
 const filteredBookings = computed(() => {
   if (!filterStatus.value) return formFilteredBookings.value
@@ -921,13 +936,18 @@ function handleBookingSaved() {
   editingBooking.value = null
 }
 
-watch([filterStatus, formFilter], () => {
+watch([filterStatus, formFilter, promoCodeFilter], () => {
   currentPage.value = 1
   pendingPage.value = 1
   confirmedPage.value = 1
   pastPage.value = 1
   rejectedPage.value = 1
 })
+
+function clearCodeFilter() {
+  promoCodeFilter.value = ''
+  promoCodeName.value = ''
+}
 
 function toYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -942,6 +962,10 @@ watch([viewMode, filterStatus, listDisplayMode, calendarViewMode, formFilter, se
   if (filterStatus.value) query.status = filterStatus.value
   if (listDisplayMode.value !== 'table') query.display = listDisplayMode.value
   if (formFilter.value !== 'all') query.form = formFilter.value
+  if (promoCodeFilter.value) {
+    query.code = promoCodeFilter.value
+    if (promoCodeName.value) query.codeName = promoCodeName.value
+  }
   if (viewMode.value === 'calendar') {
     if (calendarViewMode.value !== '1d') query.cal = calendarViewMode.value
     query.date = toYmd(selectedCalendarDate.value)
@@ -958,6 +982,8 @@ onMounted(async () => {
   if (q.cal === '1d' || q.cal === '7d' || q.cal === '30d') calendarViewMode.value = q.cal
   const forms: FormFilter[] = ['outstanding', 'not_sent', 'sent', 'completed', 'overdue']
   if (typeof q.form === 'string' && forms.includes(q.form as FormFilter)) formFilter.value = q.form as FormFilter
+  if (typeof q.code === 'string') promoCodeFilter.value = q.code
+  if (typeof q.codeName === 'string') promoCodeName.value = q.codeName
   if (typeof q.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(q.date)) {
     selectedCalendarDate.value = new Date(`${q.date}T00:00:00`)
   }

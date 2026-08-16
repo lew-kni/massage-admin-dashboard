@@ -226,13 +226,18 @@
                     <div class="text-xs uppercase tracking-wide text-gray-400 pb-1">Ref</div>
                     <div class="text-xs uppercase tracking-wide text-gray-400 pb-1">Client</div>
                     <div class="text-xs uppercase tracking-wide text-gray-400 pb-1 text-right">Date</div>
-                    <template v-for="b in c.bookings" :key="b.id">
+                    <template v-for="b in c.bookings.slice(0, 5)" :key="b.id">
                       <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium py-1">NPM-{{ b.bookingNumber }}</RouterLink>
                       <div class="py-1">{{ b.client ? `${b.client.firstName} ${b.client.lastName}` : 'Unknown' }}</div>
                       <div class="py-1 text-right text-gray-500 whitespace-nowrap">{{ formatDate(b.startTime) }}</div>
                     </template>
                   </div>
-                  <p v-else class="text-sm text-gray-400">No bookings from this code yet.</p>
+                  <RouterLink
+                    v-if="c.bookings && c.bookings.length > 5"
+                    :to="{ path: '/bookings', query: { code: c.id, codeName: c.code } }"
+                    class="inline-block mt-2 text-sm text-sage-600 hover:text-sage-700 font-medium"
+                  >View all {{ c.bookings.length }} in Bookings →</RouterLink>
+                  <p v-if="!c.bookings || !c.bookings.length" class="text-sm text-gray-400">No bookings from this code yet.</p>
                 </div>
               </div>
             </div>

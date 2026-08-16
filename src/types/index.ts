@@ -71,6 +71,8 @@ export interface Booking {
   allergies?: string | null
   promotionId?: string | null
   promotion?: Promotion | null
+  // The specific promo code quoted (for filtering bookings by campaign code).
+  promoCodeId?: string | null
   // Pricing captured at booking time (whole GBP). `discountedPrice` is the
   // promotion-adjusted price; null when no promotion applied.
   price?: number | null
