@@ -117,6 +117,7 @@
                 <i class="fas mr-1" :class="promo.kind === 'VOUCHER' ? 'fa-ticket' : 'fa-tag'"></i>{{ promo.kind === 'VOUCHER' ? 'Voucher' : 'Promotion' }}
               </span>
               <span class="badge bg-orange-100 text-orange-800">{{ discountLabel(promo) }}</span>
+              <span v-if="promo.firstBookingOnly" class="badge bg-blue-100 text-blue-800" title="First booking only"><i class="fas fa-user-plus mr-1"></i>1st booking</span>
               <span v-if="promo.kind === 'VOUCHER' && promo.code" class="badge bg-gray-100 text-gray-700 font-mono">{{ promo.code }}</span>
               <span v-if="promo.displayAsBanner" class="badge bg-emerald-100 text-emerald-800" title="Shown in the sitewide banner">
                 <i class="fas fa-bullhorn mr-1"></i>Banner
@@ -190,34 +191,26 @@
       @close="showServiceModal = false"
       @saved="onSaved"
     />
-    <PromotionFormModal
-      v-if="showPromotionModal"
-      :promotion="editingPromotion || undefined"
-      :initial-kind="newKind"
-      @close="showPromotionModal = false"
-      @saved="onSaved"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
 import type { Service, Promotion, PromotionBookingSummary, PromotionKind } from '@/types'
 import { discountLabel } from '@/composables/usePromotionPricing'
 import ServiceFormModal from '@/components/ServiceFormModal.vue'
-import PromotionFormModal from '@/components/PromotionFormModal.vue'
 import Pagination from '@/components/Pagination.vue'
 
+const route = useRoute()
+const router = useRouter()
 const store = useServicesStore()
-const activeTab = ref<'services' | 'promotions'>('services')
+const activeTab = ref<'services' | 'promotions'>(route.query.tab === 'promotions' ? 'promotions' : 'services')
 
 const showServiceModal = ref(false)
 const editingService = ref<Service | null>(null)
-const showPromotionModal = ref(false)
-const editingPromotion = ref<Promotion | null>(null)
-const newKind = ref<PromotionKind>('PROMOTION')
 
 const PAGE_SIZE = 10
 const servicesPage = ref(1)
@@ -250,14 +243,11 @@ async function confirmDeleteService(service: Service) {
 }
 
 function newPromotion(kind: PromotionKind = 'PROMOTION') {
-  editingPromotion.value = null
-  newKind.value = kind
-  showPromotionModal.value = true
+  router.push({ path: '/settings/services/promotions/new', query: { kind } })
 }
 
 function editPromotion(promo: Promotion) {
-  editingPromotion.value = promo
-  showPromotionModal.value = true
+  router.push(`/settings/services/promotions/${promo.id}`)
 }
 
 async function confirmDeletePromotion(promo: Promotion) {

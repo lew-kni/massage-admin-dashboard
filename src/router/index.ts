@@ -11,6 +11,7 @@ import LeadDetailView from '@/views/LeadDetailView.vue'
 import BookingDetailView from '@/views/BookingDetailView.vue'
 import AssessmentView from '@/views/AssessmentView.vue'
 import ServicesView from '@/views/ServicesView.vue'
+import PromotionDetailView from '@/views/PromotionDetailView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
 import AccountingView from '@/views/AccountingView.vue'
 import AccountingExpensesView from '@/views/AccountingExpensesView.vue'
@@ -145,6 +146,12 @@ const routes = [
     path: '/settings/services',
     name: 'SettingsServices',
     component: ServicesView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/services/promotions/:id',
+    name: 'PromotionDetail',
+    component: PromotionDetailView,
     meta: { requiresAuth: true },
   },
   {

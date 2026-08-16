@@ -409,6 +409,8 @@ export interface Promotion {
   details?: string[] | null
   // Promotions only: opt this one into the sitewide brochure banner.
   displayAsBanner: boolean
+  // Only apply to a client with no prior CONFIRMED booking (email/phone match).
+  firstBookingOnly?: boolean
   // Usable for pricing (bookings, duration pins) but hidden from the public
   // site — for one-off manual discounts, e.g. comping a friend's booking.
   internal: boolean
@@ -417,9 +419,20 @@ export interface Promotion {
   expiresAt?: string | null
   usageLimit?: number | null
   usageCount?: number
+  // Codes belonging to this promotion (present on the detail endpoint).
+  promoCodes?: PromoCode[]
   // Present depending on endpoint: count on the list, full rows on the detail.
   bookingCount?: number
   bookings?: PromotionBookingSummary[]
+}
+
+export interface PromoCode {
+  id: string
+  code: string
+  label?: string | null
+  usageLimit?: number | null
+  usageCount: number
+  active: boolean
 }
 
 // Expense Types

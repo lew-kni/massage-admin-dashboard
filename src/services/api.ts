@@ -27,6 +27,7 @@ import type {
   Document,
   DocumentType,
   PaymentMethod,
+  PromoCode,
 } from '@/types'
 
 class ApiService {
@@ -426,6 +427,15 @@ class ApiService {
 
   async deletePromotion(id: string): Promise<void> {
     await this.client.delete(`/api/promotions/${id}`)
+  }
+
+  async addPromoCode(promotionId: string, payload: { code: string; label?: string | null; usageLimit?: number | null }): Promise<PromoCode> {
+    const { data } = await this.client.post(`/api/promotions/${promotionId}/codes`, payload)
+    return data
+  }
+
+  async deletePromoCode(promotionId: string, codeId: string): Promise<void> {
+    await this.client.delete(`/api/promotions/${promotionId}/codes/${codeId}`)
   }
 
   // Leads
