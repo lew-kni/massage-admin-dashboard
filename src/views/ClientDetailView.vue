@@ -372,6 +372,7 @@
     <SendEmailModal
       v-if="showSendEmail && clientsStore.currentClient"
       :client="clientsStore.currentClient"
+      :bookings="bookings"
       @close="showSendEmail = false"
       @sent="handleEmailSent"
     />

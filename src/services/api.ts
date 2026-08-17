@@ -364,6 +364,20 @@ class ApiService {
     return data
   }
 
+  // Render a template server-side for the manual composer. Resolves the same
+  // rich variables the automatic emails use (pricing, payment, pre-form button).
+  // Throws a 422 with { error: 'booking_required' } when the template is
+  // appointment-scoped and no bookingId was supplied.
+  async renderTemplate(payload: {
+    clientId: string
+    templateId?: string
+    templateName?: string
+    bookingId?: string
+  }): Promise<{ subject: string; body: string; needsBooking: boolean }> {
+    const { data } = await this.client.post('/api/communications/render', payload)
+    return data
+  }
+
   async createDraft(payload: { clientId: string; templateId: string; variables?: Record<string, string> }): Promise<Communication> {
     const { data } = await this.client.post('/api/communications/draft', payload)
     return data

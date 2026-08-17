@@ -23,7 +23,29 @@
               <option value="">Blank — write your own</option>
               <option v-for="t in templates" :key="t.id" :value="t.id">{{ templateLabel(t) }}</option>
             </select>
-            <p class="text-xs text-gray-400 mt-1">Picking a template fills the subject and message below. You can edit both before sending.</p>
+            <p class="text-xs text-gray-400 mt-1">Picking a template fills the subject and message below with the full branded email. You can edit both before sending.</p>
+          </div>
+
+          <!-- Booking picker: appointment templates need to know which booking. -->
+          <div v-if="showBookingPicker">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Which appointment is this about?
+            </label>
+            <select v-if="bookings.length" v-model="selectedBookingId" class="input-field">
+              <option value="">Select a booking…</option>
+              <option v-for="b in bookings" :key="b.id" :value="b.id">{{ bookingLabel(b) }}</option>
+            </select>
+            <p v-else class="text-sm text-amber-600">
+              <i class="fas fa-triangle-exclamation mr-1"></i>This client has no bookings to reference. Pick a different template or write your own.
+            </p>
+            <p v-if="bookings.length && !selectedBookingId" class="text-xs text-amber-600 mt-1">
+              This template refers to an appointment — choose one to fill in the date, service, price and pre-visit form link.
+            </p>
+          </div>
+
+          <!-- Fixed booking context (composing from a booking page) -->
+          <div v-else-if="props.booking && needsBooking" class="text-xs text-gray-400 -mt-2">
+            <i class="fas fa-calendar-check mr-1"></i>Referring to {{ bookingLabel(props.booking) }}
           </div>
 
           <!-- Subject -->
@@ -35,8 +57,11 @@
           <!-- Body -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Message</label>
-            <textarea v-model="body" rows="10" class="input-field font-normal" placeholder="Write your message..."></textarea>
-            <p class="text-xs text-gray-400 mt-1">Sent inside the branded North Peak Massage email template. Blank lines start a new paragraph.</p>
+            <div v-if="rendering" class="border rounded-md dark:border-gray-700 min-h-[220px] flex items-center justify-center text-sm text-gray-400">
+              <i class="fas fa-spinner fa-spin mr-2"></i>Building email…
+            </div>
+            <RichTextEditor v-else ref="editorRef" v-model="body" />
+            <p class="text-xs text-gray-400 mt-1">Sent inside the branded North Peak Massage email template. Use the toolbar to format text.</p>
           </div>
 
           <div v-if="error" class="p-3 bg-red-50 border border-red-200 rounded">
@@ -47,7 +72,7 @@
         <!-- Live preview -->
         <div class="lg:border-l lg:pl-6 dark:border-gray-700">
           <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Live preview</p>
-          <EmailPreview :subject="subject" :body-html="textToHtml(body)" />
+          <EmailPreview :subject="subject" :body-html="body" />
         </div>
       </div>
 
@@ -56,7 +81,7 @@
         <button
           type="button"
           @click="send"
-          :disabled="sending || !client.email || !subject.trim() || !body.trim()"
+          :disabled="!canSend"
           class="btn-primary"
         >
           <i class="fas fa-paper-plane"></i>
@@ -68,68 +93,145 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { format } from 'date-fns'
 import { apiService } from '@/services/api'
 import type { Client, Booking, EmailTemplate } from '@/types'
 import EmailPreview from '@/components/EmailPreview.vue'
-import { htmlToText, textToHtml } from '@/utils/emailPreview'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 
-const props = defineProps<{ client: Client; booking?: Booking }>()
+const props = defineProps<{ client: Client; booking?: Booking; bookings?: Booking[] }>()
 const emit = defineEmits<{ close: []; sent: [] }>()
 
 const templates = ref<EmailTemplate[]>([])
 const selectedTemplateId = ref('')
+const selectedBookingId = ref('')
 const subject = ref('')
 const body = ref('')
 const sending = ref(false)
+const rendering = ref(false)
 const error = ref('')
+const needsBooking = ref(false)
+const editorRef = ref<InstanceType<typeof RichTextEditor>>()
+
+// Variables that can only be resolved against a specific booking. Mirrors the
+// backend's BOOKING_SCOPED_VARIABLES so the composer can prompt for a booking
+// before it even calls the server.
+const BOOKING_VARS = [
+  'service', 'duration', 'date', 'time', 'pricingDetails',
+  'paymentDetails', 'preFormButton', 'preFormLink', 'bookingRef', 'feeDetails',
+]
+
+// The client's bookings, for the "which appointment?" picker. Empty when the
+// modal is opened without them (e.g. from a context that has no list).
+const bookings = computed<Booking[]>(() => props.bookings ?? [])
+
+// The booking we'll resolve appointment variables against: an explicitly picked
+// one, or the fixed booking the modal was opened with.
+const effectiveBookingId = computed(() => selectedBookingId.value || props.booking?.id || '')
+
+// Show the picker only when the template needs a booking, we don't already have
+// one fixed by context, and the client actually has bookings to choose from —
+// otherwise fall through to the "no bookings" note the picker renders.
+const showBookingPicker = computed(
+  () => needsBooking.value && !props.booking && (bookings.value.length > 0 || selectedTemplateId.value !== ''),
+)
+
+const canSend = computed(() =>
+  !sending.value &&
+  !rendering.value &&
+  !!client.value?.email &&
+  !!subject.value.trim() &&
+  !!body.value.trim() &&
+  // If the template is appointment-scoped, a booking must be chosen first.
+  (!needsBooking.value || !!effectiveBookingId.value),
+)
+
+const client = computed(() => props.client)
 
 function templateLabel(t: EmailTemplate) {
   const pretty = t.name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   return `${pretty} — ${t.subject}`
 }
 
-// Substitute the variables we can resolve from the client; leave the rest for
-// the user to fill in (e.g. {{ date }}, {{ time }}, {{ location }}).
-function fillVars(text: string) {
-  // Always resolvable from the client
-  const vars: Record<string, string> = {
-    firstName: props.client.firstName || '',
-    lastName: props.client.lastName || '',
-  }
-  // Appointment variables only when composing in the context of a booking
-  if (props.booking) {
-    const start = new Date(props.booking.startTime)
-    vars.date = format(start, 'EEEE, d MMMM yyyy')
-    vars.time = format(start, 'h:mm a')
-    const loc = props.booking.postcode || props.client.postcode || props.client.city || ''
-    if (loc) vars.location = loc
-  }
-  // Substitute known variables; leave any others as {{ … }} for the user to fill
-  let result = text
-  for (const [key, value] of Object.entries(vars)) {
-    result = result.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'g'), value)
-  }
-  return result
+function bookingLabel(b: Booking) {
+  const when = format(new Date(b.startTime), 'd MMM yyyy, h:mm a')
+  const svc = b.service || 'Massage'
+  return `${when} · ${svc} · ${b.status.toLowerCase()}`
 }
 
-function applyTemplate() {
+function templateNeedsBooking(t: EmailTemplate) {
+  // The variables a template references: its declared list plus any actual
+  // {{ token }} placeholders in the subject/body. Matching real placeholders
+  // (not bare substrings) avoids prose words like "update"/"time" tripping it.
+  const refs = new Set<string>(Array.isArray(t.variables) ? t.variables : [])
+  const re = /{{\s*([\w.]+)\s*}}/g
+  for (const text of [t.subject || '', t.body || '']) {
+    let m: RegExpExecArray | null
+    while ((m = re.exec(text)) !== null) refs.add(m[1])
+  }
+  return BOOKING_VARS.some((v) => refs.has(v))
+}
+
+async function applyTemplate() {
+  error.value = ''
   const t = templates.value.find((x) => x.id === selectedTemplateId.value)
-  if (!t) return
-  subject.value = fillVars(t.subject)
-  body.value = fillVars(htmlToText(t.body))
+  if (!t) {
+    // "Blank — write your own"
+    needsBooking.value = false
+    subject.value = ''
+    body.value = ''
+    return
+  }
+  needsBooking.value = templateNeedsBooking(t)
+  if (needsBooking.value && !effectiveBookingId.value) {
+    // Wait for the user to pick a booking; render fires from the watcher below.
+    return
+  }
+  await renderSelected()
+}
+
+async function renderSelected() {
+  if (!selectedTemplateId.value) return
+  rendering.value = true
+  error.value = ''
+  try {
+    const res = await apiService.renderTemplate({
+      clientId: client.value.id,
+      templateId: selectedTemplateId.value,
+      bookingId: effectiveBookingId.value || undefined,
+    })
+    needsBooking.value = res.needsBooking
+    subject.value = res.subject
+    body.value = res.body
+  } catch (err: any) {
+    if (err?.response?.status === 422) {
+      needsBooking.value = true // backend says a booking is required
+    } else {
+      error.value = err?.response?.data?.error || err?.message || 'Failed to build email'
+    }
+  } finally {
+    rendering.value = false
+  }
+}
+
+// Once a booking is chosen for an appointment template, render against it.
+function onBookingChosen() {
+  if (selectedBookingId.value && selectedTemplateId.value && needsBooking.value) {
+    renderSelected()
+  }
 }
 
 async function send() {
-  if (!props.client.email) return
+  if (!client.value.email) return
   sending.value = true
   error.value = ''
   try {
+    const html = editorRef.value?.getSanitizedHtml() ?? body.value
     await apiService.sendEmail({
-      clientId: props.client.id,
+      clientId: client.value.id,
       subject: subject.value.trim(),
-      body: textToHtml(body.value),
+      body: html,
     })
     emit('sent')
     emit('close')
@@ -139,6 +241,9 @@ async function send() {
     sending.value = false
   }
 }
+
+// Once a booking is chosen for an appointment template, render against it.
+watch(selectedBookingId, onBookingChosen)
 
 onMounted(async () => {
   try {
