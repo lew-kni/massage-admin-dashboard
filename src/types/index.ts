@@ -83,7 +83,7 @@ export interface Booking {
   extraChargeReason?: string | null
   // Fee charged when a confirmed booking is cancelled late, per the published
   // cancellation policy. Null = no fee due (enough notice, or waived). Payment
-  // of the fee is tracked with isPaid / paymentMethod, like a normal booking.
+  // of the fee is tracked via the payments[] rows, like a normal booking.
   cancellationFee?: number | null
   // How a CANCELLED booking got there: 'REJECTED' (declined request) vs
   // 'CANCELLED' (cancelled confirmed booking). Null on non-cancelled + legacy.
@@ -92,10 +92,6 @@ export interface Booking {
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null
   preFormCompletedAt?: string | null
-  // DEPRECATED (payments redesign): superseded by payments[] + amountPaid/
-  // paymentStatus. Kept during the migration window.
-  isPaid?: boolean | null
-  paymentMethod?: 'CASH' | 'BACS' | 'COMPLIMENTARY' | null
   // Payments received against this booking (first-class rows), plus the derived
   // cache. Totals (gross/total/balance) are computed via utils/bookingTotals.
   payments?: Payment[]

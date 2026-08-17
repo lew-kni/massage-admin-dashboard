@@ -178,6 +178,7 @@ import {
 } from '@/constants/sa103s'
 import type { Booking } from '@/types'
 import { bookingTotal } from '@/utils/bookingTotal'
+import { computeBookingTotals } from '@/utils/bookingTotals'
 
 const bookingsStore = useBookingsStore()
 const expensesStore = useExpensesStore()
@@ -209,9 +210,15 @@ function inRange(dateStr: string): boolean {
 function effectivePrice(b: Booking): number {
   return bookingTotal(b)
 }
+// A booking counts as turnover once it's fully paid. Derived from the payments
+// model (paymentStatus) rather than the retired isPaid flag.
 const paidInYear = computed(() =>
   bookingsStore.bookings.filter(
-    (b) => b.status !== 'CANCELLED' && b.isPaid && (b.price != null || b.discountedPrice != null) && inRange(b.startTime)
+    (b) =>
+      b.status !== 'CANCELLED' &&
+      computeBookingTotals(b).paymentStatus === 'PAID' &&
+      (b.price != null || b.discountedPrice != null) &&
+      inRange(b.startTime)
   )
 )
 const turnover = computed(() => paidInYear.value.reduce((s, b) => s + effectivePrice(b), 0))
