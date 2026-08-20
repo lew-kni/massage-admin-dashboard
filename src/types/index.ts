@@ -136,6 +136,8 @@ export interface IntakeForm {
   occupation?: string | null
   phone?: string | null
   address?: string | null
+  city?: string | null
+  postcode?: string | null
   emergencyName?: string | null
   emergencyPhone?: string | null
   emergencyRelationship?: string | null

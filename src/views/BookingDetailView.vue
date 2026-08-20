@@ -812,7 +812,7 @@ const intakeRows = computed(() => {
     { label: 'Date of birth', value: f.dateOfBirth || '—' },
     { label: 'Contact number', value: f.phone || '—' },
     { label: 'Occupation', value: f.occupation || '—' },
-    { label: 'Address', value: f.address || '—', wide: true },
+    { label: 'Address', value: [f.address, f.city, f.postcode].filter(Boolean).join(', ') || '—', wide: true },
     { label: 'Emergency contact', value: [f.emergencyName, f.emergencyPhone, f.emergencyRelationship].filter(Boolean).join(' · ') || '—', wide: true },
     { label: 'GP', value: [f.gpName, f.gpPhone, f.gpSurgery].filter(Boolean).join(' · ') || '—', wide: true },
     { label: 'Contraindications in last 6 months?', value: yn(f.hasContraindications) },
