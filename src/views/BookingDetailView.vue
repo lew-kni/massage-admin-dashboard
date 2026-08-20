@@ -586,6 +586,20 @@
               <p class="font-medium">{{ formatDateTime(booking.createdAt) }}</p>
             </div>
             <div class="border-t pt-4">
+              <p class="text-gray-500">Reminder Sent</p>
+              <p v-if="booking.reminderSentAt" class="font-medium text-green-700 dark:text-green-500">
+                <i class="fas fa-check mr-1"></i>{{ formatDateTime(booking.reminderSentAt) }}
+              </p>
+              <p v-else class="font-medium text-gray-400">Not sent</p>
+            </div>
+            <div>
+              <p class="text-gray-500">Follow-up Sent</p>
+              <p v-if="booking.followupSentAt" class="font-medium text-green-700 dark:text-green-500">
+                <i class="fas fa-check mr-1"></i>{{ formatDateTime(booking.followupSentAt) }}
+              </p>
+              <p v-else class="font-medium text-gray-400">Not sent</p>
+            </div>
+            <div class="border-t pt-4">
               <p class="text-gray-500">Payment Status</p>
               <div class="flex items-center gap-2 mt-1">
                 <span :class="['badge uppercase', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">

@@ -92,6 +92,9 @@ export interface Booking {
   preFormStatus: 'NOT_SENT' | 'SENT' | 'COMPLETED' | 'OVERDUE'
   preFormSentAt?: string | null
   preFormCompletedAt?: string | null
+  // Timestamps for the automated emails, so the admin can see they went out.
+  reminderSentAt?: string | null
+  followupSentAt?: string | null
   // Payments received against this booking (first-class rows), plus the derived
   // cache. Totals (gross/total/balance) are computed via utils/bookingTotals.
   payments?: Payment[]
