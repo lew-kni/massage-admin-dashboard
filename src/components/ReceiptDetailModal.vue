@@ -162,9 +162,12 @@ function openExpensePicker() {
 
 const attachableExpenses = computed(() => {
   const linkedIds = new Set(detail.value?.expenses.map((e) => e.id) || [])
+  const receiptVendorId = detail.value?.vendorId
   const search = expenseSearch.value.trim().toLowerCase()
   return expensesStore.expenses
     .filter((e) => !linkedIds.has(e.id))
+    // Only offer expenses belonging to the receipt's vendor (when it has one).
+    .filter((e) => !receiptVendorId || e.vendorId === receiptVendorId)
     .filter((e) => !search || e.description.toLowerCase().includes(search))
     .slice(0, 20)
 })

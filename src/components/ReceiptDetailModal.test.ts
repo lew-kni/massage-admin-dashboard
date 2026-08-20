@@ -40,7 +40,13 @@ const detail: ReceiptDetail = {
 
 const unlinkedExpense: Expense = {
   id: 'e2', date: '2026-07-02T00:00:00.000Z', amount: 500, category: 'SUPPLIES',
-  description: 'Sandpaper', vendor: null, notes: null, createdAt: '', updatedAt: '',
+  description: 'Sandpaper', vendorId: 'v1', vendor: { id: 'v1', name: 'B&Q' }, notes: null, createdAt: '', updatedAt: '',
+}
+
+// Belongs to a different vendor than the receipt (v1) — must not be attachable.
+const otherVendorExpense: Expense = {
+  id: 'e3', date: '2026-07-03T00:00:00.000Z', amount: 700, category: 'SUPPLIES',
+  description: 'Paintbrush', vendorId: 'v2', vendor: { id: 'v2', name: 'Screwfix' }, notes: null, createdAt: '', updatedAt: '',
 }
 
 describe('ReceiptDetailModal', () => {
@@ -49,7 +55,7 @@ describe('ReceiptDetailModal', () => {
     vi.clearAllMocks()
     vi.mocked(apiService.getReceipt).mockResolvedValue(detail)
     vi.mocked(apiService.getReceipts).mockResolvedValue([])
-    vi.mocked(apiService.getExpenses).mockResolvedValue([unlinkedExpense])
+    vi.mocked(apiService.getExpenses).mockResolvedValue([unlinkedExpense, otherVendorExpense])
   })
 
   it('shows the running total against the receipt total', async () => {
@@ -89,6 +95,18 @@ describe('ReceiptDetailModal', () => {
     await flushPromises()
 
     expect(apiService.linkExpenseToReceipt).toHaveBeenCalledWith('r1', 'e2')
+  })
+
+  it('only offers expenses belonging to the receipt vendor', async () => {
+    const wrapper = mount(ReceiptDetailModal, { props: { receiptId: 'r1' } })
+    await flushPromises()
+
+    const attachButton = wrapper.findAll('button').find((b) => b.text().includes('Attach existing'))
+    await attachButton!.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Sandpaper')
+    expect(wrapper.text()).not.toContain('Paintbrush')
   })
 
   it('unlinking an expense calls the unlink API', async () => {
