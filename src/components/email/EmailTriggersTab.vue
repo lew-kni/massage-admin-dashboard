@@ -65,7 +65,7 @@
 
             <div v-if="t.supportsOffset">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Send this many hours before the appointment
+                Send this many hours {{ t.offsetDirection === 'after' ? 'after' : 'before' }} the appointment
               </label>
               <input
                 type="number"

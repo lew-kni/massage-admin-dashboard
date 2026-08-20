@@ -445,6 +445,64 @@
           </div>
         </div>
 
+        <!-- Post-visit feedback link -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="text-lg font-semibold"><i class="fas fa-star mr-2"></i>Post-Visit Feedback</h2>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              The client's private feedback link for this booking. The day-after follow-up email sends this automatically; use the button to copy it and share manually. Responses appear on the <router-link to="/feedback" class="text-sage-600 hover:underline">Feedback</router-link> page.
+            </p>
+            <div v-if="feedbackLink" class="mt-3 flex items-center gap-2">
+              <input :value="feedbackLink" readonly class="input-field text-sm flex-1 font-mono" @focus="($event.target as HTMLInputElement).select()" />
+            </div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button @click="onCopyFeedbackLink" class="btn-secondary text-sm">
+                <i class="fas" :class="feedbackCopied ? 'fa-check' : 'fa-link'"></i>
+                <span>{{ feedbackCopied ? 'Copied' : 'Copy feedback link' }}</span>
+              </button>
+              <a v-if="feedbackLink" :href="feedbackLink" target="_blank" rel="noopener" class="btn-secondary text-sm">
+                <i class="fas fa-arrow-up-right-from-square"></i><span>Open</span>
+              </a>
+            </div>
+            <p v-if="feedbackError" class="mt-2 text-sm text-red-700">{{ feedbackError }}</p>
+          </div>
+        </div>
+
+        <!-- Self feedback (private notes to myself) -->
+        <div class="card">
+          <div class="card-header flex justify-between items-center">
+            <h2 class="text-lg font-semibold"><i class="fas fa-pen-nib mr-2"></i>Self Feedback</h2>
+            <span v-if="selfSaved" class="text-sm text-green-600"><i class="fas fa-check mr-1"></i>Saved</span>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Your own private notes on this session — how it went, what to remember for next time. Only you see these; they're listed under <router-link to="/feedback/self" class="text-sage-600 hover:underline">Feedback → Self</router-link>.
+            </p>
+
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+            <textarea
+              v-model="selfNotes"
+              rows="4"
+              maxlength="4000"
+              class="input-field text-sm w-full"
+              placeholder="e.g. Right shoulder much tighter than left — revisit next session. Client preferred firmer pressure."
+            ></textarea>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button @click="onSaveSelfFeedback" :disabled="savingSelf || !selfNotes.trim()" class="btn-primary text-sm">
+                <i class="fas fa-floppy-disk"></i>
+                <span>{{ savingSelf ? 'Saving…' : (selfExists ? 'Update notes' : 'Save notes') }}</span>
+              </button>
+              <button v-if="selfExists" @click="onDeleteSelfFeedback" :disabled="savingSelf" class="btn-secondary text-sm text-red-600">
+                <i class="fas fa-trash"></i><span>Delete</span>
+              </button>
+            </div>
+            <p v-if="selfError" class="mt-2 text-sm text-red-700">{{ selfError }}</p>
+          </div>
+        </div>
+
         <!-- Therapist's own assessment for this session — full form lives on its
              own focused page; this card is just a status + entry point. -->
         <div class="card">
@@ -657,6 +715,78 @@ const intake = ref<IntakeForm | null>(null)
 const sendingPreform = ref(false)
 const preformError = ref('')
 const linkCopied = ref(false)
+
+// Post-visit feedback link (lazily minted on first copy).
+const feedbackLink = ref('')
+const feedbackCopied = ref(false)
+const feedbackError = ref('')
+
+async function onCopyFeedbackLink() {
+  if (!booking.value) return
+  feedbackError.value = ''
+  try {
+    const { url } = await apiService.getFeedbackLink(booking.value.id)
+    feedbackLink.value = url
+    await navigator.clipboard.writeText(url)
+    feedbackCopied.value = true
+    setTimeout(() => (feedbackCopied.value = false), 2000)
+  } catch (err: any) {
+    feedbackError.value = err?.response?.data?.error || 'Failed to copy the feedback link'
+  }
+}
+
+// Self feedback (private notes to myself on this booking).
+const selfNotes = ref('')
+const selfExists = ref(false)
+const savingSelf = ref(false)
+const selfSaved = ref(false)
+const selfError = ref('')
+
+async function loadSelfFeedback() {
+  if (!booking.value) return
+  try {
+    const sf = await apiService.getSelfFeedback(booking.value.id)
+    if (sf) {
+      selfExists.value = true
+      selfNotes.value = sf.notes
+    }
+  } catch {
+    // Non-fatal: leave the editor empty if it can't load.
+  }
+}
+
+async function onSaveSelfFeedback() {
+  if (!booking.value || !selfNotes.value.trim()) return
+  savingSelf.value = true
+  selfError.value = ''
+  try {
+    await apiService.saveSelfFeedback(booking.value.id, {
+      notes: selfNotes.value.trim(),
+    })
+    selfExists.value = true
+    selfSaved.value = true
+    setTimeout(() => (selfSaved.value = false), 2000)
+  } catch (err: any) {
+    selfError.value = err?.response?.data?.error || 'Failed to save your notes'
+  } finally {
+    savingSelf.value = false
+  }
+}
+
+async function onDeleteSelfFeedback() {
+  if (!booking.value) return
+  savingSelf.value = true
+  selfError.value = ''
+  try {
+    await apiService.deleteSelfFeedback(booking.value.id)
+    selfExists.value = false
+    selfNotes.value = ''
+  } catch (err: any) {
+    selfError.value = err?.response?.data?.error || 'Failed to delete your notes'
+  } finally {
+    savingSelf.value = false
+  }
+}
 
 const yn = (v?: boolean | null) => (v === true ? 'Yes' : v === false ? 'No' : '—')
 
@@ -892,6 +1022,7 @@ onMounted(async () => {
   initEditForm()
   await loadIntake()
   await loadAssessment()
+  await loadSelfFeedback()
   if (servicesStore.promotions.length === 0) servicesStore.fetchPromotions()
 })
 

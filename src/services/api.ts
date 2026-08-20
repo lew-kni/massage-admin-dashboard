@@ -20,6 +20,9 @@ import type {
   Expense,
   Receipt,
   ReceiptDetail,
+  Feedback,
+  SelfFeedback,
+  SelfFeedbackListItem,
   Vendor,
   VendorDetail,
   RecurringExpense,
@@ -117,6 +120,29 @@ class ApiService {
     await this.client.delete(`/api/clients/${id}`)
   }
 
+  // Feedback (post-visit, client)
+  async getFeedback(): Promise<Feedback[]> {
+    const { data } = await this.client.get('/api/feedback')
+    return data
+  }
+
+  // Self feedback (therapist's private notes on a booking)
+  async getSelfFeedbackList(): Promise<SelfFeedbackListItem[]> {
+    const { data } = await this.client.get('/api/self-feedback')
+    return data
+  }
+  async getSelfFeedback(bookingId: string): Promise<SelfFeedback | null> {
+    const { data } = await this.client.get(`/api/self-feedback/${bookingId}`)
+    return data
+  }
+  async saveSelfFeedback(bookingId: string, payload: { notes: string }): Promise<SelfFeedback> {
+    const { data } = await this.client.put(`/api/self-feedback/${bookingId}`, payload)
+    return data
+  }
+  async deleteSelfFeedback(bookingId: string): Promise<void> {
+    await this.client.delete(`/api/self-feedback/${bookingId}`)
+  }
+
   // Bookings
   async getBookings(): Promise<Booking[]> {
     const { data } = await this.client.get('/api/bookings')
@@ -203,6 +229,10 @@ class ApiService {
   // the client's behalf). Never share therapistUrl with the client.
   async getPreFormLink(id: string): Promise<{ token: string; url: string; therapistUrl: string }> {
     const { data } = await this.client.post(`/api/bookings/${id}/preform-link`)
+    return data
+  }
+  async getFeedbackLink(id: string): Promise<{ token: string; url: string }> {
+    const { data } = await this.client.post(`/api/bookings/${id}/feedback-link`)
     return data
   }
   async getIntake(id: string): Promise<IntakeForm | null> {

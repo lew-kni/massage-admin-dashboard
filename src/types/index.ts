@@ -250,6 +250,9 @@ export interface EmailTrigger {
   offsetMinutes: number | null
   templateEditable: boolean
   supportsOffset: boolean
+  // Whether the offset is measured before or after the appointment. Only set on
+  // scheduled triggers that support an offset.
+  offsetDirection?: 'before' | 'after'
 }
 
 // App Settings
@@ -270,6 +273,7 @@ export interface AppSettings {
   businessEmail: string | null
   businessPhone: string | null
   businessAddress: string | null
+  googleReviewUrl: string | null
   // Bank details for the confirmation email's "How to pay" (BACS) block.
   bankAccountName: string | null
   bankSortCode: string | null
@@ -514,6 +518,33 @@ export interface ReceiptDetail extends Receipt {
     description: string
     amount: number
   }[]
+}
+
+// Post-visit feedback left by a client via the day-after follow-up email.
+export interface Feedback {
+  id: string
+  rating: number // 1–5
+  wentWell: string | null // "What went well?"
+  improve: string | null // "What could I improve on?"
+  createdAt: string
+  client: { id: string; firstName: string; lastName: string } | null
+  booking: { id: string; bookingNumber: number; service: string | null; startTime: string } | null
+}
+
+// The therapist's own private notes on a booking ("self feedback").
+export interface SelfFeedback {
+  id: string
+  bookingId: string
+  clientId: string
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
+
+// List row for the Self Feedback subpage — includes booking + client context.
+export interface SelfFeedbackListItem extends SelfFeedback {
+  client: { id: string; firstName: string; lastName: string } | null
+  booking: { id: string; bookingNumber: number; service: string | null; startTime: string } | null
 }
 
 // Vendor Types — a supplier that owns many expenses and many receipts.

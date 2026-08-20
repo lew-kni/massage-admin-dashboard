@@ -42,6 +42,33 @@
       </div>
     </div>
 
+    <!-- Reviews & feedback -->
+    <div class="card max-w-3xl mb-6">
+      <div class="card-header flex items-center justify-between">
+        <h2 class="text-lg font-semibold"><i class="fas fa-star mr-2"></i>Reviews &amp; feedback</h2>
+        <span v-if="reviewMessage" class="text-sm text-green-600"><i class="fas fa-check mr-1"></i>{{ reviewMessage }}</span>
+        <span v-else-if="reviewError" class="text-sm text-red-600"><i class="fas fa-circle-exclamation mr-1"></i>{{ reviewError }}</span>
+      </div>
+      <div class="card-body">
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-5">
+          Your Google Business review link. When set, the day-after follow-up email invites the client to leave a Google review
+          (no incentive attached, per Google's rules). Leave blank to omit the review ask from that email.
+        </p>
+        <div v-if="loading" class="text-sm text-gray-500">Loading…</div>
+        <form v-else class="space-y-4" @submit.prevent="saveReview">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Google review URL</label>
+            <input v-model="googleReviewUrl" type="url" maxlength="500" class="input-field" placeholder="https://g.page/r/…/review" />
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" :disabled="savingReview" class="btn-primary text-sm">
+              {{ savingReview ? 'Saving…' : 'Save review link' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Danger Zone -->
     <div class="card max-w-3xl border-red-300 dark:border-red-800">
       <div class="card-header flex items-center justify-between">
@@ -134,6 +161,7 @@ function syncBankForm() {
   bank.bankAccountName = s?.bankAccountName ?? ''
   bank.bankSortCode = s?.bankSortCode ?? ''
   bank.bankAccountNumber = s?.bankAccountNumber ?? ''
+  googleReviewUrl.value = s?.googleReviewUrl ?? ''
 }
 
 async function saveBank() {
@@ -152,6 +180,27 @@ async function saveBank() {
     bankError.value = err instanceof Error ? err.message : 'Failed to save'
   } finally {
     savingBank.value = false
+  }
+}
+
+// --- Google review link ----------------------------------------------------
+const googleReviewUrl = ref('')
+const savingReview = ref(false)
+const reviewMessage = ref('')
+const reviewError = ref('')
+
+async function saveReview() {
+  savingReview.value = true
+  reviewMessage.value = ''
+  reviewError.value = ''
+  try {
+    await settingsStore.updateSettings({ googleReviewUrl: googleReviewUrl.value.trim() })
+    reviewMessage.value = 'Saved'
+    setTimeout(() => (reviewMessage.value = ''), 2000)
+  } catch (err) {
+    reviewError.value = err instanceof Error ? err.message : 'Failed to save'
+  } finally {
+    savingReview.value = false
   }
 }
 

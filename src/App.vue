@@ -70,6 +70,27 @@
                 {{ item.badge }}
               </span>
             </RouterLink>
+
+            <!-- Feedback group -->
+            <button
+              @click="feedbackOpen = !feedbackOpen"
+              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+            >
+              <i class="w-5 text-center fas fa-star"></i>
+              <span>Feedback</span>
+              <i class="ml-auto text-xs fas" :class="feedbackOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+            <div v-show="feedbackOpen">
+              <RouterLink
+                v-for="child in feedbackChildren"
+                :key="child.name"
+                :to="child.to"
+                class="flex items-center pl-14 pr-6 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+                :class="{ 'bg-sage-50 dark:bg-gray-800 text-sage-600 dark:text-sage-400 border-l-2 border-sage-600': isActive(child.to) }"
+              >
+                <span>{{ child.name }}</span>
+              </RouterLink>
+            </div>
           </nav>
 
           <!-- Bottom section -->
@@ -148,6 +169,7 @@ const leadsStore = useLeadsStore()
 const bookingsStore = useBookingsStore()
 const settingsOpen = ref(false)
 const accountingOpen = ref(false)
+const feedbackOpen = ref(false)
 // Sidebar drawer state below the `sidebar` breakpoint (920px) — irrelevant
 // above it, where the sidebar is always visible regardless of this value.
 const sidebarOpen = ref(false)
@@ -163,6 +185,12 @@ const navigation = computed(() => [
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
   { name: 'Rebooking', to: '/rebooking', icon: 'fas fa-user-clock' },
 ])
+
+const feedbackChildren = [
+  { name: 'Dashboard', to: '/feedback/dashboard' },
+  { name: 'Client', to: '/feedback/client' },
+  { name: 'Self', to: '/feedback/self' },
+]
 
 const accountingChildren = [
   { name: 'Dashboard', to: '/accounting/dashboard' },
@@ -191,6 +219,7 @@ watch(
   (path) => {
     if (path.startsWith('/settings')) settingsOpen.value = true
     if (path.startsWith('/accounting')) accountingOpen.value = true
+    if (path.startsWith('/feedback')) feedbackOpen.value = true
     sidebarOpen.value = false
   },
   { immediate: true }

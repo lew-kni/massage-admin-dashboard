@@ -120,6 +120,8 @@ const editorRef = ref<InstanceType<typeof RichTextEditor>>()
 const BOOKING_VARS = [
   'service', 'duration', 'date', 'time', 'pricingDetails',
   'paymentDetails', 'preFormButton', 'preFormLink', 'bookingRef', 'feeDetails',
+  // Post-visit follow-up ("Thank you") template variables.
+  'rebookUrl', 'feedbackUrl', 'feedbackButton', 'reviewSection',
 ]
 
 // The client's bookings, for the "which appointment?" picker. Empty when the
