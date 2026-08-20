@@ -50,8 +50,14 @@ export function computeBookingTotals(b: Booking): BookingTotals {
     total,
     amountPaid: paid,
     balance: total - paid,
-    // Prefer the backend's cached status when present; fall back to deriving it.
-    paymentStatus: b.paymentStatus ?? paymentStatusFor(total, paid),
+    // When the payment rows are loaded (the detail view), derive the status from
+    // the actual charge + payments — that's the definitive value and self-heals
+    // a stale cache (e.g. a 100%-discounted booking whose cached status is still
+    // DUE because no payment write ever recomputed it). Only fall back to the
+    // cached column in list contexts where `payments` isn't loaded.
+    paymentStatus: Array.isArray(b.payments)
+      ? paymentStatusFor(total, paid)
+      : (b.paymentStatus ?? paymentStatusFor(total, paid)),
   }
 }
 

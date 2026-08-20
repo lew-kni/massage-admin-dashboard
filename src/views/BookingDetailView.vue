@@ -532,6 +532,19 @@
             <h3 class="font-semibold">Quick Actions</h3>
           </div>
           <div class="card-body space-y-3">
+            <!-- Pending request: approve or decline right here -->
+            <template v-if="!isEditing && booking.status === 'PENDING'">
+              <button @click="approveBooking" :disabled="approving || rejecting" class="btn-primary w-full text-sm">
+                <i class="fas fa-check"></i>
+                <span>{{ approving ? 'Confirming…' : 'Approve & Confirm' }}</span>
+              </button>
+              <button @click="rejectBooking" :disabled="approving || rejecting" class="btn-danger w-full text-sm">
+                <i class="fas fa-ban"></i>
+                <span>{{ rejecting ? 'Rejecting…' : 'Reject Request' }}</span>
+              </button>
+              <p v-if="approveRejectError" class="text-xs text-red-600">{{ approveRejectError }}</p>
+              <hr class="border-gray-100 dark:border-gray-700" />
+            </template>
             <button v-if="!isEditing" @click="isEditing = true" class="btn-secondary w-full text-sm">
               <i class="fas fa-edit"></i>
               <span>Edit</span>
@@ -1197,6 +1210,40 @@ async function confirmCancel(fee: number) {
     alert(err?.message || 'Failed to cancel booking')
   } finally {
     cancelling.value = false
+  }
+}
+
+// Approve / reject a pending booking request straight from the detail page
+// (mirrors the actions on the Bookings list). Approve confirms it (which fires
+// the confirmation email + voucher redeem server-side); Reject declines it.
+const approving = ref(false)
+const rejecting = ref(false)
+const approveRejectError = ref('')
+
+async function approveBooking() {
+  if (!booking.value) return
+  approveRejectError.value = ''
+  approving.value = true
+  try {
+    booking.value = await bookingsStore.updateBooking(booking.value.id, { status: 'CONFIRMED' })
+  } catch (err: any) {
+    approveRejectError.value = err?.response?.data?.error || err?.message || 'Failed to confirm the booking'
+  } finally {
+    approving.value = false
+  }
+}
+
+async function rejectBooking() {
+  if (!booking.value) return
+  if (!confirm('Reject this booking request? The client will be emailed to let them know it can’t be accommodated. No cancellation fee applies.')) return
+  approveRejectError.value = ''
+  rejecting.value = true
+  try {
+    booking.value = await bookingsStore.rejectBooking(booking.value.id)
+  } catch (err: any) {
+    approveRejectError.value = err?.response?.data?.error || err?.message || 'Failed to reject the booking'
+  } finally {
+    rejecting.value = false
   }
 }
 
