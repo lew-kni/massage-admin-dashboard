@@ -15,7 +15,9 @@
           >
             <i class="fas fa-bars"></i>
           </button>
-          <img src="/logo.png" alt="North Peak Massage" class="h-8 w-auto" />
+          <RouterLink to="/" class="flex items-center">
+            <img src="/logo.png" alt="North Peak Massage — go to dashboard" class="h-8 w-auto" />
+          </RouterLink>
         </div>
 
         <!-- Backdrop, closes the drawer on click -->
@@ -137,6 +139,16 @@
               </RouterLink>
             </div>
 
+            <a
+              :href="brochureUrl"
+              target="_blank"
+              rel="noopener"
+              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+            >
+              <i class="w-5 text-center fas fa-arrow-up-right-from-square"></i>
+              <span>View live site</span>
+            </a>
+
             <button
               @click="logout"
               class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
@@ -170,6 +182,10 @@ const bookingsStore = useBookingsStore()
 const settingsOpen = ref(false)
 const accountingOpen = ref(false)
 const feedbackOpen = ref(false)
+
+// Public brochure site, opened in a new tab from the sidebar. Configurable so
+// dev can point at localhost; falls back to the live site.
+const brochureUrl = import.meta.env.VITE_BROCHURE_URL || 'https://www.northpeakmassage.com'
 // Sidebar drawer state below the `sidebar` breakpoint (920px) — irrelevant
 // above it, where the sidebar is always visible regardless of this value.
 const sidebarOpen = ref(false)
