@@ -56,6 +56,18 @@
                   </p>
                 </div>
               </div>
+              <!-- Marketing consent — joined by email from the marketing list.
+                   `null` marketing means they've never opted in. -->
+              <div class="mt-4 flex items-center gap-2">
+                <span class="text-sm text-gray-500">Marketing:</span>
+                <MarketingStatusBadge :status="clientsStore.currentClient.marketing?.status ?? null" />
+                <span
+                  v-if="clientsStore.currentClient.marketing?.status === 'SUBSCRIBED'"
+                  class="text-xs text-gray-400"
+                >
+                  since {{ formatDateOnly(clientsStore.currentClient.marketing.subscribedAt) }}
+                </span>
+              </div>
             </div>
 
             <!-- Personal Details -->
@@ -412,6 +424,7 @@ import NewBookingModal from '@/components/NewBookingModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import Pagination from '@/components/Pagination.vue'
 import DocumentsPanel from '@/components/DocumentsPanel.vue'
+import MarketingStatusBadge from '@/components/MarketingStatusBadge.vue'
 
 const route = useRoute()
 const router = useRouter()

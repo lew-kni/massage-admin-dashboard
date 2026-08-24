@@ -6,6 +6,9 @@ import ClientsView from '@/views/ClientsView.vue'
 import ClientDetailView from '@/views/ClientDetailView.vue'
 import BookingsView from '@/views/BookingsView.vue'
 import RebookingView from '@/views/RebookingView.vue'
+import MarketingView from '@/views/MarketingView.vue'
+import MarketingSendView from '@/views/MarketingSendView.vue'
+import MarketingTemplatesView from '@/views/MarketingTemplatesView.vue'
 import FeedbackDashboardView from '@/views/FeedbackDashboardView.vue'
 import FeedbackClientView from '@/views/FeedbackClientView.vue'
 import FeedbackSelfView from '@/views/FeedbackSelfView.vue'
@@ -72,6 +75,25 @@ const routes = [
     path: '/rebooking',
     name: 'Rebooking',
     component: RebookingView,
+    meta: { requiresAuth: true },
+  },
+  { path: '/marketing', redirect: '/marketing/subscribers' },
+  {
+    path: '/marketing/subscribers',
+    name: 'MarketingSubscribers',
+    component: MarketingView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/marketing/send',
+    name: 'MarketingSend',
+    component: MarketingSendView,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/marketing/templates',
+    name: 'MarketingTemplates',
+    component: MarketingTemplatesView,
     meta: { requiresAuth: true },
   },
   { path: '/feedback', redirect: '/feedback/dashboard' },

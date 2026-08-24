@@ -20,6 +20,62 @@ export interface Client {
   gpName?: string | null
   gpPhone?: string | null
   gpSurgery?: string | null
+  // Marketing-email consent, joined by email from the standalone MarketingContact
+  // table (see the backend). Present only on the single-client detail response;
+  // null when this person has never opted in.
+  marketing?: MarketingStatus | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type MarketingConsentStatus = 'SUBSCRIBED' | 'UNSUBSCRIBED'
+
+// Compact marketing state attached to a client detail record.
+export interface MarketingStatus {
+  status: MarketingConsentStatus
+  source: string | null
+  subscribedAt: string
+  unsubscribedAt: string | null
+}
+
+// A row in the standalone marketing list (GET /api/marketing/contacts).
+export interface MarketingContact {
+  id: string
+  email: string
+  name: string | null
+  status: MarketingConsentStatus
+  source: string | null
+  subscribedAt: string
+  unsubscribedAt: string | null
+}
+
+// A sent marketing campaign (GET /api/marketing/campaigns).
+export interface MarketingCampaign {
+  id: string
+  subject: string
+  body: string
+  recipientCount: number
+  sentCount: number
+  failedCount: number
+  sentAt: string
+}
+
+// Result of POST /api/marketing/send.
+export interface MarketingSendResult {
+  campaignId: string
+  recipientCount: number
+  sentCount: number
+  failedCount: number
+}
+
+// A saved marketing design. `blocks` is the block-builder layout (parsed from
+// JSON by the backend). Typed as unknown[] here to avoid a types→utils import
+// cycle; the composer/templates code narrows it to MarketingBlock[].
+export interface MarketingTemplate {
+  id: string
+  name: string
+  subject: string
+  blocks: unknown[]
   createdAt: string
   updatedAt: string
 }

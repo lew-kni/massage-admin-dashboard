@@ -93,6 +93,27 @@
                 <span>{{ child.name }}</span>
               </RouterLink>
             </div>
+
+            <!-- Marketing group -->
+            <button
+              @click="marketingOpen = !marketingOpen"
+              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+            >
+              <i class="w-5 text-center fas fa-bullhorn"></i>
+              <span>Marketing</span>
+              <i class="ml-auto text-xs fas" :class="marketingOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+            <div v-show="marketingOpen">
+              <RouterLink
+                v-for="child in marketingChildren"
+                :key="child.name"
+                :to="child.to"
+                class="flex items-center pl-14 pr-6 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+                :class="{ 'bg-sage-50 dark:bg-gray-800 text-sage-600 dark:text-sage-400 border-l-2 border-sage-600': isActive(child.to) }"
+              >
+                <span>{{ child.name }}</span>
+              </RouterLink>
+            </div>
           </nav>
 
           <!-- Bottom section -->
@@ -182,6 +203,7 @@ const bookingsStore = useBookingsStore()
 const settingsOpen = ref(false)
 const accountingOpen = ref(false)
 const feedbackOpen = ref(false)
+const marketingOpen = ref(false)
 
 // Public brochure site, opened in a new tab from the sidebar. Configurable so
 // dev can point at localhost; falls back to the live site.
@@ -201,6 +223,12 @@ const navigation = computed(() => [
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
   { name: 'Rebooking', to: '/rebooking', icon: 'fas fa-user-clock' },
 ])
+
+const marketingChildren = [
+  { name: 'Subscribers', to: '/marketing/subscribers' },
+  { name: 'Send', to: '/marketing/send' },
+  { name: 'Templates', to: '/marketing/templates' },
+]
 
 const feedbackChildren = [
   { name: 'Dashboard', to: '/feedback/dashboard' },
@@ -236,6 +264,7 @@ watch(
     if (path.startsWith('/settings')) settingsOpen.value = true
     if (path.startsWith('/accounting')) accountingOpen.value = true
     if (path.startsWith('/feedback')) feedbackOpen.value = true
+    if (path.startsWith('/marketing')) marketingOpen.value = true
     sidebarOpen.value = false
   },
   { immediate: true }

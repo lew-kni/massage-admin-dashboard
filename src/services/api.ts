@@ -31,7 +31,12 @@ import type {
   DocumentType,
   PaymentMethod,
   PromoCode,
+  MarketingContact,
+  MarketingCampaign,
+  MarketingSendResult,
+  MarketingTemplate,
 } from '@/types'
+import type { MarketingBlock } from '@/utils/marketingBlocks'
 
 class ApiService {
   private client: AxiosInstance
@@ -124,6 +129,57 @@ class ApiService {
   async getFeedback(): Promise<Feedback[]> {
     const { data } = await this.client.get('/api/feedback')
     return data
+  }
+
+  // Marketing list. status: 'SUBSCRIBED' (default) | 'UNSUBSCRIBED' | 'all'.
+  async getMarketingContacts(
+    status: 'SUBSCRIBED' | 'UNSUBSCRIBED' | 'all' = 'SUBSCRIBED'
+  ): Promise<{ subscribedCount: number; count: number; contacts: MarketingContact[] }> {
+    const { data } = await this.client.get('/api/marketing/contacts', { params: { status } })
+    return data
+  }
+
+  // Send a marketing campaign (rich HTML from the block builder) to every
+  // subscribed contact.
+  async sendMarketingCampaign(subject: string, html: string): Promise<MarketingSendResult> {
+    const { data } = await this.client.post('/api/marketing/send', { subject, html })
+    return data
+  }
+
+  // Past sends (newest first).
+  async getMarketingCampaigns(): Promise<MarketingCampaign[]> {
+    const { data } = await this.client.get('/api/marketing/campaigns')
+    return data
+  }
+
+  // Upload an image for the block builder; returns a public URL usable in email.
+  async uploadMarketingImage(file: File): Promise<{ url: string }> {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await this.client.post('/api/marketing/images', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data
+  }
+
+  // Saved templates.
+  async getMarketingTemplates(): Promise<MarketingTemplate[]> {
+    const { data } = await this.client.get('/api/marketing/templates')
+    return data
+  }
+  async createMarketingTemplate(name: string, subject: string, blocks: MarketingBlock[]): Promise<MarketingTemplate> {
+    const { data } = await this.client.post('/api/marketing/templates', { name, subject, blocks })
+    return data
+  }
+  async updateMarketingTemplate(
+    id: string,
+    patch: { name?: string; subject?: string; blocks?: MarketingBlock[] }
+  ): Promise<MarketingTemplate> {
+    const { data } = await this.client.patch(`/api/marketing/templates/${id}`, patch)
+    return data
+  }
+  async deleteMarketingTemplate(id: string): Promise<void> {
+    await this.client.delete(`/api/marketing/templates/${id}`)
   }
 
   // Self feedback (therapist's private notes on a booking)
