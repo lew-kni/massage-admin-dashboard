@@ -33,7 +33,7 @@ export interface CancellationSuggestion {
   hoursNotice: number
   percent: number
   tierLabel: string
-  /** Whole £, 0 for the free tier, null when the booking has no price on file. */
+  /** Pence, 0 for the free tier, null when the booking has no price on file. */
   amount: number | null
 }
 

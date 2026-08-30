@@ -236,6 +236,7 @@ import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import type { Booking } from '@/types'
 import { bookingTotal } from '@/utils/bookingTotal'
 import { computeBookingTotals, sumPaymentsInRange, paymentsInRange, outstandingBalance, paymentMethodLabel, bookingRef } from '@/utils/bookingTotals'
+import { formatGBP, formatGBPCompact } from '@/utils/money'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 import Pagination from '@/components/Pagination.vue'
 
@@ -253,8 +254,9 @@ function isPast(b: Booking): boolean {
 function sum(list: Booking[]): number {
   return list.reduce((s, b) => s + effectivePrice(b), 0)
 }
-const gbp = (n: number) => '£' + Math.round(n).toLocaleString('en-GB')
-const compactGbp = (n: number) => (n >= 1000 ? '£' + (n / 1000).toFixed(1) + 'k' : '£' + Math.round(n))
+// All money here is pence (payments, booking charges, expenses alike).
+const gbp = formatGBP
+const compactGbp = formatGBPCompact
 const pct = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0)
 
 // Bookings that count towards the books: not cancelled and with a known price.
@@ -296,7 +298,7 @@ const taxYearIncome = computed(() =>
 const taxYearExpensesTotal = computed(() =>
   expensesStore.expenses
     .filter((e) => dateInTaxYear(e.date))
-    .reduce((s, e) => s + e.amount, 0) / 100
+    .reduce((s, e) => s + e.amount, 0)
 )
 const taxYearProfit = computed(() => taxYearIncome.value - taxYearExpensesTotal.value)
 
@@ -467,6 +469,8 @@ async function confirmPaid(method: 'CASH' | 'BACS') {
 }
 
 // --- CSV export (General Accounting's booking-level data) ------------------
+// Pence -> "75.00" for a spreadsheet cell (no currency symbol).
+const poundsStr = (pence: number) => ((Number(pence) || 0) / 100).toFixed(2)
 function exportCsv() {
   const header = ['Booking', 'Date', 'Client', 'Service', 'List', 'Discounted', 'Charged', 'Paid', 'Balance', 'Methods', 'Payment status', 'Booking status']
   const rows = generalPeriodBookings.value
@@ -479,11 +483,13 @@ function exportCsv() {
         new Date(b.startTime).toLocaleDateString('en-GB', { timeZone: 'Europe/London' }),
         `${b.client?.firstName ?? ''} ${b.client?.lastName ?? ''}`.trim(),
         b.service || '',
-        b.price != null ? String(b.price) : '',
-        b.discountedPrice != null ? String(b.discountedPrice) : '',
-        String(effectivePrice(b)),
-        String(t.amountPaid),
-        String(outstandingBalance(b)),
+        // Money columns as plain pounds.pence so the CSV drops straight into a
+        // spreadsheet (the app stores pence internally).
+        b.price != null ? poundsStr(b.price) : '',
+        b.discountedPrice != null ? poundsStr(b.discountedPrice) : '',
+        poundsStr(effectivePrice(b)),
+        poundsStr(t.amountPaid),
+        poundsStr(outstandingBalance(b)),
         [...new Set((b.payments ?? []).map((p) => p.method))].join(';'),
         t.paymentStatus,
         b.status,

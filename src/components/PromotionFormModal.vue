@@ -60,6 +60,7 @@
                 type="number"
                 min="0"
                 :max="form.discountType === 'PERCENT' ? 100 : undefined"
+                :step="form.discountType === 'FIXED' ? '0.01' : '1'"
                 class="input-field"
                 :class="{ 'pl-7': form.discountType === 'FIXED' }"
                 required
@@ -183,6 +184,7 @@
 <script setup lang="ts">
 import { reactive, ref, computed } from 'vue'
 import { useServicesStore } from '@/stores/services'
+import { penceToPounds, poundsToPence } from '@/utils/money'
 import type { Promotion, PromotionKind } from '@/types'
 
 const props = defineProps<{ promotion?: Promotion; initialKind?: PromotionKind }>()
@@ -218,10 +220,11 @@ const form = reactive({
   kind: (props.promotion?.kind || props.initialKind || 'PROMOTION') as PromotionKind,
   message: props.promotion?.message || '',
   discountType: props.promotion?.discountType || 'PERCENT',
-  // Single value bound to whichever discount type is active.
+  // Single value bound to whichever discount type is active. For FIXED this is
+  // pounds (the stored discountAmount is pence); for PERCENT it's the percentage.
   value:
     props.promotion?.discountType === 'FIXED'
-      ? props.promotion?.discountAmount ?? 0
+      ? penceToPounds(props.promotion?.discountAmount ?? 0) ?? 0
       : props.promotion?.discountPercentage ?? 0,
   active: props.promotion?.active ?? false,
   internal: props.promotion?.internal ?? false,
@@ -269,7 +272,7 @@ async function submitForm() {
     message: form.message.trim(),
     discountType: form.discountType,
     discountPercentage: form.discountType === 'PERCENT' ? form.value : 0,
-    discountAmount: form.discountType === 'FIXED' ? form.value : null,
+    discountAmount: form.discountType === 'FIXED' ? poundsToPence(form.value) : null,
     active: form.active,
     applicableTo: scope.value === 'all' ? 'all' : selectedSlugs.value,
     applicableDurations: durationScope.value === 'all' ? 'all' : selectedMinutes.value,

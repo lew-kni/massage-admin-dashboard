@@ -169,8 +169,8 @@
                   <span
                     v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
                     class="text-gray-400 line-through mr-1"
-                  >£{{ booking.price }}</span>
-                  <span>£{{ booking.discountedPrice ?? booking.price }}</span>
+                  >{{ formatGBP(booking.price) }}</span>
+                  <span>{{ formatGBP(booking.discountedPrice ?? booking.price) }}</span>
                   <span
                     v-if="booking.discountedPrice !== null && booking.discountedPrice !== undefined && booking.discountedPrice !== booking.price"
                     class="ml-2 badge bg-amber-100 text-amber-800"
@@ -180,12 +180,12 @@
               </p>
               <!-- Extra charge (e.g. travel) as a line + total when set -->
               <p v-if="!isEditing && booking.extraCharge" class="text-sm text-gray-700 mt-0.5">
-                + £{{ booking.extraCharge }}<span v-if="booking.extraChargeReason" class="text-gray-500"> · {{ booking.extraChargeReason }}</span>
-                <span class="ml-2 font-medium">Total £{{ bookingTotal(booking) }}</span>
+                + {{ formatGBP(booking.extraCharge) }}<span v-if="booking.extraChargeReason" class="text-gray-500"> · {{ booking.extraChargeReason }}</span>
+                <span class="ml-2 font-medium">Total {{ formatGBP(bookingTotal(booking)) }}</span>
               </p>
               <!-- Cancellation fee, when this booking was cancelled with a charge -->
               <p v-if="!isEditing && booking.status === 'CANCELLED' && booking.cancellationFee" class="text-sm text-red-700 mt-0.5">
-                <i class="fas fa-ban mr-1"></i>Cancellation fee: £{{ booking.cancellationFee }}
+                <i class="fas fa-ban mr-1"></i>Cancellation fee: {{ formatGBP(booking.cancellationFee) }}
               </p>
               <p v-else-if="!isEditing && booking.status === 'CANCELLED'" class="text-sm text-gray-500 mt-0.5">
                 <i class="fas fa-ban mr-1"></i>Cancelled — no fee
@@ -231,7 +231,7 @@
                     type="number"
                     min="0"
                     :max="discountMode === 'percent' ? 100 : undefined"
-                    step="1"
+                    :step="discountMode === 'amount' ? '0.01' : '1'"
                     placeholder="One-off discount"
                     class="input-field text-xs py-1 w-32"
                   />
@@ -252,7 +252,7 @@
             <div v-if="isEditing">
               <label class="text-sm text-gray-500">Extra charge (£)</label>
               <div class="flex items-center gap-2 mt-1">
-                <input v-model.number="editForm.extraCharge" type="number" min="0" step="1" placeholder="0" class="input-field w-24" />
+                <input v-model.number="editForm.extraCharge" type="number" min="0" step="0.01" placeholder="0" class="input-field w-24" />
                 <input v-model="editForm.extraChargeReason" type="text" maxlength="200" placeholder="Reason (e.g. travel outside area)" class="input-field flex-1" />
               </div>
               <p class="text-xs text-gray-400 mt-1">Added on top of the price and shown to the client on their confirmation.</p>
@@ -262,17 +262,17 @@
             <div class="border-t pt-4">
               <div class="text-sm space-y-1">
                 <div v-if="paymentTotals.grossTotal !== paymentTotals.total" class="flex items-center justify-between text-gray-500">
-                  <span>Gross</span><span class="line-through">£{{ paymentTotals.grossTotal }}</span>
+                  <span>Gross</span><span class="line-through">{{ formatGBP(paymentTotals.grossTotal) }}</span>
                 </div>
                 <div class="flex items-center justify-between">
-                  <span class="text-gray-600">Total due</span><span class="font-medium">£{{ paymentTotals.total }}</span>
+                  <span class="text-gray-600">Total due</span><span class="font-medium">{{ formatGBP(paymentTotals.total) }}</span>
                 </div>
                 <div v-if="paymentTotals.amountPaid" class="flex items-center justify-between">
-                  <span class="text-gray-600">Paid</span><span class="font-medium">£{{ paymentTotals.amountPaid }}</span>
+                  <span class="text-gray-600">Paid</span><span class="font-medium">{{ formatGBP(paymentTotals.amountPaid) }}</span>
                 </div>
                 <div v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'" class="flex items-center justify-between">
                   <span class="text-gray-600">Balance</span>
-                  <span class="font-medium" :class="paymentTotals.balance > 0 ? 'text-red-600' : 'text-green-600'">£{{ paymentTotals.balance }}</span>
+                  <span class="font-medium" :class="paymentTotals.balance > 0 ? 'text-red-600' : 'text-green-600'">{{ formatGBP(paymentTotals.balance) }}</span>
                 </div>
               </div>
               <div v-if="booking.payments && booking.payments.length" class="mt-4 grid grid-cols-[auto_1fr_auto_auto] items-center gap-x-4 text-sm">
@@ -284,7 +284,7 @@
 
                 <!-- One row per payment (+ a full-width note line when present) -->
                 <template v-for="p in booking.payments" :key="p.id">
-                  <div class="border-t border-gray-100 dark:border-gray-800 py-2 font-medium tabular-nums">£{{ p.amount }}</div>
+                  <div class="border-t border-gray-100 dark:border-gray-800 py-2 font-medium tabular-nums">{{ formatGBP(p.amount) }}</div>
                   <div class="border-t border-gray-100 dark:border-gray-800 py-2">{{ paymentMethodLabel(p.method) }}</div>
                   <div class="border-t border-gray-100 dark:border-gray-800 py-2 whitespace-nowrap text-gray-600 dark:text-gray-400">{{ formatDate(p.receivedAt) }}</div>
                   <div class="border-t border-gray-100 dark:border-gray-800 py-2 text-right">
@@ -619,7 +619,7 @@
                   {{ paymentStatusLabel(paymentTotals.paymentStatus) }}
                 </span>
                 <span v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY' && paymentTotals.balance > 0" class="text-sm text-red-600">
-                  £{{ paymentTotals.balance }} outstanding
+                  {{ formatGBP(paymentTotals.balance) }} outstanding
                 </span>
               </div>
             </div>
@@ -677,6 +677,7 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { toLondonInputParts, londonWallTimeToUtc, toLondonFakeLocalDate } from '@/utils/formatLondon'
 import { bookingTotal } from '@/utils/bookingTotal'
 import { computeBookingTotals, paymentMethodLabel, paymentStatusLabel, bookingRef } from '@/utils/bookingTotals'
+import { formatGBP, penceToPounds, poundsToPence } from '@/utils/money'
 import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import RecordPaymentModal from '@/components/RecordPaymentModal.vue'
@@ -970,7 +971,7 @@ async function onApplyDiscount() {
   try {
     const payload = discountMode.value === 'percent'
       ? { discountPercentage: discountValue.value }
-      : { discountAmount: discountValue.value }
+      : { discountAmount: poundsToPence(discountValue.value)! }
     booking.value = await bookingsStore.applyDiscount(booking.value.id, payload)
     discountValue.value = null
   } catch (err: any) {
@@ -1037,7 +1038,8 @@ function initEditForm() {
   editForm.pressurePreference = (b.pressurePreference as any) || ''
   editForm.firstTime = b.firstTime === true ? 'yes' : b.firstTime === false ? 'no' : ''
   editForm.allergies = b.allergies || ''
-  editForm.extraCharge = b.extraCharge ?? null
+  // Stored in pence; the £ input edits pounds.
+  editForm.extraCharge = penceToPounds(b.extraCharge)
   editForm.extraChargeReason = b.extraChargeReason || ''
 }
 
@@ -1144,7 +1146,7 @@ async function saveBooking() {
       pressurePreference: editForm.pressurePreference || null,
       firstTime: editForm.firstTime === 'yes' ? true : editForm.firstTime === 'no' ? false : null,
       allergies: editForm.allergies.trim() || null,
-      extraCharge: Number(editForm.extraCharge) > 0 ? Math.round(Number(editForm.extraCharge)) : null,
+      extraCharge: Number(editForm.extraCharge) > 0 ? poundsToPence(editForm.extraCharge) : null,
       extraChargeReason: Number(editForm.extraCharge) > 0 ? (editForm.extraChargeReason.trim() || null) : null,
     })
     booking.value = updated

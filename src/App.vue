@@ -49,9 +49,15 @@
                 class="w-[180px] h-auto mx-auto transition-transform duration-200 group-hover:scale-[1.02]"
               />
             </RouterLink>
-            <p class="text-[0.7rem] uppercase tracking-[0.22em] text-gray-400 dark:text-gray-500 mt-3 text-center">
-              Admin Dashboard
-            </p>
+            <a
+              :href="brochureUrl"
+              target="_blank"
+              rel="noopener"
+              class="mt-3 flex items-center justify-center gap-1.5 text-[0.7rem] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+            >
+              <i class="fas fa-arrow-up-right-from-square text-[0.65rem]"></i>
+              <span>View Brochure Site</span>
+            </a>
           </div>
 
           <!-- Top section -->
@@ -73,16 +79,37 @@
               </span>
             </RouterLink>
 
+            <!-- Promotions group -->
+            <button
+              @click="toggleGroup('promotions')"
+              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+            >
+              <i class="w-5 text-center fas fa-tag"></i>
+              <span>Promotions</span>
+              <i class="ml-auto text-xs fas" :class="openGroup === 'promotions' ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
+            <div v-show="openGroup === 'promotions'">
+              <RouterLink
+                v-for="child in promotionsChildren"
+                :key="child.name"
+                :to="child.to"
+                class="flex items-center pl-14 pr-6 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
+                :class="{ 'bg-sage-50 dark:bg-gray-800 text-sage-600 dark:text-sage-400 border-l-2 border-sage-600': isActive(child.to) }"
+              >
+                <span>{{ child.name }}</span>
+              </RouterLink>
+            </div>
+
             <!-- Feedback group -->
             <button
-              @click="feedbackOpen = !feedbackOpen"
+              @click="toggleGroup('feedback')"
               class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
             >
               <i class="w-5 text-center fas fa-star"></i>
               <span>Feedback</span>
-              <i class="ml-auto text-xs fas" :class="feedbackOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              <i class="ml-auto text-xs fas" :class="openGroup === 'feedback' ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
             </button>
-            <div v-show="feedbackOpen">
+            <div v-show="openGroup === 'feedback'">
               <RouterLink
                 v-for="child in feedbackChildren"
                 :key="child.name"
@@ -96,14 +123,14 @@
 
             <!-- Marketing group -->
             <button
-              @click="marketingOpen = !marketingOpen"
+              @click="toggleGroup('marketing')"
               class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
             >
               <i class="w-5 text-center fas fa-bullhorn"></i>
               <span>Marketing</span>
-              <i class="ml-auto text-xs fas" :class="marketingOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              <i class="ml-auto text-xs fas" :class="openGroup === 'marketing' ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
             </button>
-            <div v-show="marketingOpen">
+            <div v-show="openGroup === 'marketing'">
               <RouterLink
                 v-for="child in marketingChildren"
                 :key="child.name"
@@ -120,14 +147,14 @@
           <div class="border-t border-gray-200 dark:border-gray-800 py-2">
             <!-- Accounting group -->
             <button
-              @click="accountingOpen = !accountingOpen"
+              @click="toggleGroup('accounting')"
               class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
             >
               <i class="w-5 text-center fas fa-sterling-sign"></i>
               <span>Accounting</span>
-              <i class="ml-auto text-xs fas" :class="accountingOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              <i class="ml-auto text-xs fas" :class="openGroup === 'accounting' ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
             </button>
-            <div v-show="accountingOpen">
+            <div v-show="openGroup === 'accounting'">
               <RouterLink
                 v-for="child in accountingChildren"
                 :key="child.name"
@@ -141,14 +168,14 @@
 
             <!-- Settings group -->
             <button
-              @click="settingsOpen = !settingsOpen"
+              @click="toggleGroup('settings')"
               class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
             >
               <i class="w-5 text-center fas fa-gear"></i>
               <span>Settings</span>
-              <i class="ml-auto text-xs fas" :class="settingsOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              <i class="ml-auto text-xs fas" :class="openGroup === 'settings' ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
             </button>
-            <div v-show="settingsOpen">
+            <div v-show="openGroup === 'settings'">
               <RouterLink
                 v-for="child in settingsChildren"
                 :key="child.name"
@@ -159,16 +186,6 @@
                 <span>{{ child.name }}</span>
               </RouterLink>
             </div>
-
-            <a
-              :href="brochureUrl"
-              target="_blank"
-              rel="noopener"
-              class="w-full flex items-center gap-3 px-6 py-3 text-gray-700 dark:text-gray-300 hover:bg-sage-50 dark:hover:bg-gray-800 hover:text-sage-600 dark:hover:text-sage-400 transition-colors"
-            >
-              <i class="w-5 text-center fas fa-arrow-up-right-from-square"></i>
-              <span>View live site</span>
-            </a>
 
             <button
               @click="logout"
@@ -200,10 +217,13 @@ const router = useRouter()
 const authStore = useAuthStore()
 const leadsStore = useLeadsStore()
 const bookingsStore = useBookingsStore()
-const settingsOpen = ref(false)
-const accountingOpen = ref(false)
-const feedbackOpen = ref(false)
-const marketingOpen = ref(false)
+// Which expandable sidebar group is open. Only one at a time (accordion) —
+// null when all are collapsed.
+type NavGroup = 'promotions' | 'settings' | 'accounting' | 'feedback' | 'marketing'
+const openGroup = ref<NavGroup | null>(null)
+function toggleGroup(name: NavGroup) {
+  openGroup.value = openGroup.value === name ? null : name
+}
 
 // Public brochure site, opened in a new tab from the sidebar. Configurable so
 // dev can point at localhost; falls back to the live site.
@@ -223,6 +243,11 @@ const navigation = computed(() => [
   { name: 'Bookings', to: '/bookings', icon: 'fas fa-calendar', badge: pendingBookingsCount.value },
   { name: 'Rebooking', to: '/rebooking', icon: 'fas fa-user-clock' },
 ])
+
+const promotionsChildren = [
+  { name: 'Promotions', to: '/promotions' },
+  { name: 'Vouchers', to: '/promotions/vouchers' },
+]
 
 const marketingChildren = [
   { name: 'Subscribers', to: '/marketing/subscribers' },
@@ -261,10 +286,11 @@ function isActive(path: string) {
 watch(
   () => router.currentRoute.value.path,
   (path) => {
-    if (path.startsWith('/settings')) settingsOpen.value = true
-    if (path.startsWith('/accounting')) accountingOpen.value = true
-    if (path.startsWith('/feedback')) feedbackOpen.value = true
-    if (path.startsWith('/marketing')) marketingOpen.value = true
+    if (path.startsWith('/promotions')) openGroup.value = 'promotions'
+    else if (path.startsWith('/settings')) openGroup.value = 'settings'
+    else if (path.startsWith('/accounting')) openGroup.value = 'accounting'
+    else if (path.startsWith('/feedback')) openGroup.value = 'feedback'
+    else if (path.startsWith('/marketing')) openGroup.value = 'marketing'
     sidebarOpen.value = false
   },
   { immediate: true }

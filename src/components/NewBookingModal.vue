@@ -41,11 +41,11 @@
           <div v-if="selectedListPrice !== null" class="mt-3 flex items-center gap-2 text-sm">
             <span class="text-gray-500">Price:</span>
             <template v-if="selectedDiscountedPrice !== null && selectedDiscountedPrice !== selectedListPrice">
-              <span class="text-gray-400 line-through">£{{ selectedListPrice }}</span>
-              <span class="font-semibold text-gray-900">£{{ selectedDiscountedPrice }}</span>
+              <span class="text-gray-400 line-through">{{ formatGBP(selectedListPrice) }}</span>
+              <span class="font-semibold text-gray-900">{{ formatGBP(selectedDiscountedPrice) }}</span>
               <span v-if="currentPromotion" class="badge bg-amber-100 text-amber-800">{{ discountLabel(currentPromotion) }}</span>
             </template>
-            <span v-else class="font-semibold text-gray-900">£{{ selectedListPrice }}</span>
+            <span v-else class="font-semibold text-gray-900">{{ formatGBP(selectedListPrice) }}</span>
           </div>
           <p v-if="currentPromotion" class="mt-1 text-xs text-amber-700">
             <i class="fas fa-tag mr-1"></i>{{ currentPromotion.message }}
@@ -57,12 +57,12 @@
             <div class="flex items-center gap-2">
               <div class="relative">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">£</span>
-                <input v-model.number="form.extraCharge" type="number" min="0" step="1" placeholder="0" class="input-field pl-6 w-28" />
+                <input v-model.number="form.extraCharge" type="number" min="0" step="0.01" placeholder="0" class="input-field pl-6 w-28" />
               </div>
               <input v-model="form.extraChargeReason" type="text" maxlength="200" placeholder="Reason (e.g. travel outside area)" class="input-field flex-1" />
             </div>
             <p v-if="Number(form.extraCharge) > 0 && selectedListPrice !== null" class="mt-1 text-xs text-gray-500">
-              Total: £{{ (selectedDiscountedPrice ?? selectedListPrice) + Number(form.extraCharge) }}
+              Total: {{ formatGBP((selectedDiscountedPrice ?? selectedListPrice ?? 0) + (poundsToPence(form.extraCharge) ?? 0)) }}
             </p>
           </div>
         </div>
@@ -165,6 +165,7 @@ import { format } from 'date-fns'
 import { useBookingsStore } from '@/stores/bookings'
 import { useServicesStore } from '@/stores/services'
 import { usePromotionPricing, discountLabel } from '@/composables/usePromotionPricing'
+import { formatGBP, poundsToPence } from '@/utils/money'
 import { apiService } from '@/services/api'
 import { londonWallTimeToUtc, formatLondonTime } from '@/utils/formatLondon'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
@@ -210,9 +211,9 @@ function durationLabel(d: ServiceDuration): string {
   if (d.price === null || d.price === undefined) return minutes
   const discounted = discountedPrice(d.price, currentService.value?.slug)
   if (discounted !== null && discounted !== d.price) {
-    return `${minutes} · £${discounted} (was £${d.price})`
+    return `${minutes} · ${formatGBP(discounted)} (was ${formatGBP(d.price)})`
   }
-  return `${minutes} · £${d.price}`
+  return `${minutes} · ${formatGBP(d.price)}`
 }
 
 // Pricing summary for the selected duration (drives the price line under the times).
@@ -315,7 +316,7 @@ async function submitForm() {
       durationMinutes: selectedMinutes.value,
       status: form.status,
       notes: form.notes || undefined,
-      extraCharge: Number(form.extraCharge) > 0 ? Math.round(Number(form.extraCharge)) : undefined,
+      extraCharge: Number(form.extraCharge) > 0 ? poundsToPence(form.extraCharge) : undefined,
       extraChargeReason: Number(form.extraCharge) > 0 ? (form.extraChargeReason.trim() || undefined) : undefined,
       override: customTime.value,
     } as any)

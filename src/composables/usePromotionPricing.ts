@@ -1,4 +1,5 @@
 import { useServicesStore } from '@/stores/services'
+import { formatGBP } from '@/utils/money'
 import type { Promotion } from '@/types'
 
 // Client-side mirror of the backend pricing logic (src/utils/pricing.js) so the
@@ -21,7 +22,7 @@ export function usePromotionPricing() {
     return null
   }
 
-  // The whole-£ discount a promotion/voucher takes off a price (handles both
+  // The discount in pence a promotion/voucher takes off a price (handles both
   // discount types; capped so a price can't go negative). Mirrors the backend's
   // computeDiscount.
   function discountFor(price: number, promo: Promotion): number {
@@ -42,10 +43,10 @@ export function usePromotionPricing() {
   return { getApplicablePromotion, discountedPrice, discountFor }
 }
 
-// "50% off" or "£10 off" — a compact label for either discount type. Standalone
-// so list/badge UIs can use it without the store.
+// "50% off" or "£10.00 off" — a compact label for either discount type.
+// Standalone so list/badge UIs can use it without the store.
 export function discountLabel(promo: Pick<Promotion, 'discountType' | 'discountPercentage' | 'discountAmount'>): string {
   return promo.discountType === 'FIXED'
-    ? `£${promo.discountAmount || 0} off`
+    ? `${formatGBP(promo.discountAmount || 0)} off`
     : `${promo.discountPercentage || 0}% off`
 }

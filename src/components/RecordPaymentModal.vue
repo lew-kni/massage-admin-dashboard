@@ -6,7 +6,7 @@
       <div class="space-y-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Amount (£)</label>
-          <input v-model.number="form.amount" type="number" step="1" class="input-field" />
+          <input v-model="form.amount" type="number" step="0.01" class="input-field" />
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Use a negative amount for a refund.</p>
         </div>
 
@@ -23,7 +23,7 @@
 
         <div v-if="form.method === 'CARD'">
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Card fee (£, optional)</label>
-          <input v-model.number="form.feeAmount" type="number" step="1" min="0" class="input-field" placeholder="e.g. 1" />
+          <input v-model.number="form.feeAmount" type="number" step="0.01" min="0" class="input-field" placeholder="e.g. 0.50" />
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Terminal processing fee — recorded for reconciliation; doesn't reduce the amount paid.</p>
         </div>
 
@@ -60,11 +60,12 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { toLondonInputParts, londonWallTimeToUtc } from '@/utils/formatLondon'
+import { penceToInput, poundsToPence } from '@/utils/money'
 import type { PaymentMethod } from '@/types'
 
 const props = defineProps<{
   saving?: boolean
-  // Suggested default amount — the outstanding balance.
+  // Suggested default amount — the outstanding balance, in pence.
   suggestedAmount?: number
 }>()
 
@@ -76,7 +77,9 @@ const emit = defineEmits<{
 const error = ref('')
 
 const form = reactive({
-  amount: props.suggestedAmount && props.suggestedAmount > 0 ? props.suggestedAmount : (undefined as number | undefined),
+  // Editing pounds as a string so a suggested balance keeps its 2dp ("22.50",
+  // not "22.5"); the suggested balance and stored amounts are pence.
+  amount: props.suggestedAmount && props.suggestedAmount > 0 ? penceToInput(props.suggestedAmount) : '',
   method: 'CASH' as PaymentMethod,
   feeAmount: undefined as number | undefined,
   date: toLondonInputParts(new Date()).date,
@@ -85,7 +88,7 @@ const form = reactive({
 
 function confirm() {
   error.value = ''
-  if (!form.amount || form.amount === 0) {
+  if (!form.amount || Number(form.amount) === 0) {
     error.value = 'Enter a non-zero amount.'
     return
   }
@@ -97,10 +100,10 @@ function confirm() {
   // can shift the date, then convert to the UTC instant the backend stores.
   const receivedAt = londonWallTimeToUtc(form.date, '12:00').toISOString()
   emit('confirm', {
-    amount: Math.round(form.amount),
+    amount: poundsToPence(form.amount)!,
     method: form.method,
     receivedAt,
-    feeAmount: form.method === 'CARD' && form.feeAmount ? Math.round(form.feeAmount) : null,
+    feeAmount: form.method === 'CARD' && form.feeAmount ? poundsToPence(form.feeAmount) : null,
     note: form.note.trim() || null,
   })
 }

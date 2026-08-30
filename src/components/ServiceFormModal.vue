@@ -119,7 +119,7 @@
             <div class="w-28">
               <div class="relative">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">£</span>
-                <input v-model="d.price" type="number" min="0" placeholder="price" class="input-field text-sm pl-6" />
+                <input v-model="d.price" type="number" min="0" step="0.01" placeholder="price" class="input-field text-sm pl-6" />
               </div>
             </div>
             <input v-model="d.note" type="text" placeholder="Note (optional)" class="input-field text-sm flex-1 min-w-[8rem]" />
@@ -152,6 +152,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useServicesStore } from '@/stores/services'
+import { penceToInput, poundsToPence } from '@/utils/money'
 import type { Service, ServiceCategory, ServiceDuration, NoteBlock } from '@/types'
 
 const props = defineProps<{ service?: Service }>()
@@ -187,7 +188,8 @@ const form = reactive({
   durations: (props.service?.durations || []).map((d) => ({
     id: d.id,
     minutes: d.minutes,
-    price: d.price === null || d.price === undefined ? '' : String(d.price),
+    // Stored in pence; the £ input edits pounds ("75.00").
+    price: penceToInput(d.price),
     note: d.note || '',
     promotionId: d.promotionId || '',
   })) as Array<{ id?: string; minutes: number | null; price: string; note: string; promotionId: string }>,
@@ -233,7 +235,7 @@ function collectDurations(): ServiceDuration[] {
     .filter((d) => d.minutes != null && d.minutes > 0)
     .map((d, idx) => ({
       minutes: Number(d.minutes),
-      price: d.price === '' ? null : Number(d.price),
+      price: poundsToPence(d.price),
       note: d.note.trim() || null,
       sortOrder: idx,
       promotionId: d.promotionId || null,

@@ -1,8 +1,8 @@
 <template>
   <div class="p-8 dark:text-gray-50">
     <div class="flex justify-between items-center mb-6">
-      <RouterLink to="/settings/services?tab=promotions" class="text-sage-600 hover:text-sage-700 dark:text-sage-400">
-        <i class="fas fa-arrow-left mr-1"></i>Back to Promotions
+      <RouterLink :to="listPath" class="text-sage-600 hover:text-sage-700 dark:text-sage-400">
+        <i class="fas fa-arrow-left mr-1"></i>Back to {{ isVoucher ? 'Vouchers' : 'Promotions' }}
       </RouterLink>
       <div class="flex gap-2">
         <template v-if="isEditing">
@@ -111,7 +111,7 @@
                   </div>
                   <div class="relative flex-1">
                     <span v-if="form.discountType === 'FIXED'" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">£</span>
-                    <input v-model.number="form.value" type="number" min="0" :max="form.discountType === 'PERCENT' ? 100 : undefined" class="input-field" :class="{ 'pl-7': form.discountType === 'FIXED' }" required />
+                    <input v-model.number="form.value" type="number" min="0" :max="form.discountType === 'PERCENT' ? 100 : undefined" :step="form.discountType === 'FIXED' ? '0.01' : '1'" class="input-field" :class="{ 'pl-7': form.discountType === 'FIXED' }" required />
                     <span v-if="form.discountType === 'PERCENT'" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">%</span>
                   </div>
                 </div>
@@ -254,6 +254,7 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import { useServicesStore } from '@/stores/services'
 import { apiService } from '@/services/api'
+import { formatGBP, penceToPounds, poundsToPence } from '@/utils/money'
 import type { Promotion, PromotionKind, PromoCode } from '@/types'
 
 const route = useRoute()
@@ -323,12 +324,15 @@ function formatDate(iso: string): string {
 }
 
 const isVoucher = computed(() => form.kind === 'VOUCHER')
+// The list this record belongs to — so Back and the post-delete redirect land on
+// the right sub-page (Promotions vs Vouchers).
+const listPath = computed(() => (isVoucher.value ? '/promotions/vouchers' : '/promotions'))
 const title = computed(() => {
   const noun = isVoucher.value ? 'Voucher' : 'Promotion'
   return id.value ? noun : `New ${noun}`
 })
 const discountText = computed(() =>
-  form.discountType === 'FIXED' ? `£${form.value} off` : `${form.value}% off`,
+  form.discountType === 'FIXED' ? `${formatGBP(poundsToPence(form.value) ?? 0)} off` : `${form.value}% off`,
 )
 const appliesToText = computed(() => {
   const svc = scope.value === 'all' ? 'All services' : (selectedSlugs.value.join(', ') || 'No services')
@@ -341,7 +345,8 @@ function hydrate(p: Promotion) {
   form.name = p.name || ''
   form.message = p.message
   form.discountType = p.discountType
-  form.value = p.discountType === 'FIXED' ? (p.discountAmount ?? 0) : p.discountPercentage
+  // FIXED discountAmount is stored in pence; the £ field edits pounds.
+  form.value = p.discountType === 'FIXED' ? (penceToPounds(p.discountAmount ?? 0) ?? 0) : p.discountPercentage
   form.active = p.active
   form.internal = p.internal
   form.displayAsBanner = p.displayAsBanner
@@ -391,7 +396,7 @@ async function save() {
     message: form.message.trim(),
     discountType: form.discountType,
     discountPercentage: form.discountType === 'PERCENT' ? form.value : 0,
-    discountAmount: form.discountType === 'FIXED' ? form.value : null,
+    discountAmount: form.discountType === 'FIXED' ? poundsToPence(form.value) : null,
     active: form.active,
     firstBookingOnly: form.firstBookingOnly,
     applicableTo: scope.value === 'all' ? 'all' : selectedSlugs.value,
@@ -418,7 +423,7 @@ async function save() {
       isEditing.value = false
     } else {
       const created = await store.createPromotion(payload)
-      router.replace(`/settings/services/promotions/${created.id}`)
+      router.replace(`/promotions/${created.id}`)
       id.value = created.id
       hydrate(created as Promotion)
       isEditing.value = false
@@ -472,7 +477,7 @@ async function onDelete() {
   saving.value = true
   try {
     await store.deletePromotion(id.value)
-    router.push('/settings/services?tab=promotions')
+    router.push(listPath.value)
   } catch (err: any) {
     error.value = err?.message || 'Failed to delete'
     saving.value = false

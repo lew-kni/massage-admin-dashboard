@@ -3,7 +3,7 @@
     <div class="bg-white rounded-lg shadow-lg p-6 max-w-md w-full mx-4">
       <h2 class="text-lg font-semibold mb-1">Cancel booking</h2>
       <p class="text-gray-600 text-sm mb-4">
-        The client will be emailed a cancellation notice{{ fee > 0 ? `, stating the £${fee} fee` : '' }}.
+        The client will be emailed a cancellation notice{{ feePence > 0 ? `, stating the ${formatGBP(feePence)} fee` : '' }}.
       </p>
 
       <!-- Notice given + policy tier -->
@@ -14,7 +14,7 @@
         <p class="text-gray-500 mt-1">
           Policy — {{ suggestion.tierLabel }}:
           <strong>{{ suggestion.percent }}%</strong>
-          <template v-if="suggestion.amount !== null"> (£{{ suggestion.amount }})</template>
+          <template v-if="suggestion.amount !== null"> ({{ formatGBP(suggestion.amount) }})</template>
         </p>
       </div>
 
@@ -29,7 +29,7 @@
         <input
           type="number"
           min="0"
-          step="1"
+          step="0.01"
           v-model.number="fee"
           :disabled="waived"
           class="input-field flex-1"
@@ -57,7 +57,7 @@
           class="btn-danger flex-1"
           :class="{ 'opacity-50 cursor-not-allowed': saving }"
         >
-          {{ saving ? 'Cancelling…' : (fee > 0 ? `Cancel & charge £${fee}` : 'Cancel booking') }}
+          {{ saving ? 'Cancelling…' : (feePence > 0 ? `Cancel & charge ${formatGBP(feePence)}` : 'Cancel booking') }}
         </button>
       </div>
     </div>
@@ -68,6 +68,7 @@
 import { ref, computed } from 'vue'
 import type { Booking } from '@/types'
 import { suggestedCancellationFee, formatNotice } from '@/utils/cancellationPolicy'
+import { formatGBP, penceToPounds, poundsToPence } from '@/utils/money'
 
 const props = defineProps<{
   booking: Booking
@@ -84,14 +85,16 @@ const suggestion = suggestedCancellationFee(props.booking)
 const noPrice = computed(() => suggestion.amount === null)
 
 // Pre-fill with the policy suggestion (0 when unknown/free); the therapist can
-// edit it or waive entirely.
-const fee = ref<number>(suggestion.amount ?? 0)
+// edit it or waive entirely. The input edits pounds; the suggestion is pence.
+const fee = ref<number>(penceToPounds(suggestion.amount) ?? 0)
 const waived = ref(false)
+
+// The fee actually charged, in pence — 0 when waived.
+const feePence = computed(() => (waived.value ? 0 : Math.max(0, poundsToPence(fee.value) ?? 0)))
 
 const noticeText = computed(() => formatNotice(suggestion.hoursNotice))
 
 function confirm() {
-  const amount = waived.value ? 0 : Math.max(0, Math.round(Number(fee.value) || 0))
-  emit('confirm', amount)
+  emit('confirm', feePence.value)
 }
 </script>

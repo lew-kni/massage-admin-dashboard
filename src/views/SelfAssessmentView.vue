@@ -221,7 +221,10 @@ const paidInYear = computed(() =>
       inRange(b.startTime)
   )
 )
-const turnover = computed(() => paidInYear.value.reduce((s, b) => s + effectivePrice(b), 0))
+// bookingTotal is pence; the SA103S figures (boxes, £85k limit, CSV) are all in
+// pounds, and expenses below already divide by 100 — so bring turnover to pounds
+// at this boundary and everything downstream stays in pounds.
+const turnover = computed(() => paidInYear.value.reduce((s, b) => s + effectivePrice(b), 0) / 100)
 const paidSessions = computed(() => paidInYear.value.length)
 
 // --- expenses --------------------------------------------------------------

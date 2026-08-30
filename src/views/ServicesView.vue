@@ -1,35 +1,17 @@
 <template>
   <div class="p-8 dark:text-gray-50">
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-50">Services &amp; Promotions</h1>
-      <p class="text-gray-600 dark:text-gray-400 mt-2">Manage what you offer, session lengths, pricing, and campaigns</p>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex gap-2 mb-8 border-b dark:border-gray-700">
-      <button
-        @click="activeTab = 'services'"
-        :class="['px-4 py-3 font-medium border-b-2', activeTab === 'services' ? 'border-sage-600 text-sage-600 dark:text-sage-400' : 'border-transparent text-gray-600 dark:text-gray-400']"
-      >
-        <i class="fas fa-spa mr-2"></i>Services
-      </button>
-      <button
-        @click="activeTab = 'promotions'"
-        :class="['px-4 py-3 font-medium border-b-2', activeTab === 'promotions' ? 'border-sage-600 text-sage-600 dark:text-sage-400' : 'border-transparent text-gray-600 dark:text-gray-400']"
-      >
-        <i class="fas fa-tag mr-2"></i>Promotions &amp; Vouchers
-      </button>
-    </div>
-
-    <!-- Services Tab -->
-    <div v-if="activeTab === 'services'" class="space-y-4">
-      <div class="flex justify-end">
-        <button @click="newService" class="btn-primary text-sm">
-          <i class="fas fa-plus"></i>
-          <span>New Service</span>
-        </button>
+    <div class="mb-8 flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-50">Services</h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-2">Manage what you offer, session lengths, and pricing</p>
       </div>
+      <button @click="newService" class="btn-primary text-sm shrink-0">
+        <i class="fas fa-plus"></i>
+        <span>New Service</span>
+      </button>
+    </div>
 
+    <div class="space-y-4">
       <div v-if="store.loading && store.services.length === 0" class="text-center py-12 text-gray-500">
         Loading services...
       </div>
@@ -78,7 +60,7 @@
             >
               <span class="font-medium">{{ d.minutes }} min</span>
               <span class="text-gray-500">·</span>
-              <span>{{ d.price === null || d.price === undefined ? 'TBC' : '£' + d.price }}</span>
+              <span>{{ d.price === null || d.price === undefined ? 'TBC' : formatGBP(d.price) }}</span>
               <i v-if="d.promotionId" class="fas fa-tag text-amber-600 text-xs" title="Has a promotion pinned to this duration"></i>
             </span>
             <span v-if="service.durations.length === 0" class="text-sm text-gray-400">No durations set</span>
@@ -87,94 +69,6 @@
       </div>
 
       <Pagination v-model="servicesPage" :total-pages="servicesTotalPages" />
-    </div>
-
-    <!-- Promotions Tab -->
-    <div v-if="activeTab === 'promotions'" class="space-y-4">
-      <div class="flex justify-end gap-2">
-        <button @click="newPromotion('PROMOTION')" class="btn-secondary text-sm">
-          <i class="fas fa-tag"></i>
-          <span>New Promotion</span>
-        </button>
-        <button @click="newPromotion('VOUCHER')" class="btn-primary text-sm">
-          <i class="fas fa-ticket"></i>
-          <span>New Voucher</span>
-        </button>
-      </div>
-
-      <div v-if="store.promotions.length === 0" class="card p-12 text-center text-gray-500">
-        No promotions yet.
-      </div>
-
-      <div v-for="promo in paginatedPromotions" :key="promo.id" class="card" :class="{ 'opacity-60': !promo.active }">
-        <div class="card-body flex justify-between items-start gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors" @click="editPromotion(promo)">
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="badge" :class="promo.active ? 'badge-success' : 'bg-gray-100 text-gray-700'">
-                {{ promo.active ? 'Active' : 'Inactive' }}
-              </span>
-              <span class="badge" :class="promo.kind === 'VOUCHER' ? 'bg-purple-100 text-purple-800' : 'bg-sky-100 text-sky-800'">
-                <i class="fas mr-1" :class="promo.kind === 'VOUCHER' ? 'fa-ticket' : 'fa-tag'"></i>{{ promo.kind === 'VOUCHER' ? 'Voucher' : 'Promotion' }}
-              </span>
-              <span class="badge bg-orange-100 text-orange-800">{{ discountLabel(promo) }}</span>
-              <span v-if="promo.firstBookingOnly" class="badge bg-blue-100 text-blue-800" title="First booking only"><i class="fas fa-user-plus mr-1"></i>1st booking</span>
-              <span v-if="promo.kind === 'VOUCHER' && promo.code" class="badge bg-gray-100 text-gray-700 font-mono">{{ promo.code }}</span>
-              <span v-if="promo.displayAsBanner" class="badge bg-emerald-100 text-emerald-800" title="Shown in the sitewide banner">
-                <i class="fas fa-bullhorn mr-1"></i>Banner
-              </span>
-              <span v-if="promo.internal" class="badge bg-gray-200 text-gray-700" title="Never shown on the website">
-                <i class="fas fa-eye-slash mr-1"></i>Internal
-              </span>
-            </div>
-            <p class="font-medium mt-2">{{ promo.name || promo.message }}</p>
-            <p v-if="promo.name" class="text-sm text-gray-500">{{ promo.message }}</p>
-            <p class="text-sm text-gray-500 mt-1">
-              Applies to:
-              <span v-if="promo.applicableTo === 'all'">all services</span>
-              <span v-else>{{ (promo.applicableTo as string[]).join(', ') }}</span>
-              <span v-if="promo.applicableDurations && promo.applicableDurations !== 'all'"> · {{ (promo.applicableDurations as number[]).join(', ') }} min</span>
-            </p>
-            <p v-if="promo.kind === 'VOUCHER'" class="text-sm text-gray-500 mt-1">
-              <span v-if="promo.expiresAt">Expires {{ formatBookingDate(promo.expiresAt) }} · </span>
-              Redeemed {{ promo.usageCount ?? 0 }}{{ promo.usageLimit ? ` of ${promo.usageLimit}` : '' }}
-            </p>
-            <button
-              @click.stop="toggleBookings(promo)"
-              class="mt-2 text-sm text-sage-600 hover:text-sage-700 font-medium inline-flex items-center gap-1"
-            >
-              <i class="fas" :class="expandedPromoId === promo.id ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
-              <span>{{ promo.bookingCount ?? 0 }} booking{{ (promo.bookingCount ?? 0) === 1 ? '' : 's' }}</span>
-            </button>
-          </div>
-          <i class="fas fa-chevron-right text-gray-300 dark:text-gray-600 mt-1 shrink-0"></i>
-        </div>
-
-        <!-- Bookings that used this promotion -->
-        <div v-if="expandedPromoId === promo.id" class="border-t border-gray-100 dark:border-gray-800 px-6 py-4">
-          <p v-if="loadingPromoBookings" class="text-sm text-gray-500">Loading bookings…</p>
-          <p v-else-if="promoBookings.length === 0" class="text-sm text-gray-500">No bookings have used this promotion.</p>
-          <ul v-else class="divide-y divide-gray-100 dark:divide-gray-800">
-            <li v-for="b in promoBookings" :key="b.id" class="py-2 flex items-center justify-between text-sm">
-              <RouterLink :to="`/bookings/${b.id}`" class="text-sage-600 hover:text-sage-700 font-medium">
-                NPM-{{ b.bookingNumber }}
-                <span class="text-gray-500 font-normal">
-                  · {{ b.client ? `${b.client.firstName} ${b.client.lastName}` : 'Unknown client' }}
-                  · {{ formatBookingDate(b.startTime) }}
-                </span>
-              </RouterLink>
-              <span class="text-gray-700 dark:text-gray-300">
-                <span v-if="b.discountedPrice != null && b.price != null && b.discountedPrice !== b.price">
-                  <span class="text-gray-400 line-through mr-1">£{{ b.price }}</span>£{{ b.discountedPrice }}
-                </span>
-                <span v-else-if="b.discountedPrice != null">£{{ b.discountedPrice }}</span>
-                <span v-else-if="b.price != null">£{{ b.price }}</span>
-              </span>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <Pagination v-model="promotionsPage" :total-pages="promotionsTotalPages" />
     </div>
 
     <!-- Modals -->
@@ -188,35 +82,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
 import { useServicesStore } from '@/stores/services'
-import { apiService } from '@/services/api'
-import type { Service, Promotion, PromotionBookingSummary, PromotionKind } from '@/types'
-import { discountLabel } from '@/composables/usePromotionPricing'
+import type { Service } from '@/types'
+import { formatGBP } from '@/utils/money'
 import ServiceFormModal from '@/components/ServiceFormModal.vue'
 import Pagination from '@/components/Pagination.vue'
 
-const route = useRoute()
-const router = useRouter()
 const store = useServicesStore()
-const activeTab = ref<'services' | 'promotions'>(route.query.tab === 'promotions' ? 'promotions' : 'services')
 
 const showServiceModal = ref(false)
 const editingService = ref<Service | null>(null)
 
 const PAGE_SIZE = 10
 const servicesPage = ref(1)
-const promotionsPage = ref(1)
-
 const servicesTotalPages = computed(() => Math.max(1, Math.ceil(store.services.length / PAGE_SIZE)))
-const promotionsTotalPages = computed(() => Math.max(1, Math.ceil(store.promotions.length / PAGE_SIZE)))
-
 const paginatedServices = computed(() =>
   store.services.slice((servicesPage.value - 1) * PAGE_SIZE, servicesPage.value * PAGE_SIZE)
-)
-const paginatedPromotions = computed(() =>
-  store.promotions.slice((promotionsPage.value - 1) * PAGE_SIZE, promotionsPage.value * PAGE_SIZE)
 )
 
 function newService() {
@@ -235,61 +117,14 @@ async function confirmDeleteService(service: Service) {
   }
 }
 
-function newPromotion(kind: PromotionKind = 'PROMOTION') {
-  router.push({ path: '/settings/services/promotions/new', query: { kind } })
-}
-
-function editPromotion(promo: Promotion) {
-  router.push(`/settings/services/promotions/${promo.id}`)
-}
-
-async function confirmDeletePromotion(promo: Promotion) {
-  if (confirm('Delete this promotion? This cannot be undone.')) {
-    await store.deletePromotion(promo.id)
-  }
-}
-
-// Expandable list of bookings that used a promotion (fetched on demand — the
-// list endpoint only returns the count).
-const expandedPromoId = ref<string | null>(null)
-const promoBookings = ref<PromotionBookingSummary[]>([])
-const loadingPromoBookings = ref(false)
-
-async function toggleBookings(promo: Promotion) {
-  if (expandedPromoId.value === promo.id) {
-    expandedPromoId.value = null
-    return
-  }
-  expandedPromoId.value = promo.id
-  promoBookings.value = []
-  loadingPromoBookings.value = true
-  try {
-    const full = await apiService.getPromotion(promo.id)
-    promoBookings.value = full.bookings || []
-  } catch {
-    promoBookings.value = []
-  } finally {
-    loadingPromoBookings.value = false
-  }
-}
-
-function formatBookingDate(iso: string): string {
-  const d = new Date(iso)
-  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' })
-}
-
 function onSaved() {
   // Stores refetch internally; nothing else needed here
 }
 
-// Mirror the active tab into the URL (replace, not push) so opening a promotion
-// and hitting Back returns to the tab you were on. Hydrated from ?tab= above.
-watch(activeTab, (tab) => {
-  router.replace({ query: tab === 'promotions' ? { tab } : {} })
-})
-
 onMounted(() => {
   store.fetchServices()
+  // Promotions still power the "pinned promotion" tag on durations, and the
+  // ServiceFormModal's per-duration promotion picker.
   store.fetchPromotions()
 })
 </script>

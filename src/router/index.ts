@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import LoginView from '@/views/LoginView.vue'
 import DashboardView from '@/views/DashboardView.vue'
@@ -17,6 +18,7 @@ import LeadDetailView from '@/views/LeadDetailView.vue'
 import BookingDetailView from '@/views/BookingDetailView.vue'
 import AssessmentView from '@/views/AssessmentView.vue'
 import ServicesView from '@/views/ServicesView.vue'
+import PromotionsView from '@/views/PromotionsView.vue'
 import PromotionDetailView from '@/views/PromotionDetailView.vue'
 import AvailabilityView from '@/views/AvailabilityView.vue'
 import AccountingView from '@/views/AccountingView.vue'
@@ -29,7 +31,7 @@ import SettingsView from '@/views/SettingsView.vue'
 import AppearanceView from '@/views/AppearanceView.vue'
 import GeneralSettingsView from '@/views/GeneralSettingsView.vue'
 
-const routes = [
+const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
@@ -127,6 +129,13 @@ const routes = [
     component: AssessmentView,
     meta: { requiresAuth: true },
   },
+  // Promotions section (Promotions + Vouchers, split by kind via route meta).
+  { path: '/promotions', name: 'Promotions', component: PromotionsView, meta: { requiresAuth: true, kind: 'PROMOTION' } },
+  { path: '/promotions/vouchers', name: 'Vouchers', component: PromotionsView, meta: { requiresAuth: true, kind: 'VOUCHER' } },
+  // `:id` also covers the 'new' create form; defined after the static children
+  // above so '/promotions/vouchers' isn't captured as an id.
+  { path: '/promotions/:id', name: 'PromotionDetail', component: PromotionDetailView, meta: { requiresAuth: true } },
+
   // Accounting section
   { path: '/accounting', redirect: '/accounting/dashboard' },
   {
@@ -193,12 +202,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/settings/services/promotions/:id',
-    name: 'PromotionDetail',
-    component: PromotionDetailView,
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/settings/email',
     name: 'SettingsEmail',
     component: SettingsView,
@@ -208,6 +211,8 @@ const routes = [
   // Legacy paths — keep old links working by redirecting into Settings
   { path: '/services', redirect: '/settings/services' },
   { path: '/availability', redirect: '/settings/availability' },
+  // Promotions/Vouchers moved out of Settings → Services into their own section.
+  { path: '/settings/services/promotions/:id', redirect: (to) => ({ path: `/promotions/${to.params.id}` }) },
   // Email Templates and the standalone Emails page are now tabs within
   // Settings → Email; redirect the old routes so existing links still work.
   { path: '/emails', redirect: '/settings/email' },

@@ -8,11 +8,11 @@
     <!-- Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
       <StatCard label="Pending Inquiries" :value="pendingCount" icon="AlertCircle" :to="`/bookings?status=PENDING`" />
-      <StatCard label="Outstanding Payments" :value="`£${owedToYou}`" icon="Cash" to="/accounting" :value-color="owedToYou > 0 ? 'text-red-600' : 'text-green-600'" />
+      <StatCard label="Outstanding Payments" :value="formatGBP(owedToYou)" icon="Cash" to="/accounting" :value-color="owedToYou > 0 ? 'text-red-600' : 'text-green-600'" />
       <StatCard label="Due to Rebook" :value="toContactCount" icon="Rebook" to="/rebooking" />
       <StatCard label="Forms Outstanding" :value="formsOutstanding" icon="Form" to="/bookings?status=ACTIVE&form=outstanding" />
       <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" to="/bookings?status=ACTIVE" />
-      <StatCard label="Collected This Month" :value="`£${monthlyRevenue}`" icon="TrendingUp" />
+      <StatCard label="Collected This Month" :value="monthlyRevenue" icon="TrendingUp" />
       <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
     </div>
 
@@ -111,6 +111,7 @@ import { useBookingsStore } from '@/stores/bookings'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
 import { sumPaymentsInRange, outstandingBalance } from '@/utils/bookingTotals'
+import { formatGBP } from '@/utils/money'
 import { computeRebooking } from '@/utils/rebooking'
 import StatCard from '@/components/StatCard.vue'
 
@@ -159,7 +160,7 @@ const monthlyRevenue = computed(() => {
   const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime()
   const total = sumPaymentsInRange(bookings.value, start, end, (iso) => toLondonFakeLocalDate(iso).getTime())
-  return total.toFixed(2)
+  return formatGBP(total)
 })
 
 const todaysBookings = computed(() => {

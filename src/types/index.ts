@@ -129,12 +129,12 @@ export interface Booking {
   promotion?: Promotion | null
   // The specific promo code quoted (for filtering bookings by campaign code).
   promoCodeId?: string | null
-  // Pricing captured at booking time (whole GBP). `discountedPrice` is the
+  // Pricing captured at booking time (pence). `discountedPrice` is the
   // promotion-adjusted price; null when no promotion applied.
   price?: number | null
   discountedPrice?: number | null
   // Flat charge added on top of the (post-discount) price, e.g. a travel
-  // surcharge for a visit outside the usual area. Whole GBP.
+  // surcharge for a visit outside the usual area. Pence.
   extraCharge?: number | null
   extraChargeReason?: string | null
   // Fee charged when a confirmed booking is cancelled late, per the published
@@ -166,7 +166,7 @@ export type PaymentStatus = 'DUE' | 'PART_PAID' | 'PAID' | 'COMPLIMENTARY'
 export interface Payment {
   id: string
   bookingId: string
-  amount: number       // whole GBP; positive = received, negative = refund
+  amount: number       // pence; positive = received, negative = refund
   method: PaymentMethod
   receivedAt: string
   feeAmount?: number | null  // card terminal fee (CARD only)
@@ -393,7 +393,7 @@ export type ServiceCategory = 'relaxation' | 'sports'
 export interface ServiceDuration {
   id?: string
   minutes: number
-  price: number | null
+  price: number | null // pence; null while pricing is to be confirmed
   note?: string | null
   isActive?: boolean
   sortOrder?: number
@@ -463,7 +463,7 @@ export interface Promotion {
   name?: string | null
   message: string
   discountType: DiscountType
-  // PERCENT uses discountPercentage (0–100); FIXED uses discountAmount (whole £).
+  // PERCENT uses discountPercentage (0–100); FIXED uses discountAmount (pence).
   discountPercentage: number
   discountAmount?: number | null
   applicableTo: 'all' | string[]
