@@ -495,6 +495,8 @@ export interface PromoCode {
   id: string
   code: string
   label?: string | null
+  // Free-text log of where flyers carrying this code have been placed.
+  placements?: string | null
   usageLimit?: number | null
   usageCount: number
   active: boolean

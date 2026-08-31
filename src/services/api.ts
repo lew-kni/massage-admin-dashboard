@@ -539,6 +539,11 @@ class ApiService {
     return data
   }
 
+  async updatePromoCode(promotionId: string, codeId: string, payload: { code?: string; label?: string | null; usageLimit?: number | null; placements?: string | null }): Promise<PromoCode> {
+    const { data } = await this.client.patch(`/api/promotions/${promotionId}/codes/${codeId}`, payload)
+    return data
+  }
+
   async deletePromoCode(promotionId: string, codeId: string): Promise<void> {
     await this.client.delete(`/api/promotions/${promotionId}/codes/${codeId}`)
   }

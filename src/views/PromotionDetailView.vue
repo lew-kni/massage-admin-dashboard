@@ -213,15 +213,48 @@
               </div>
               <!-- rows -->
               <div v-for="c in codes" :key="c.id" class="border-b border-gray-100 dark:border-gray-800">
-                <div class="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-x-4 items-center py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" @click="toggleCode(c.id)">
-                  <div class="font-medium uppercase">{{ c.code }}</div>
+                <div class="grid grid-cols-[1fr_1fr_auto_auto_auto_auto] gap-x-4 items-center py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" @click="toggleCode(c.id)">
+                  <div class="font-medium uppercase">{{ c.code }}<i v-if="c.placements" class="fas fa-sticky-note ml-2 text-gray-300 dark:text-gray-600" title="Has notes"></i></div>
                   <div class="text-gray-600 dark:text-gray-400 truncate">{{ c.label || '—' }}</div>
                   <div class="text-right tabular-nums">{{ c.usageCount }}{{ c.usageLimit ? ` / ${c.usageLimit}` : '' }}</div>
+                  <button type="button" @click.stop="startEditCode(c)" :disabled="codeSaving" class="text-gray-400 hover:text-sage-600" title="Edit code"><i class="fas fa-edit"></i></button>
                   <button type="button" @click.stop="removeCode(c)" :disabled="codeSaving" class="text-red-500 hover:text-red-700" title="Delete code"><i class="fas fa-trash"></i></button>
                   <i class="fas text-gray-400" :class="expandedCode === c.id ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
                 </div>
-                <!-- expanded: bookings from this code -->
-                <div v-if="expandedCode === c.id" class="pb-3 pl-2">
+
+                <!-- inline edit form for this code -->
+                <div v-if="editingCode === c.id" class="p-3 mb-2 bg-gray-50 dark:bg-gray-800/50 rounded space-y-3">
+                  <div class="flex flex-wrap gap-2">
+                    <div class="w-44">
+                      <label class="block text-xs text-gray-500 mb-1">Code</label>
+                      <input v-model="editForm.code" type="text" class="input-field uppercase text-sm" placeholder="NPMBUXTON" />
+                    </div>
+                    <div class="flex-1 min-w-40">
+                      <label class="block text-xs text-gray-500 mb-1">Label (optional)</label>
+                      <input v-model="editForm.label" type="text" class="input-field text-sm" placeholder="e.g. Buxton flyer" />
+                    </div>
+                    <div class="w-32">
+                      <label class="block text-xs text-gray-500 mb-1">Usage cap</label>
+                      <input v-model.number="editForm.usageLimit" type="number" min="1" class="input-field text-sm" placeholder="None" />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Notes <span class="text-gray-400">— anything worth recording about this code (e.g. where flyers went up; jot dates as you like)</span></label>
+                    <textarea v-model="editForm.placements" rows="5" class="input-field text-sm" placeholder="e.g. Buxton Library noticeboard — 12 Aug&#10;New Mills Co-op window"></textarea>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button type="button" @click="saveCode(c)" :disabled="codeSaving || !editForm.code.trim()" class="btn-primary text-sm">{{ codeSaving ? 'Saving…' : 'Save' }}</button>
+                    <button type="button" @click="cancelEditCode" class="btn-secondary text-sm">Cancel</button>
+                    <p v-if="codeError" class="text-sm text-red-600">{{ codeError }}</p>
+                  </div>
+                </div>
+
+                <!-- expanded: placements + bookings from this code -->
+                <div v-else-if="expandedCode === c.id" class="pb-3 pl-2">
+                  <div v-if="c.placements" class="mb-3">
+                    <div class="text-xs uppercase tracking-wide text-gray-400 pb-1"><i class="fas fa-sticky-note mr-1"></i>Notes</div>
+                    <p class="text-sm whitespace-pre-wrap text-gray-600 dark:text-gray-300">{{ c.placements }}</p>
+                  </div>
                   <div v-if="c.bookings && c.bookings.length" class="grid grid-cols-[auto_1fr_auto] gap-x-4">
                     <div class="text-xs uppercase tracking-wide text-gray-400 pb-1">Ref</div>
                     <div class="text-xs uppercase tracking-wide text-gray-400 pb-1">Client</div>
@@ -304,9 +337,47 @@ const codeSaving = ref(false)
 const codeError = ref('')
 const adding = ref(false)
 const expandedCode = ref<string | null>(null)
+const editingCode = ref<string | null>(null)
+const editForm = reactive({ code: '', label: '', usageLimit: null as number | null, placements: '' })
 
 function toggleCode(codeId: string) {
+  if (editingCode.value === codeId) return // don't collapse the row being edited
   expandedCode.value = expandedCode.value === codeId ? null : codeId
+}
+
+function startEditCode(c: PromoCode) {
+  editingCode.value = c.id
+  expandedCode.value = null
+  codeError.value = ''
+  editForm.code = c.code
+  editForm.label = c.label || ''
+  editForm.usageLimit = c.usageLimit ?? null
+  editForm.placements = c.placements || ''
+}
+
+function cancelEditCode() {
+  editingCode.value = null
+  codeError.value = ''
+}
+
+async function saveCode(c: PromoCode) {
+  if (!editForm.code.trim()) return
+  codeSaving.value = true
+  codeError.value = ''
+  try {
+    await apiService.updatePromoCode(id.value, c.id, {
+      code: editForm.code.trim(),
+      label: editForm.label.trim() || null,
+      usageLimit: editForm.usageLimit || null,
+      placements: editForm.placements.trim() || null,
+    })
+    await load()
+    editingCode.value = null
+  } catch (err: any) {
+    codeError.value = err?.response?.data?.error || err?.message || 'Failed to save code'
+  } finally {
+    codeSaving.value = false
+  }
 }
 function startAdd() {
   adding.value = true
