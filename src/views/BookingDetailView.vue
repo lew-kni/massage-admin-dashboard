@@ -193,7 +193,7 @@
               <!-- Applied promotion or manual discount + revoke -->
               <div v-if="hasActiveDiscount" class="mt-1 flex items-center flex-wrap gap-2">
                 <span class="text-xs text-amber-700">
-                  <i class="fas fa-tag mr-1"></i>{{ booking.promotion ? booking.promotion.message : 'Manual discount' }}
+                  <i class="fas fa-tag mr-1"></i>{{ appliedDiscountLabel }}
                 </span>
                 <button
                   @click="onRemoveDiscount"
@@ -206,14 +206,14 @@
               <!-- Nothing applied yet: apply a stored promotion or a one-off manual discount -->
               <div v-else class="mt-1 space-y-1.5">
                 <div class="flex items-center flex-wrap gap-2">
-                  <select v-model="selectedPromotionId" class="input-field text-xs py-1 w-48">
+                  <select v-model="selectedPromoOption" class="input-field text-xs py-1 w-56">
                     <option value="">Apply a promotion…</option>
-                    <option v-for="p in servicesStore.promotions.filter((p) => p.active)" :key="p.id" :value="p.id">
-                      {{ p.message }}{{ p.internal ? ' (internal)' : '' }}
+                    <option v-for="opt in promotionOptions" :key="opt.value" :value="opt.value">
+                      {{ opt.label }}
                     </option>
                   </select>
                   <button
-                    v-if="selectedPromotionId"
+                    v-if="selectedPromoOption"
                     @click="onApplyPromotion"
                     :disabled="applyingPromotion"
                     class="text-xs text-sage-600 hover:text-sage-700 font-medium disabled:opacity-50"
@@ -270,7 +270,7 @@
                 <div v-if="paymentTotals.amountPaid" class="flex items-center justify-between">
                   <span class="text-gray-600">Paid</span><span class="font-medium">{{ formatGBP(paymentTotals.amountPaid) }}</span>
                 </div>
-                <div v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'" class="flex items-center justify-between">
+                <div v-if="collectsPayment" class="flex items-center justify-between">
                   <span class="text-gray-600">Balance</span>
                   <span class="font-medium" :class="paymentTotals.balance > 0 ? 'text-red-600' : 'text-green-600'">{{ formatGBP(paymentTotals.balance) }}</span>
                 </div>
@@ -296,7 +296,7 @@
                 </template>
               </div>
               <button
-                v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY'"
+                v-if="collectsPayment"
                 @click="showPaymentModal = true"
                 class="mt-3 text-sage-600 hover:text-sage-700 text-sm font-medium"
               >
@@ -445,6 +445,28 @@
           </div>
         </div>
 
+        <!-- Therapist's own assessment for this session — full form lives on its
+             own focused page; this card is just a status + entry point. Sits
+             right after the pre-massage form so the pre-session prep flows top to
+             bottom before the post-visit sections. -->
+        <div class="card">
+          <div class="card-header flex justify-between items-center">
+            <h2 class="text-lg font-semibold"><i class="fas fa-notes-medical mr-2"></i>Pre-Massage Assessment</h2>
+            <span :class="['badge', assessmentBadgeClass]">{{ assessmentStatusLabel }}</span>
+          </div>
+          <div class="card-body flex flex-wrap items-center justify-between gap-4">
+            <p class="text-sm text-gray-500">
+              <span v-if="assessmentSummary?.signedAt">Signed off by the client {{ formatRelative(assessmentSummary.signedAt) }}.</span>
+              <span v-else-if="assessmentSummary">Saved{{ assessmentSummary.updatedAt ? ` ${formatRelative(assessmentSummary.updatedAt)}` : '' }} — not yet signed.</span>
+              <span v-else>Record your posture, movement and palpation findings and the treatment plan, then have the client sign.</span>
+            </p>
+            <RouterLink :to="`/bookings/${booking.id}/pre-massage-assessment`" class="btn-primary text-sm whitespace-nowrap">
+              <i class="fas fa-pen-to-square"></i>
+              <span>{{ assessmentSummary ? 'Open assessment' : 'Start assessment' }}</span>
+            </RouterLink>
+          </div>
+        </div>
+
         <!-- Post-visit feedback link -->
         <div class="card">
           <div class="card-header">
@@ -503,25 +525,6 @@
           </div>
         </div>
 
-        <!-- Therapist's own assessment for this session — full form lives on its
-             own focused page; this card is just a status + entry point. -->
-        <div class="card">
-          <div class="card-header flex justify-between items-center">
-            <h2 class="text-lg font-semibold"><i class="fas fa-notes-medical mr-2"></i>Pre-Massage Assessment</h2>
-            <span :class="['badge', assessmentBadgeClass]">{{ assessmentStatusLabel }}</span>
-          </div>
-          <div class="card-body flex flex-wrap items-center justify-between gap-4">
-            <p class="text-sm text-gray-500">
-              <span v-if="assessmentSummary?.signedAt">Signed off by the client {{ formatRelative(assessmentSummary.signedAt) }}.</span>
-              <span v-else-if="assessmentSummary">Saved{{ assessmentSummary.updatedAt ? ` ${formatRelative(assessmentSummary.updatedAt)}` : '' }} — not yet signed.</span>
-              <span v-else>Record your posture, movement and palpation findings and the treatment plan, then have the client sign.</span>
-            </p>
-            <RouterLink :to="`/bookings/${booking.id}/pre-massage-assessment`" class="btn-primary text-sm whitespace-nowrap">
-              <i class="fas fa-pen-to-square"></i>
-              <span>{{ assessmentSummary ? 'Open assessment' : 'Start assessment' }}</span>
-            </RouterLink>
-          </div>
-        </div>
       </div>
 
       <!-- Sidebar -->
@@ -584,8 +587,8 @@
             </div>
             <div>
               <p class="text-gray-500">Status</p>
-              <span :class="['badge mt-1', getStatusClass(booking.status)]">
-                {{ booking.status }}
+              <span :class="['badge mt-1', getStatusClass(bannerKind)]">
+                {{ bannerLabel }}
               </span>
             </div>
             <div>
@@ -618,7 +621,7 @@
                 <span :class="['badge uppercase', paymentStatusBadgeClass(paymentTotals.paymentStatus)]">
                   {{ paymentStatusLabel(paymentTotals.paymentStatus) }}
                 </span>
-                <span v-if="paymentTotals.paymentStatus !== 'COMPLIMENTARY' && paymentTotals.balance > 0" class="text-sm text-red-600">
+                <span v-if="collectsPayment && paymentTotals.balance > 0" class="text-sm text-red-600">
                   {{ formatGBP(paymentTotals.balance) }} outstanding
                 </span>
               </div>
@@ -702,7 +705,26 @@ const showCancelModal = ref(false)
 const deleting = ref(false)
 const removingDiscount = ref(false)
 const applyingPromotion = ref(false)
-const selectedPromotionId = ref('')
+// Holds the chosen option's value: a bare promotion id, or "promotionId::promoCodeId"
+// when a specific voucher code was picked.
+const selectedPromoOption = ref('')
+
+// Flatten promotions into the picker's options. A voucher with codes contributes
+// one row per (active) code — "£10 off — NPMBUXTON" — so each flyer code can be
+// attributed; a promotion (or codeless voucher) is a single row.
+const promotionOptions = computed(() => {
+  const opts: { value: string; label: string }[] = []
+  for (const p of servicesStore.promotions) {
+    if (!p.active) continue
+    const codes = (p.promoCodes || []).filter((c) => c.active)
+    if (p.kind === 'VOUCHER' && codes.length) {
+      for (const c of codes) opts.push({ value: `${p.id}::${c.id}`, label: `${p.message} — ${c.code}` })
+    } else {
+      opts.push({ value: p.id, label: `${p.message}${p.internal ? ' (internal)' : ''}` })
+    }
+  }
+  return opts
+})
 const applyingDiscount = ref(false)
 const discountMode = ref<'percent' | 'amount'>('percent')
 const discountValue = ref<number | null>(null)
@@ -712,6 +734,14 @@ const hasActiveDiscount = computed(() => {
   const b = booking.value
   if (!b) return false
   return b.discountedPrice !== null && b.discountedPrice !== undefined && b.discountedPrice !== b.price
+})
+
+// Label for the applied discount. Names the specific code when the promotion was
+// redeemed via one (a voucher can have several) — "£10 off — NPMBUXTON".
+const appliedDiscountLabel = computed(() => {
+  const b = booking.value
+  if (!b?.promotion) return 'Manual discount'
+  return b.promoCode ? `${b.promotion.message} — ${b.promoCode.code}` : b.promotion.message
 })
 
 
@@ -893,6 +923,10 @@ const paymentError = ref('')
 
 // Derived money view (gross/total/balance/status) for the Payments panel.
 const paymentTotals = computed(() => computeBookingTotals(booking.value ?? ({} as Booking)))
+// Whether there's actually money to collect — false for a complimentary session
+// or a cancelled/rejected booking with no fee, which hides the balance + "record
+// payment" affordances.
+const collectsPayment = computed(() => !['COMPLIMENTARY', 'NO_CHARGE'].includes(paymentTotals.value.paymentStatus))
 
 // Use the same semantic badge classes as getStatusClass so the Payment Status
 // pill matches the Status pill exactly (shape, colours, dark mode).
@@ -900,6 +934,7 @@ function paymentStatusBadgeClass(status: string): string {
   if (status === 'PAID') return 'badge-success'
   if (status === 'PART_PAID') return 'badge-warning'
   if (status === 'COMPLIMENTARY') return 'bg-purple-100 text-purple-800'
+  if (status === 'NO_CHARGE') return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
   return 'badge-danger' // DUE
 }
 
@@ -949,12 +984,13 @@ async function onRemoveDiscount() {
 // friend's session. Only changes pricing; intake form and assessment (kept
 // on separate rows keyed off the booking) are untouched.
 async function onApplyPromotion() {
-  if (!booking.value || !selectedPromotionId.value) return
+  if (!booking.value || !selectedPromoOption.value) return
+  const [promotionId, promoCodeId] = selectedPromoOption.value.split('::')
   applyingPromotion.value = true
   discountError.value = ''
   try {
-    booking.value = await bookingsStore.applyPromotion(booking.value.id, selectedPromotionId.value)
-    selectedPromotionId.value = ''
+    booking.value = await bookingsStore.applyPromotion(booking.value.id, promotionId, promoCodeId || null)
+    selectedPromoOption.value = ''
   } catch (err: any) {
     discountError.value = err?.response?.data?.error || err?.message || 'Failed to apply promotion'
   } finally {
@@ -1094,6 +1130,8 @@ function getStatusClass(status?: string): string {
     case 'PENDING':
       return 'badge-warning'
     case 'CANCELLED':
+      return 'badge-danger'
+    case 'REJECTED':
       return 'badge-danger'
     case 'COMPLETED':
       return 'bg-purple-100 text-purple-800'

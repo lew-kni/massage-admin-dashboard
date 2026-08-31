@@ -129,6 +129,7 @@ export interface Booking {
   promotion?: Promotion | null
   // The specific promo code quoted (for filtering bookings by campaign code).
   promoCodeId?: string | null
+  promoCode?: PromoCode | null
   // Pricing captured at booking time (pence). `discountedPrice` is the
   // promotion-adjusted price; null when no promotion applied.
   price?: number | null
@@ -161,7 +162,7 @@ export interface Booking {
 }
 
 export type PaymentMethod = 'CASH' | 'BACS' | 'CARD' | 'VOUCHER' | 'OTHER'
-export type PaymentStatus = 'DUE' | 'PART_PAID' | 'PAID' | 'COMPLIMENTARY'
+export type PaymentStatus = 'DUE' | 'PART_PAID' | 'PAID' | 'COMPLIMENTARY' | 'NO_CHARGE'
 
 export interface Payment {
   id: string

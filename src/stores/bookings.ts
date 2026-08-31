@@ -84,11 +84,11 @@ export const useBookingsStore = defineStore('bookings', () => {
     }
   }
 
-  async function applyPromotion(id: string, promotionId: string) {
+  async function applyPromotion(id: string, promotionId: string, promoCodeId?: string | null) {
     loading.value = true
     error.value = null
     try {
-      const updated = await apiService.applyBookingPromotion(id, promotionId)
+      const updated = await apiService.applyBookingPromotion(id, promotionId, promoCodeId)
       const index = bookings.value.findIndex(b => b.id === id)
       if (index !== -1) {
         bookings.value[index] = updated

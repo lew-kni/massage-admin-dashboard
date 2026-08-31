@@ -125,19 +125,39 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label class="text-sm text-gray-500">Posture</label>
-                <textarea v-model="finding.posture" class="input-field mt-1" rows="2"></textarea>
+                <textarea
+                  v-model="finding.posture"
+                  class="input-field mt-1"
+                  rows="2"
+                  placeholder="What you see at rest — e.g. rounded shoulders, forward head, right shoulder higher, anterior pelvic tilt."
+                ></textarea>
               </div>
               <div>
                 <label class="text-sm text-gray-500">Movement / ROM</label>
-                <textarea v-model="finding.movement" class="input-field mt-1" rows="2"></textarea>
+                <textarea
+                  v-model="finding.movement"
+                  class="input-field mt-1"
+                  rows="2"
+                  placeholder="What's limited, painful or uneven when they move — e.g. left neck rotation reduced, painful reaching overhead."
+                ></textarea>
               </div>
               <div>
                 <label class="text-sm text-gray-500">Palpation</label>
-                <textarea v-model="finding.palpation" class="input-field mt-1" rows="2"></textarea>
+                <textarea
+                  v-model="finding.palpation"
+                  class="input-field mt-1"
+                  rows="2"
+                  placeholder="What you feel with your hands — tight or ropey muscle, tender spots / knots (trigger points), heat or swelling. e.g. tight upper traps, tender knot in right rhomboid."
+                ></textarea>
               </div>
               <div>
                 <label class="text-sm text-gray-500">Other notes</label>
-                <textarea v-model="finding.notes" class="input-field mt-1" rows="2"></textarea>
+                <textarea
+                  v-model="finding.notes"
+                  class="input-field mt-1"
+                  rows="2"
+                  placeholder="Anything else relevant — prior injury to the area, what makes it better or worse, the client's goal for it."
+                ></textarea>
               </div>
             </div>
 
@@ -392,3 +412,20 @@ onMounted(async () => {
   loading.value = false
 })
 </script>
+
+<style scoped>
+/* Stop the resize handle collapsing a textarea below its opening height — it's
+   easy to catch the handle while scrolling and shrink one to a couple of pixels,
+   which then can't be read or typed into. Growing taller is still allowed. The
+   floors mirror each field's `rows` (border-box: rows × 1.5rem line-height +
+   1rem vertical padding + 2px border). */
+textarea {
+  resize: vertical;
+}
+textarea[rows="2"] {
+  min-height: calc(4 * 1.5rem + 1rem + 2px);
+}
+textarea[rows="3"] {
+  min-height: calc(5 * 1.5rem + 1rem + 2px);
+}
+</style>

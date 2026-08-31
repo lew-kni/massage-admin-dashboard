@@ -55,9 +55,13 @@ export function computeBookingTotals(b: Booking): BookingTotals {
     // a stale cache (e.g. a 100%-discounted booking whose cached status is still
     // DUE because no payment write ever recomputed it). Only fall back to the
     // cached column in list contexts where `payments` isn't loaded.
-    paymentStatus: Array.isArray(b.payments)
-      ? paymentStatusFor(total, paid)
-      : (b.paymentStatus ?? paymentStatusFor(total, paid)),
+    // A cancelled/rejected booking owing nothing is always NO_CHARGE, even if a
+    // stale cached column still says COMPLIMENTARY from before this rule existed.
+    paymentStatus: (b.status === 'CANCELLED' && total <= 0)
+      ? 'NO_CHARGE'
+      : Array.isArray(b.payments)
+        ? paymentStatusFor(total, paid)
+        : (b.paymentStatus ?? paymentStatusFor(total, paid)),
   }
 }
 
@@ -116,7 +120,7 @@ export function paymentMethodLabel(method: string): string {
 }
 
 const STATUS_LABELS: Record<PaymentStatus, string> = {
-  DUE: 'Unpaid', PART_PAID: 'Part paid', PAID: 'Paid', COMPLIMENTARY: 'Complimentary',
+  DUE: 'Unpaid', PART_PAID: 'Part paid', PAID: 'Paid', COMPLIMENTARY: 'Complimentary', NO_CHARGE: 'No charge',
 }
 export function paymentStatusLabel(status: PaymentStatus): string {
   return STATUS_LABELS[status] ?? status
