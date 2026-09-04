@@ -156,6 +156,27 @@ export const useBookingsStore = defineStore('bookings', () => {
     }
   }
 
+  async function amendBooking(
+    id: string,
+    payload: { startTime: string; endTime: string; service?: string | null; serviceSlug?: string; durationMinutes?: number; override?: boolean },
+  ) {
+    loading.value = true
+    error.value = null
+    try {
+      const updated = await apiService.amendBooking(id, payload)
+      const index = bookings.value.findIndex(b => b.id === id)
+      if (index !== -1) {
+        bookings.value[index] = updated
+      }
+      return updated
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to amend booking'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function addPayment(
     id: string,
     payload: { amount: number; method: import('@/types').PaymentMethod; receivedAt: string; feeAmount?: number | null; note?: string | null },
@@ -212,6 +233,7 @@ export const useBookingsStore = defineStore('bookings', () => {
     applyDiscount,
     cancelBooking,
     rejectBooking,
+    amendBooking,
     addPayment,
     deletePayment,
     deleteBooking,

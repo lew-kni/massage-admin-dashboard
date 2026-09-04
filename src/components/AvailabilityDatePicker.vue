@@ -13,8 +13,10 @@ const props = withDefaults(
     excludeBookingId?: string | null
     /** Earliest selectable date (omit to allow past dates, e.g. fixing records) */
     minDate?: Date | null
+    /** Let unavailable days still be picked (days off are marked but not disabled) */
+    allowUnavailable?: boolean
   }>(),
-  { modelValue: '', duration: null, excludeBookingId: null, minDate: null }
+  { modelValue: '', duration: null, excludeBookingId: null, minDate: null, allowUnavailable: false }
 )
 
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
@@ -52,8 +54,11 @@ const value = computed({
   set: (v: string | null) => emit('update:modelValue', v || ''),
 })
 
-// Rebuilt when the set changes so the picker re-evaluates its days.
+// Rebuilt when the set changes so the picker re-evaluates its days. With
+// allowUnavailable, nothing is disabled — days off are still marked (dayClass
+// below) but remain selectable, for deliberately booking outside normal hours.
 const disabledDates = computed(() => {
+  if (props.allowUnavailable) return () => false
   const set = unavailable.value
   return (date: Date) => set.has(toYmd(date))
 })

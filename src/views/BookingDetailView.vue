@@ -552,6 +552,14 @@
               <i class="fas fa-edit"></i>
               <span>Edit</span>
             </button>
+            <button
+              v-if="!isEditing && booking.status === 'CONFIRMED' && !isBookingPast(booking)"
+              @click="showAmendModal = true"
+              class="btn-secondary w-full text-sm"
+            >
+              <i class="fas fa-calendar-alt"></i>
+              <span>Amend Booking</span>
+            </button>
             <button v-if="!isEditing" @click="showSendEmail = true" class="btn-primary w-full text-sm">
               <i class="fas fa-envelope"></i>
               <span>Send Email</span>
@@ -665,6 +673,14 @@
       @close="showCancelModal = false"
       @confirm="confirmCancel"
     />
+
+    <AmendBookingModal
+      v-if="showAmendModal && booking"
+      :booking="booking"
+      :saving="amending"
+      @close="showAmendModal = false"
+      @confirm="confirmAmend"
+    />
   </div>
 </template>
 
@@ -685,6 +701,7 @@ import ChangeClientModal from '@/components/ChangeClientModal.vue'
 import SendEmailModal from '@/components/SendEmailModal.vue'
 import RecordPaymentModal from '@/components/RecordPaymentModal.vue'
 import CancelBookingModal from '@/components/CancelBookingModal.vue'
+import AmendBookingModal from '@/components/AmendBookingModal.vue'
 import BodyDiagramView from '@/components/BodyDiagramView.vue'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import DocumentsPanel from '@/components/DocumentsPanel.vue'
@@ -702,6 +719,8 @@ const showSendEmail = ref(false)
 const showPaymentModal = ref(false)
 const cancelling = ref(false)
 const showCancelModal = ref(false)
+const amending = ref(false)
+const showAmendModal = ref(false)
 const deleting = ref(false)
 const removingDiscount = ref(false)
 const applyingPromotion = ref(false)
@@ -1250,6 +1269,19 @@ async function confirmCancel(fee: number) {
     alert(err?.message || 'Failed to cancel booking')
   } finally {
     cancelling.value = false
+  }
+}
+
+async function confirmAmend(payload: { startTime: string; endTime: string; service: string | null; serviceSlug?: string; durationMinutes?: number; override: boolean }) {
+  if (!booking.value) return
+  amending.value = true
+  try {
+    booking.value = await bookingsStore.amendBooking(booking.value.id, payload)
+    showAmendModal.value = false
+  } catch (err: any) {
+    alert(err?.response?.data?.error || err?.message || 'Failed to amend booking')
+  } finally {
+    amending.value = false
   }
 }
 

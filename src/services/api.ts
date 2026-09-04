@@ -241,6 +241,16 @@ class ApiService {
     await this.client.delete(`/api/bookings/${id}`)
   }
 
+  // Amend a confirmed booking: new date/time (startTime/endTime, endTime carries
+  // the new duration) and/or service. Sends the client the "booking updated" email.
+  async amendBooking(
+    id: string,
+    payload: { startTime: string; endTime: string; service?: string | null; serviceSlug?: string; durationMinutes?: number; override?: boolean },
+  ): Promise<Booking> {
+    const { data } = await this.client.post(`/api/bookings/${id}/amend`, payload)
+    return data
+  }
+
   // Record a payment against a booking; returns the booking with recomputed
   // payments + amountPaid/paymentStatus.
   async addPayment(
@@ -348,8 +358,10 @@ class ApiService {
     return data
   }
 
-  async getSlots(date: string, duration: number): Promise<{ available: boolean; slots: string[]; reason?: string; blocks?: Array<{ start: string; end: string; reason: string | null }> }> {
-    const { data } = await this.client.get('/api/availability/slots', { params: { date, duration } })
+  async getSlots(date: string, duration: number, excludeBookingId?: string): Promise<{ available: boolean; slots: string[]; reason?: string; blocks?: Array<{ start: string; end: string; reason: string | null }> }> {
+    const { data } = await this.client.get('/api/availability/slots', {
+      params: { date, duration, ...(excludeBookingId ? { excludeBookingId } : {}) },
+    })
     return data
   }
 
