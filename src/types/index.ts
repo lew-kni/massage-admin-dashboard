@@ -467,6 +467,8 @@ export interface Promotion {
   // PERCENT uses discountPercentage (0–100); FIXED uses discountAmount (pence).
   discountPercentage: number
   discountAmount?: number | null
+  // Optional cap (pence) on a percentage discount — "50% off, up to £30".
+  maxDiscountAmount?: number | null
   applicableTo: 'all' | string[]
   // "all" or a list of duration lengths (minutes) the discount applies to.
   applicableDurations: 'all' | number[]

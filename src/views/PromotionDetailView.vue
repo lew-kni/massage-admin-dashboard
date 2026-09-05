@@ -117,6 +117,15 @@
                 </div>
               </div>
 
+              <div v-if="form.discountType === 'PERCENT'">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Maximum discount <span class="text-gray-400 font-normal">(optional)</span></label>
+                <div class="relative max-w-[10rem]">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">£</span>
+                  <input v-model.number="form.maxDiscount" type="number" min="0" step="0.01" class="input-field pl-7" placeholder="No cap" />
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Caps how much this takes off. E.g. 50% off with a £30 cap: an hour (£60) → £30, but 90 min (£75) → £45 instead of £37.50.</p>
+              </div>
+
               <label class="flex items-start gap-2 text-sm pt-2 border-t dark:border-gray-700">
                 <input v-model="form.firstBookingOnly" type="checkbox" class="w-4 h-4 mt-0.5" />
                 <span>
@@ -324,6 +333,7 @@ const form = reactive({
   message: '',
   discountType: 'PERCENT' as 'PERCENT' | 'FIXED',
   value: 0,
+  maxDiscount: null as number | null, // £ cap on a percentage discount; null = uncapped
   active: false,
   internal: false,
   displayAsBanner: false,
@@ -402,9 +412,13 @@ const title = computed(() => {
   const noun = isVoucher.value ? 'Voucher' : 'Promotion'
   return id.value ? noun : `New ${noun}`
 })
-const discountText = computed(() =>
-  form.discountType === 'FIXED' ? `${formatGBP(poundsToPence(form.value) ?? 0)} off` : `${form.value}% off`,
-)
+const discountText = computed(() => {
+  if (form.discountType === 'FIXED') return `${formatGBP(poundsToPence(form.value) ?? 0)} off`
+  const base = `${form.value}% off`
+  return form.maxDiscount != null && form.maxDiscount > 0
+    ? `${base} (up to ${formatGBP(poundsToPence(form.maxDiscount) ?? 0)})`
+    : base
+})
 const appliesToText = computed(() => {
   const svc = scope.value === 'all' ? 'All services' : (selectedSlugs.value.join(', ') || 'No services')
   const dur = durationScope.value === 'all' ? 'all durations' : `${selectedMinutes.value.join(', ')} min`
@@ -418,6 +432,7 @@ function hydrate(p: Promotion) {
   form.discountType = p.discountType
   // FIXED discountAmount is stored in pence; the £ field edits pounds.
   form.value = p.discountType === 'FIXED' ? (penceToPounds(p.discountAmount ?? 0) ?? 0) : p.discountPercentage
+  form.maxDiscount = p.maxDiscountAmount != null ? (penceToPounds(p.maxDiscountAmount) ?? null) : null
   form.active = p.active
   form.internal = p.internal
   form.displayAsBanner = p.displayAsBanner
@@ -468,6 +483,10 @@ async function save() {
     discountType: form.discountType,
     discountPercentage: form.discountType === 'PERCENT' ? form.value : 0,
     discountAmount: form.discountType === 'FIXED' ? poundsToPence(form.value) : null,
+    // Cap only applies to percentage offers; cleared otherwise or when left blank/0.
+    maxDiscountAmount: form.discountType === 'PERCENT' && form.maxDiscount != null && form.maxDiscount > 0
+      ? poundsToPence(form.maxDiscount)
+      : null,
     active: form.active,
     firstBookingOnly: form.firstBookingOnly,
     applicableTo: scope.value === 'all' ? 'all' : selectedSlugs.value,
