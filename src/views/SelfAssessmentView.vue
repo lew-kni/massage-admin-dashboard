@@ -41,7 +41,7 @@
     <template v-else>
       <!-- ===================== Filing summary (the boxes) ===================== -->
       <section class="mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           <div class="card p-6">
             <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Turnover <span class="text-gray-400">· box 9</span></p>
             <p class="text-3xl font-bold text-emerald-600 mt-2">{{ gbp(turnover) }}</p>
@@ -58,6 +58,19 @@
             </p>
             <p class="text-3xl font-bold mt-2" :class="isLoss ? 'text-red-600' : 'text-sage-600'">{{ gbp(Math.abs(netResult)) }}</p>
             <p class="text-xs text-gray-500 mt-1">turnover minus expenses</p>
+          </div>
+          <div class="card p-6">
+            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">
+Est. tax to set aside <span class="text-gray-400">· guide</span>
+            </p>
+            <p class="text-3xl font-bold text-amber-600 mt-2">{{ gbp(taxEstimate.total) }}</p>
+            <p class="text-xs text-gray-500 mt-1">
+              <template v-if="taxEstimate.total > 0">
+                ≈{{ (taxEstimate.effectiveRate * 100).toFixed(0) }}% · tax {{ gbp(taxEstimate.incomeTax) }} + NIC {{ gbp(taxEstimate.class4Nic) }}
+              </template>
+              <template v-else-if="netResult > 0">under the £12,570 allowance — nothing due</template>
+              <template v-else>no profit to tax</template>
+            </p>
           </div>
         </div>
       </section>
@@ -179,6 +192,7 @@ import {
 import type { Booking } from '@/types'
 import { bookingTotal } from '@/utils/bookingTotal'
 import { computeBookingTotals } from '@/utils/bookingTotals'
+import { estimateSelfEmployedTax } from '@/constants/incomeTax'
 
 const bookingsStore = useBookingsStore()
 const expensesStore = useExpensesStore()
@@ -233,6 +247,11 @@ const totalExpenses = computed(() => taxYearExpenses.value.reduce((s, e) => s + 
 
 const netResult = computed(() => turnover.value - totalExpenses.value)
 const isLoss = computed(() => netResult.value < 0)
+
+// Rough Income Tax + Class 4 NIC on the year's profit — a "set this aside" guide,
+// not a filed figure (see the disclaimer under Key dates). Assumes this is the
+// only income; 2025/26 rates.
+const taxEstimate = computed(() => estimateSelfEmployedTax(netResult.value))
 
 // Per-box totals + which of our categories fed each box.
 const boxRows = computed(() => {

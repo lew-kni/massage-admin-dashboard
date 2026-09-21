@@ -16,6 +16,11 @@
       <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
     </div>
 
+    <!-- Estimated tax to set aside -->
+    <div class="mb-8 max-w-md">
+      <TaxSetAsideCard :profit="taxYearProfit" :context="`On profit earned so far this tax year (${taxYearLabel})`" />
+    </div>
+
     <!-- Recent Activity -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Today's Bookings -->
@@ -108,14 +113,19 @@ import { onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useClientsStore } from '@/stores/clients'
 import { useBookingsStore } from '@/stores/bookings'
+import { useExpensesStore } from '@/stores/expenses'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import { sumPaymentsInRange, outstandingBalance } from '@/utils/bookingTotals'
+import { sumPaymentsInRange, outstandingBalance, computeBookingTotals } from '@/utils/bookingTotals'
+import { bookingTotal } from '@/utils/bookingTotal'
+import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { formatGBP } from '@/utils/money'
 import { computeRebooking } from '@/utils/rebooking'
 import StatCard from '@/components/StatCard.vue'
+import TaxSetAsideCard from '@/components/TaxSetAsideCard.vue'
 
 const clientsStore = useClientsStore()
+const expensesStore = useExpensesStore()
 // Shared store rather than this view's own fetch, so the dashboard reflects
 // the same (periodically polled, see App.vue) data as the sidebar badges and
 // every other view, instead of a snapshot from whenever this page happened
@@ -161,6 +171,38 @@ const monthlyRevenue = computed(() => {
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime()
   const total = sumPaymentsInRange(bookings.value, start, end, (iso) => toLondonFakeLocalDate(iso).getTime())
   return formatGBP(total)
+})
+
+// Current tax-year profit, computed the same way the Self Assessment view does
+// so the "set aside" figure here reconciles with the one there: turnover is
+// fully-paid bookings sitting in this tax year (cash basis), minus expenses
+// dated in the same year. Money is pence internally; profit is pounds.
+const taxYearRange = computed(() => {
+  const now = toLondonFakeLocalDate(new Date())
+  return { start: taxYearStart(now).getTime(), end: taxYearEnd(now).getTime() }
+})
+function inTaxYear(dateStr: string): boolean {
+  const t = new Date(dateStr).getTime()
+  return t >= taxYearRange.value.start && t < taxYearRange.value.end
+}
+const taxYearLabel = computed(() => {
+  const y = new Date(taxYearRange.value.start).getUTCFullYear()
+  return `${y}/${String((y + 1) % 100).padStart(2, '0')}`
+})
+const taxYearProfit = computed(() => {
+  const turnoverPence = bookings.value
+    .filter(
+      (b) =>
+        b.status !== 'CANCELLED' &&
+        computeBookingTotals(b).paymentStatus === 'PAID' &&
+        (b.price != null || b.discountedPrice != null) &&
+        inTaxYear(b.startTime),
+    )
+    .reduce((s, b) => s + bookingTotal(b), 0)
+  const expensesPence = expensesStore.expenses
+    .filter((e) => inTaxYear(e.date))
+    .reduce((s, e) => s + e.amount, 0)
+  return (turnoverPence - expensesPence) / 100
 })
 
 const todaysBookings = computed(() => {
@@ -214,5 +256,7 @@ onMounted(async () => {
   // fetch here too if nothing's arrived yet (e.g. this is the very first view
   // rendered, before that initial fetch resolves).
   if (bookingsStore.bookings.length === 0) bookingsStore.fetchBookings()
+  // Expenses feed the tax set-aside estimate below.
+  if (expensesStore.expenses.length === 0) expensesStore.fetchExpenses()
 })
 </script>
