@@ -307,6 +307,64 @@
           </div>
         </div>
 
+        <!-- Travel & Mileage Card -->
+        <div class="card">
+          <div class="card-header flex justify-between items-center">
+            <h2 class="text-lg font-semibold"><i class="fas fa-car-side mr-2"></i>Travel &amp; Mileage</h2>
+            <button
+              v-if="booking.status !== 'CANCELLED' && !booking.mileageExempt"
+              @click="showMileageModal = true"
+              class="text-sm text-sage-600 hover:text-sage-700 font-medium"
+            >
+              <i class="fas fa-plus-circle mr-1"></i>Log mileage
+            </button>
+          </div>
+          <div class="card-body">
+            <!-- Has mileage logged -->
+            <div v-if="mileageExpenses.length > 0">
+              <div class="flex items-baseline justify-between mb-2">
+                <span class="text-sm text-gray-500">{{ totalTripMiles.toLocaleString('en-GB') }} business mile{{ totalTripMiles === 1 ? '' : 's' }}</span>
+                <span class="text-lg font-semibold text-sage-600">{{ formatGBP(totalTripMileagePence) }}</span>
+              </div>
+              <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+                <li v-for="e in mileageExpenses" :key="e.id" class="flex justify-between items-center py-2 text-sm">
+                  <span>
+                    <span class="font-medium">{{ e.miles }} mi</span>
+                    <span class="text-gray-500"> · {{ formatDate(e.date) }}</span>
+                    <span v-if="e.description" class="text-gray-400"> — {{ e.description }}</span>
+                  </span>
+                  <span class="text-gray-600 dark:text-gray-400 tabular-nums">{{ formatGBP(e.amount) }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Marked as no-travel -->
+            <div v-else-if="booking.mileageExempt" class="flex items-center justify-between gap-2 text-sm">
+              <span class="text-gray-500"><i class="fas fa-ban text-gray-400 mr-1"></i>No travel for this trip — excluded from the missing-mileage list.</span>
+              <button @click="setMileageExempt(false)" :disabled="savingExempt" class="text-xs font-medium text-sage-600 hover:text-sage-700 whitespace-nowrap disabled:opacity-50">
+                Undo
+              </button>
+            </div>
+
+            <!-- Missing: not logged and not exempt -->
+            <div v-else>
+              <div class="text-sm text-gray-500 flex items-center gap-2">
+                <i class="fas fa-triangle-exclamation text-amber-500"></i>
+                <span>No mileage logged for this trip yet.</span>
+              </div>
+              <button
+                v-if="booking.status !== 'CANCELLED'"
+                @click="setMileageExempt(true)"
+                :disabled="savingExempt"
+                class="mt-2 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              >
+                <i class="fas fa-ban mr-1"></i>This trip had no travel — mark exempt
+              </button>
+              <p v-if="exemptError" class="mt-2 text-xs text-red-600">{{ exemptError }}</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Session & Health Details Card -->
         <div class="card">
           <div class="card-header">
@@ -681,6 +739,16 @@
       @close="showAmendModal = false"
       @confirm="confirmAmend"
     />
+
+    <ExpenseFormModal
+      v-if="showMileageModal && booking"
+      :initial-booking-id="mileagePrefill.bookingId"
+      :initial-date="mileagePrefill.date"
+      :initial-category="'MILEAGE'"
+      :initial-description="mileagePrefill.description"
+      @close="showMileageModal = false"
+      @saved="onMileageSaved"
+    />
   </div>
 </template>
 
@@ -705,12 +773,16 @@ import AmendBookingModal from '@/components/AmendBookingModal.vue'
 import BodyDiagramView from '@/components/BodyDiagramView.vue'
 import AvailabilityDatePicker from '@/components/AvailabilityDatePicker.vue'
 import DocumentsPanel from '@/components/DocumentsPanel.vue'
+import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
+import { useExpensesStore } from '@/stores/expenses'
+import type { Expense } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
 const bookingsStore = useBookingsStore()
 const settingsStore = useSettingsStore()
 const servicesStore = useServicesStore()
+const expensesStore = useExpensesStore()
 
 const booking = ref<Booking | null>(null)
 const showChangeClient = ref(false)
@@ -1108,7 +1180,51 @@ onMounted(async () => {
   await loadAssessment()
   await loadSelfFeedback()
   if (servicesStore.promotions.length === 0) servicesStore.fetchPromotions()
+  if (expensesStore.expenses.length === 0) expensesStore.fetchExpenses()
 })
+
+// --- Travel / mileage for this trip ----------------------------------------
+// Expenses tagged to this booking (in practice its mileage). Read from the
+// store, which the app keeps loaded; refreshed when the modal saves.
+const bookingExpenses = computed<Expense[]>(() =>
+  booking.value ? expensesStore.expenses.filter((e) => e.bookingId === booking.value!.id) : []
+)
+const mileageExpenses = computed(() => bookingExpenses.value.filter((e) => e.category === 'MILEAGE'))
+const totalTripMiles = computed(() => mileageExpenses.value.reduce((s, e) => s + (e.miles || 0), 0))
+const totalTripMileagePence = computed(() => mileageExpenses.value.reduce((s, e) => s + e.amount, 0))
+
+const showMileageModal = ref(false)
+// Pre-fill the log-mileage form with the trip's context so it's a quick confirm.
+const mileagePrefill = computed(() => {
+  const b = booking.value
+  const who = b?.client ? `${b.client.firstName} ${b.client.lastName}`.trim() : 'client'
+  const where = b?.postcode ? ` (${b.postcode})` : ''
+  return {
+    bookingId: b?.id ?? null,
+    date: b?.startTime ?? null,
+    description: `Travel to ${who}${where}`,
+  }
+})
+async function onMileageSaved() {
+  await expensesStore.fetchExpenses()
+}
+
+// Mark/unmark this booking as involving no billable travel, so it drops out of
+// (or returns to) the missing-mileage nudge.
+const savingExempt = ref(false)
+const exemptError = ref('')
+async function setMileageExempt(value: boolean) {
+  if (!booking.value) return
+  savingExempt.value = true
+  exemptError.value = ''
+  try {
+    booking.value = await bookingsStore.updateBooking(booking.value.id, { mileageExempt: value })
+  } catch (err: unknown) {
+    exemptError.value = err instanceof Error ? err.message : 'Failed to update'
+  } finally {
+    savingExempt.value = false
+  }
+}
 
 function formatPressure(value?: string | null): string {
   if (!value) return ''

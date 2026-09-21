@@ -93,7 +93,7 @@ describe('ExpenseFormModal — mileage flow', () => {
     const wrapper = mount(ExpenseFormModal)
     await wrapper.find('select').setValue('MILEAGE')
     await wrapper.find('input[type="number"]').setValue('40')
-    await wrapper.find('input[type="text"]').setValue('Trip to client')
+    await wrapper.find('input[placeholder="e.g. Visit to client in New Mills"]').setValue('Trip to client')
 
     await wrapper.find('form').trigger('submit.prevent')
     await Promise.resolve()
@@ -129,7 +129,7 @@ describe('ExpenseFormModal — mileage flow', () => {
   it('requires miles to be entered before submitting a mileage expense', async () => {
     const wrapper = mount(ExpenseFormModal)
     await wrapper.find('select').setValue('MILEAGE')
-    await wrapper.find('input[type="text"]').setValue('Trip to client')
+    await wrapper.find('input[placeholder="e.g. Visit to client in New Mills"]').setValue('Trip to client')
 
     await wrapper.find('form').trigger('submit.prevent')
     await Promise.resolve()

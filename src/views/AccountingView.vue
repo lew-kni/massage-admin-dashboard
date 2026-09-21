@@ -36,7 +36,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
           <div class="card p-6">
             <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Income</p>
             <p class="text-3xl font-bold text-emerald-600 mt-2">{{ gbp(taxYearIncome) }}</p>
@@ -51,6 +51,17 @@
             <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Profit</p>
             <p class="text-3xl font-bold mt-2" :class="taxYearProfit >= 0 ? 'text-sage-600' : 'text-red-600'">{{ gbp(taxYearProfit) }}</p>
             <p class="text-xs text-gray-500 mt-1">income minus expenses, {{ taxYearLabel }}</p>
+          </div>
+          <div class="card p-6">
+            <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Est. tax to set aside <span class="text-gray-400">· guide</span></p>
+            <p class="text-3xl font-bold text-amber-600 mt-2">{{ gbp(taxEstimate.total * 100) }}</p>
+            <p class="text-xs text-gray-500 mt-1">
+              <template v-if="taxEstimate.total > 0">
+                ≈{{ (taxEstimate.effectiveRate * 100).toFixed(0) }}% · tax {{ gbp(taxEstimate.incomeTax * 100) }} + NIC {{ gbp(taxEstimate.class4Nic * 100) }}
+              </template>
+              <template v-else-if="taxYearProfit > 0">under the £12,570 allowance — nothing due</template>
+              <template v-else>no profit to tax</template>
+            </p>
           </div>
         </div>
       </section>
@@ -239,6 +250,7 @@ import { computeBookingTotals, sumPaymentsInRange, paymentsInRange, outstandingB
 import { formatGBP, formatGBPCompact } from '@/utils/money'
 import PaymentMethodModal from '@/components/PaymentMethodModal.vue'
 import Pagination from '@/components/Pagination.vue'
+import { estimateSelfEmployedTax } from '@/constants/incomeTax'
 
 const bookingsStore = useBookingsStore()
 const expensesStore = useExpensesStore()
@@ -301,6 +313,10 @@ const taxYearExpensesTotal = computed(() =>
     .reduce((s, e) => s + e.amount, 0)
 )
 const taxYearProfit = computed(() => taxYearIncome.value - taxYearExpensesTotal.value)
+
+// Rough Income Tax + Class 4 NIC on the year's profit — a "set this aside" guide.
+// estimateSelfEmployedTax works in pounds; taxYearProfit is pence.
+const taxEstimate = computed(() => estimateSelfEmployedTax(taxYearProfit.value / 100))
 
 // ============================================================================
 // General Accounting section — day-to-day payment tracking, independent of

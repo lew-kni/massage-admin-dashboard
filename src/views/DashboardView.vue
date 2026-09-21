@@ -11,14 +11,10 @@
       <StatCard label="Outstanding Payments" :value="formatGBP(owedToYou)" icon="Cash" to="/accounting" :value-color="owedToYou > 0 ? 'text-red-600' : 'text-green-600'" />
       <StatCard label="Due to Rebook" :value="toContactCount" icon="Rebook" to="/rebooking" />
       <StatCard label="Forms Outstanding" :value="formsOutstanding" icon="Form" to="/bookings?status=ACTIVE&form=outstanding" />
+      <StatCard label="Trips to Log" :value="tripsToLogCount" icon="Car" to="/bookings?status=PAST&mileage=missing" :value-color="tripsToLogCount > 0 ? 'text-amber-600' : 'text-green-600'" />
       <StatCard label="Upcoming Bookings" :value="upcomingBookingsCount" icon="Calendar" to="/bookings?status=ACTIVE" />
       <StatCard label="Collected This Month" :value="monthlyRevenue" icon="TrendingUp" />
       <StatCard label="Total Clients" :value="clientsCount" icon="Users" to="/clients" />
-    </div>
-
-    <!-- Estimated tax to set aside -->
-    <div class="mb-8 max-w-md">
-      <TaxSetAsideCard :profit="taxYearProfit" :context="`On profit earned so far this tax year (${taxYearLabel})`" />
     </div>
 
     <!-- Recent Activity -->
@@ -116,13 +112,11 @@ import { useBookingsStore } from '@/stores/bookings'
 import { useExpensesStore } from '@/stores/expenses'
 import { formatDistanceToNow, format } from 'date-fns'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import { sumPaymentsInRange, outstandingBalance, computeBookingTotals } from '@/utils/bookingTotals'
-import { bookingTotal } from '@/utils/bookingTotal'
-import { taxYearStart, taxYearEnd } from '@/utils/mileage'
+import { sumPaymentsInRange, outstandingBalance } from '@/utils/bookingTotals'
 import { formatGBP } from '@/utils/money'
 import { computeRebooking } from '@/utils/rebooking'
+import { missingMileageBookings } from '@/utils/mileageTracking'
 import StatCard from '@/components/StatCard.vue'
-import TaxSetAsideCard from '@/components/TaxSetAsideCard.vue'
 
 const clientsStore = useClientsStore()
 const expensesStore = useExpensesStore()
@@ -173,37 +167,11 @@ const monthlyRevenue = computed(() => {
   return formatGBP(total)
 })
 
-// Current tax-year profit, computed the same way the Self Assessment view does
-// so the "set aside" figure here reconciles with the one there: turnover is
-// fully-paid bookings sitting in this tax year (cash basis), minus expenses
-// dated in the same year. Money is pence internally; profit is pounds.
-const taxYearRange = computed(() => {
-  const now = toLondonFakeLocalDate(new Date())
-  return { start: taxYearStart(now).getTime(), end: taxYearEnd(now).getTime() }
-})
-function inTaxYear(dateStr: string): boolean {
-  const t = new Date(dateStr).getTime()
-  return t >= taxYearRange.value.start && t < taxYearRange.value.end
-}
-const taxYearLabel = computed(() => {
-  const y = new Date(taxYearRange.value.start).getUTCFullYear()
-  return `${y}/${String((y + 1) % 100).padStart(2, '0')}`
-})
-const taxYearProfit = computed(() => {
-  const turnoverPence = bookings.value
-    .filter(
-      (b) =>
-        b.status !== 'CANCELLED' &&
-        computeBookingTotals(b).paymentStatus === 'PAID' &&
-        (b.price != null || b.discountedPrice != null) &&
-        inTaxYear(b.startTime),
-    )
-    .reduce((s, b) => s + bookingTotal(b), 0)
-  const expensesPence = expensesStore.expenses
-    .filter((e) => inTaxYear(e.date))
-    .reduce((s, e) => s + e.amount, 0)
-  return (turnoverPence - expensesPence) / 100
-})
+// Past confirmed trips with no mileage expense linked — the "you forgot to log
+// this drive" nudge. Links to the Bookings list pre-filtered to exactly these.
+const tripsToLogCount = computed(
+  () => missingMileageBookings(bookings.value, expensesStore.expenses).length,
+)
 
 const todaysBookings = computed(() => {
   // Compared as London calendar days, not the viewing browser's own timezone

@@ -29,6 +29,14 @@
       <button @click="clearCodeFilter" class="text-sm font-medium text-sage-700 dark:text-sage-300 hover:underline">Clear filter</button>
     </div>
 
+    <!-- Active mileage filter (from the dashboard "Trips to log" tile) -->
+    <div v-if="mileageFilter === 'missing'" class="mb-4 flex items-center justify-between gap-3 p-3 bg-amber-50 dark:bg-gray-800 border border-amber-200 dark:border-gray-700 rounded">
+      <p class="text-sm text-amber-800 dark:text-amber-300">
+        <i class="fas fa-car-side mr-1"></i>Showing past trips with <span class="font-semibold">no mileage logged</span>
+      </p>
+      <button @click="clearMileageFilter" class="text-sm font-medium text-amber-800 dark:text-amber-300 hover:underline">Clear filter</button>
+    </div>
+
     <!-- List View -->
     <div v-if="viewMode === 'list'">
       <!-- Status Filters -->
@@ -474,6 +482,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useBookingsStore } from '@/stores/bookings'
 import { useAvailabilityStore } from '@/stores/availability'
+import { useExpensesStore } from '@/stores/expenses'
+import { bookingIdsWithMileage, isMissingMileage } from '@/utils/mileageTracking'
 import type { Booking, UnavailableBlock } from '@/types'
 import { toLondonInputParts } from '@/utils/formatLondon'
 import BookingCard from '@/components/BookingCard.vue'
@@ -487,6 +497,7 @@ const router = useRouter()
 const route = useRoute()
 const bookingsStore = useBookingsStore()
 const availabilityStore = useAvailabilityStore()
+const expensesStore = useExpensesStore()
 const viewMode = ref<'list' | 'calendar'>('list')
 const listDisplayMode = ref<'cards' | 'table'>('table')
 const calendarViewMode = ref<'1d' | '7d' | '30d'>('1d')
@@ -517,7 +528,18 @@ function matchesForm(b: Booking): boolean {
 function matchesCode(b: Booking): boolean {
   return !promoCodeFilter.value || b.promoCodeId === promoCodeFilter.value
 }
-const formFilteredBookings = computed(() => bookingsStore.bookings.filter((b) => matchesForm(b) && matchesCode(b)))
+// Mileage filter (from the dashboard "Trips to log" tile). Only narrows the Past
+// tab — the only place "no mileage logged" is a meaningful nudge — so switching
+// to any other tab behaves exactly as before.
+const mileageFilter = ref<'missing' | null>(null)
+const withMileageIds = computed(() => bookingIdsWithMileage(expensesStore.expenses))
+function matchesMileage(b: Booking): boolean {
+  if (mileageFilter.value !== 'missing' || filterStatus.value !== 'PAST') return true
+  return isMissingMileage(b, withMileageIds.value)
+}
+const formFilteredBookings = computed(() =>
+  bookingsStore.bookings.filter((b) => matchesForm(b) && matchesCode(b) && matchesMileage(b)),
+)
 
 const filteredBookings = computed(() => {
   if (!filterStatus.value) return formFilteredBookings.value
@@ -949,6 +971,14 @@ function clearCodeFilter() {
   promoCodeName.value = ''
 }
 
+function clearMileageFilter() {
+  mileageFilter.value = null
+  // Drop the query param so a refresh / back doesn't re-apply it.
+  const { mileage, ...rest } = route.query
+  void mileage
+  router.replace({ query: rest })
+}
+
 function toYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
@@ -988,9 +1018,15 @@ onMounted(async () => {
     selectedCalendarDate.value = new Date(`${q.date}T00:00:00`)
   }
 
+  if (q.mileage === 'missing') mileageFilter.value = 'missing'
+
   await Promise.all([
     bookingsStore.fetchBookings(),
     availabilityStore.fetchUnavailableBlocks(),
+    // Only needed for the mileage=missing nudge; cheap and already cached elsewhere.
+    mileageFilter.value === 'missing' && expensesStore.expenses.length === 0
+      ? expensesStore.fetchExpenses()
+      : Promise.resolve(),
   ])
 
   const statusParam = route.query.status

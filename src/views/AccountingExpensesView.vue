@@ -121,6 +121,47 @@
         </div>
       </div>
 
+      <!-- Missing mileage — past confirmed trips with nothing logged -->
+      <div v-if="missingMileage.length > 0" class="card mb-6 border-l-4 border-amber-400">
+        <div class="card-header">
+          <h2 class="text-lg font-semibold">
+            <i class="fas fa-car-side mr-2 text-amber-500"></i>Missing mileage
+            <span class="text-sm font-normal text-gray-500">({{ missingMileage.length }})</span>
+          </h2>
+        </div>
+        <div class="card-body">
+          <p class="text-sm text-gray-500 mb-3">
+            Past confirmed appointments with no mileage logged. Log the trip, or mark it as no-travel to clear it.
+          </p>
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            <li v-for="b in missingMileageVisible" :key="b.id" class="py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+              <div>
+                <RouterLink :to="`/bookings/${b.id}`" class="font-medium text-sage-600 hover:text-sage-700">{{ bookingRef(b) }}</RouterLink>
+                <span class="text-gray-500"> · {{ b.client?.firstName }} {{ b.client?.lastName }}</span>
+                <span class="text-gray-400"> · {{ formatDate(b.startTime) }}</span>
+                <span v-if="b.postcode" class="text-gray-400"> · {{ b.postcode }}</span>
+              </div>
+              <div class="flex items-center gap-4 whitespace-nowrap">
+                <button @click="logMileageFor(b)" class="text-sage-600 hover:text-sage-700 font-medium">
+                  <i class="fas fa-plus-circle mr-1"></i>Log mileage
+                </button>
+                <button @click="markExempt(b)" :disabled="exemptSavingId === b.id" class="text-gray-400 hover:text-gray-600 disabled:opacity-50" title="This trip had no travel">
+                  <i class="fas fa-ban mr-1"></i>No travel
+                </button>
+              </div>
+            </li>
+          </ul>
+          <button
+            v-if="missingMileage.length > missingMileageLimit"
+            @click="missingMileageLimit += 10"
+            class="mt-3 text-xs text-sage-600 hover:text-sage-700"
+          >
+            Show {{ Math.min(10, missingMileage.length - missingMileageLimit) }} more
+          </button>
+          <p v-if="exemptError" class="mt-3 text-sm text-red-700">{{ exemptError }}</p>
+        </div>
+      </div>
+
       <!-- Expenses table -->
       <div class="card">
         <div class="card-header">
@@ -151,6 +192,12 @@
                     {{ e.description }}
                     <span v-if="e.category === 'MILEAGE' && e.miles" class="text-gray-400 text-xs">({{ e.miles }} mi)</span>
                     <i v-if="e.receiptCount" class="fas fa-paperclip text-gray-400 text-xs ml-1" :title="`${e.receiptCount} receipt${e.receiptCount === 1 ? '' : 's'} attached`"></i>
+                    <RouterLink
+                      v-if="e.bookingId"
+                      :to="`/bookings/${e.bookingId}`"
+                      class="ml-1 text-xs text-sage-600 hover:text-sage-700 whitespace-nowrap"
+                      :title="'Linked to a booking'"
+                    ><i class="fas fa-link text-[10px] mr-0.5"></i>{{ linkedBookingLabel(e) || 'booking' }}</RouterLink>
                   </td>
                   <td class="px-3 py-2 text-gray-600 dark:text-gray-300">
                     <RouterLink v-if="e.vendor" :to="`/accounting/vendors/${e.vendor.id}`" class="text-sage-600 hover:text-sage-700">{{ e.vendor.name }}</RouterLink>
@@ -200,6 +247,17 @@
       @close="showRecurringForm = false"
       @saved="onRecurringSaved"
     />
+
+    <!-- Log mileage for a specific missing trip (pre-filled + linked) -->
+    <ExpenseFormModal
+      v-if="mileageBooking"
+      :initial-booking-id="mileageBooking.id"
+      :initial-date="mileageBooking.startTime"
+      :initial-category="'MILEAGE'"
+      :initial-description="mileagePrefillDescription(mileageBooking)"
+      @close="mileageBooking = null"
+      @saved="onMileageLogged"
+    />
   </div>
 </template>
 
@@ -209,10 +267,13 @@ import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
 import { useExpensesStore } from '@/stores/expenses'
 import { useRecurringStore } from '@/stores/recurring'
+import { useBookingsStore } from '@/stores/bookings'
+import { bookingRef } from '@/utils/bookingTotals'
+import { missingMileageBookings } from '@/utils/mileageTracking'
 import { EXPENSE_CATEGORIES, categoryLabel } from '@/constants/expenseCategories'
 import { taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import type { Expense, RecurringExpense } from '@/types'
+import type { Expense, RecurringExpense, Booking } from '@/types'
 import ExpenseFormModal from '@/components/ExpenseFormModal.vue'
 import RecurringExpenseFormModal from '@/components/RecurringExpenseFormModal.vue'
 import Pagination from '@/components/Pagination.vue'
@@ -221,6 +282,52 @@ const PAGE_SIZE = 10
 
 const store = useExpensesStore()
 const recurringStore = useRecurringStore()
+const bookingsStore = useBookingsStore()
+
+// A short "NPM-1042" label for the booking an expense is linked to, resolved
+// from the store; null if the booking isn't loaded (or the expense isn't linked).
+function linkedBookingLabel(e: Expense): string | null {
+  if (!e.bookingId) return null
+  const b = bookingsStore.bookings.find((x) => x.id === e.bookingId)
+  return b ? bookingRef(b) : null
+}
+
+// --- Missing mileage -------------------------------------------------------
+// Past confirmed trips with no mileage logged (and not marked exempt). Shown as
+// its own section so un-logged drives are easy to clear from the accounts page.
+const missingMileage = computed(() => missingMileageBookings(bookingsStore.bookings, store.expenses))
+const missingMileageLimit = ref(10)
+const missingMileageVisible = computed(() => missingMileage.value.slice(0, missingMileageLimit.value))
+
+function mileagePrefillDescription(b: Booking): string {
+  const who = b.client ? `${b.client.firstName} ${b.client.lastName}`.trim() : 'client'
+  return `Travel to ${who}${b.postcode ? ` (${b.postcode})` : ''}`
+}
+
+// Log-mileage modal, targeted at one missing trip.
+const mileageBooking = ref<Booking | null>(null)
+function logMileageFor(b: Booking) {
+  mileageBooking.value = b
+}
+async function onMileageLogged() {
+  mileageBooking.value = null
+  await store.fetchExpenses()
+}
+
+// Mark a trip as no-travel so it drops off this list.
+const exemptSavingId = ref<string | null>(null)
+const exemptError = ref('')
+async function markExempt(b: Booking) {
+  exemptSavingId.value = b.id
+  exemptError.value = ''
+  try {
+    await bookingsStore.updateBooking(b.id, { mileageExempt: true })
+  } catch (err: unknown) {
+    exemptError.value = err instanceof Error ? err.message : 'Failed to update'
+  } finally {
+    exemptSavingId.value = null
+  }
+}
 
 // taxYear/lastTaxYear exist alongside the calendar-based options rather than
 // replacing them: at actual filing time (after 5 April) you want the tax year
@@ -401,5 +508,7 @@ function formatDate(date: string): string {
 onMounted(() => {
   if (store.expenses.length === 0) store.fetchExpenses()
   recurringStore.fetchRecurring()
+  // Needed to resolve the "linked to NPM-xxxx" labels on mileage rows.
+  if (bookingsStore.bookings.length === 0) bookingsStore.fetchBookings()
 })
 </script>

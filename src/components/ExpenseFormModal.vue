@@ -15,6 +15,21 @@
           <input v-model="form.date" type="date" class="input-field" required />
         </div>
 
+        <!-- Linked booking (when logging from a booking, or editing a linked expense) -->
+        <div v-if="form.bookingId" class="flex items-center justify-between text-sm bg-sage-50 rounded px-3 py-2">
+          <span class="text-gray-700">
+            <i class="fas fa-link text-sage-600 mr-1"></i>Linked to
+            <RouterLink v-if="linkedBooking" :to="`/bookings/${form.bookingId}`" class="font-medium text-sage-700 hover:underline">
+              {{ bookingRef(linkedBooking) }}
+            </RouterLink>
+            <span v-else class="font-medium">this booking</span>
+            <span v-if="linkedBooking" class="text-gray-500"> — {{ linkedBooking.client?.firstName }} {{ linkedBooking.client?.lastName }}</span>
+          </span>
+          <button type="button" @click="form.bookingId = null" class="text-gray-400 hover:text-red-600" title="Unlink from booking">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+
         <!-- Category (moved above amount/miles since it decides which field shows) -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -35,6 +50,30 @@
             </template>
             <template v-else>Based on {{ milesAlreadyLoggedThisYear }} mile{{ milesAlreadyLoggedThisYear === 1 ? '' : 's' }} already logged this tax year.</template>
           </p>
+        </div>
+
+        <!-- Booking picker (mileage only, when nothing's linked yet) -->
+        <div v-if="isMileage && !form.bookingId">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Which booking was this trip for? <span class="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input v-model="bookingSearch" type="text" class="input-field" placeholder="Search by client, booking no. or postcode…" />
+          <ul v-if="bookingOptions.length" class="mt-1 max-h-40 overflow-y-auto border rounded divide-y">
+            <li
+              v-for="b in bookingOptions"
+              :key="b.id"
+              class="px-3 py-2 text-sm hover:bg-sage-50 cursor-pointer flex justify-between gap-2"
+              @click="selectBooking(b)"
+            >
+              <span>
+                <span class="font-medium">{{ b.client?.firstName }} {{ b.client?.lastName }}</span>
+                <span class="text-gray-400"> · {{ bookingRef(b) }}</span>
+                <span v-if="b.postcode" class="text-gray-400"> · {{ b.postcode }}</span>
+              </span>
+              <span class="text-gray-400 whitespace-nowrap">{{ formatDate(b.startTime) }}</span>
+            </li>
+          </ul>
+          <p v-else-if="bookingSearch.trim()" class="mt-1 text-xs text-gray-400">No matching bookings.</p>
         </div>
 
         <!-- Amount (everything else) -->
@@ -110,15 +149,18 @@
 
 <script setup lang="ts">
 import { reactive, computed, ref, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { format } from 'date-fns'
 import { useExpensesStore } from '@/stores/expenses'
 import { useReceiptsStore } from '@/stores/receipts'
 import { useVendorsStore } from '@/stores/vendors'
+import { useBookingsStore } from '@/stores/bookings'
+import { bookingRef } from '@/utils/bookingTotals'
 import { apiService } from '@/services/api'
 import { EXPENSE_CATEGORIES } from '@/constants/expenseCategories'
 import { calculateMileageAmountPence, taxYearStart, taxYearEnd } from '@/utils/mileage'
 import { toLondonFakeLocalDate } from '@/utils/formatLondon'
-import type { Expense, ExpenseCategory, ReceiptSummary, Vendor } from '@/types'
+import type { Expense, ExpenseCategory, ReceiptSummary, Vendor, Booking } from '@/types'
 import VendorSelect from '@/components/VendorSelect.vue'
 import ExpenseModeTabs, { type ExpenseMode } from '@/components/ExpenseModeTabs.vue'
 
@@ -128,6 +170,11 @@ const props = defineProps<{
   receiptId?: string
   initialVendorId?: string | null
   initialDate?: string | null
+  // Set when logging an expense from a booking's page (its mileage). Pre-links
+  // the expense and lets us pre-fill sensible defaults for the trip.
+  initialBookingId?: string | null
+  initialCategory?: ExpenseCategory
+  initialDescription?: string
   // Show the Single/Recurring tab switcher (create flow from the Expenses page).
   modeTabs?: boolean
 }>()
@@ -151,12 +198,48 @@ const error = ref('')
 const form = reactive({
   date: props.expense?.date?.slice(0, 10) || props.initialDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
   amountPounds: props.expense && props.expense.category !== 'MILEAGE' ? (props.expense.amount / 100).toFixed(2) : '',
-  category: (props.expense?.category || 'SUPPLIES') as ExpenseCategory,
+  category: (props.expense?.category || props.initialCategory || 'SUPPLIES') as ExpenseCategory,
   miles: props.expense?.miles ? String(props.expense.miles) : '',
-  description: props.expense?.description || '',
+  description: props.expense?.description || props.initialDescription || '',
   vendorId: props.expense?.vendorId || props.initialVendorId || null,
+  bookingId: props.expense?.bookingId ?? props.initialBookingId ?? null,
   notes: props.expense?.notes || '',
 })
+
+// The booking this expense is linked to, if any — resolved from the store so we
+// can show which trip it belongs to.
+const bookingsStore = useBookingsStore()
+const linkedBooking = computed(() =>
+  form.bookingId ? bookingsStore.bookings.find((b) => b.id === form.bookingId) || null : null
+)
+// Bookings are needed both to resolve the linked label and to power the picker.
+onMounted(() => {
+  if (bookingsStore.bookings.length === 0) bookingsStore.fetchBookings()
+})
+
+// Booking picker (mileage only). Without a search, offer the most recent
+// non-cancelled bookings — the likeliest trips to be logging mileage for.
+const bookingSearch = ref('')
+const bookingOptions = computed<Booking[]>(() => {
+  const search = bookingSearch.value.trim().toLowerCase()
+  const matches = bookingsStore.bookings
+    .filter((b) => b.status !== 'CANCELLED')
+    .filter((b) => {
+      if (!search) return true
+      const name = `${b.client?.firstName || ''} ${b.client?.lastName || ''}`.toLowerCase()
+      return (
+        name.includes(search) ||
+        bookingRef(b).toLowerCase().includes(search) ||
+        (b.postcode || '').toLowerCase().includes(search)
+      )
+    })
+    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+  return matches.slice(0, 8)
+})
+function selectBooking(b: Booking) {
+  form.bookingId = b.id
+  bookingSearch.value = ''
+}
 
 // Picking a vendor with a default category pre-fills the category — but only
 // when creating (don't silently re-categorise an existing expense being edited).
@@ -277,6 +360,7 @@ async function submitForm() {
       category: form.category,
       miles,
       description: form.description.trim(),
+      bookingId: form.bookingId || null,
       notes: form.notes.trim() || null,
     }
   } else {
@@ -291,6 +375,7 @@ async function submitForm() {
       category: form.category,
       description: form.description.trim(),
       vendorId: form.vendorId || null,
+      bookingId: form.bookingId || null,
       notes: form.notes.trim() || null,
     }
   }

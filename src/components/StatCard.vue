@@ -36,6 +36,7 @@ const iconMap: Record<string, string> = {
   Cash: 'fas fa-hand-holding-dollar',
   Rebook: 'fas fa-user-clock',
   Form: 'fas fa-clipboard-list',
+  Car: 'fas fa-car-side',
 }
 
 const displayIcon = computed(() => iconMap[props.icon] || 'fas fa-chart-simple')

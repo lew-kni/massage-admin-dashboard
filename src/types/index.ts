@@ -138,6 +138,9 @@ export interface Booking {
   // surcharge for a visit outside the usual area. Pence.
   extraCharge?: number | null
   extraChargeReason?: string | null
+  // True when this appointment involved no billable travel, so it's excluded
+  // from the "missing mileage" nudge.
+  mileageExempt?: boolean
   // Fee charged when a confirmed booking is cancelled late, per the published
   // cancellation policy. Null = no fee due (enough notice, or waived). Payment
   // of the fee is tracked via the payments[] rows, like a normal booking.
@@ -538,6 +541,9 @@ export interface Expense {
   notes?: string | null
   // Only set when category is MILEAGE.
   miles?: number | null
+  // The appointment this expense relates to (in practice, the trip's mileage).
+  // Null for expenses not tied to a specific booking.
+  bookingId?: string | null
   // Set when this expense was generated from a monthly recurring template.
   recurringExpenseId?: string | null
   createdAt: string
